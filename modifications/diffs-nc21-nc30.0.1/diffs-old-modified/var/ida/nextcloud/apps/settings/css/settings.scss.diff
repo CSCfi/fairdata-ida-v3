@@ -1,0 +1,13 @@
+--- /var/ida/nextcloud-old/apps/settings/css/settings.scss	2024-02-20 10:11:37.688437881 +0000
++++ /var/ida/nextcloud-old/apps/settings/css/settings.scss.original	2024-02-20 10:11:37.689437884 +0000
+@@ -1763,10 +1763,3 @@
+ 		}
+ 	}
+ }
+-
+-label {
+-	color: currentColor;
+-	display: inline-block;
+-	pointer-events: none;
+-	text-decoration: none;
+-}

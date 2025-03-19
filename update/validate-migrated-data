@@ -1,0 +1,151 @@
+#!/bin/bash
+#
+# This script will validate the data migration from an old database to a new database
+# based on a comparison of project details extracted before the migration, using the
+# previous version of IDA, and project details extracted after the migration, using
+# the updated version of IDA.
+#
+# The script does not validate the contents of the files, only that they exist and
+# are not empty, and for JSON files, that they are syntactically valid, and that
+# the old and new variants of each file are identical.
+#
+# Strict assumptions are made about the location of git repositories; update as needed.
+
+. /var/ida/update/init.sh
+
+echo "--- Validating migrated data ..."
+
+ERRORS=""
+NEWLINE=$'\n'
+
+if [ -z "$PROJECTS" ]; then
+    echo "The environment variable PROJECTS must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$USERS" ]; then
+    echo "The environment variable USERS must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$FILE_ENDINGS" ]; then
+    echo "The environment variable FILE_ENDINGS must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$OLDDATA" ]; then
+    echo "The environment variable OLDDATA must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$NEWDATA" ]; then
+    echo "The environment variable NEWDATA must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$DIFFS" ]; then
+    echo "The environment variable DIFFS must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ ! -d $OLDDATA ]; then
+    ERRORS="${ERRORS}ERROR: Missing $OLDDATA data directory.${NEWLINE}"
+    exit 1
+fi
+if [ ! -d $NEWDATA ]; then
+    ERRORS="${ERRORS}ERROR: Missing $NEWDATA data directory.${NEWLINE}"
+    exit 1
+fi
+
+if [ -d "$DIFFS" ]; then
+    echo "Purging existing diffs directory ..."
+    rm -fr "$DIFFS"
+fi
+
+echo "Creating diffs directory ..."
+mkdir -p "$DIFFS"
+
+echo "Checking all project data files ..."
+
+for PROJECT in $PROJECTS; do
+
+    echo "PROJECT: $PROJECT"
+    if [[ " $LARGE_PROJECTS " =~ " $PROJECT " ]]; then
+        echo "Skipping excluded large project $PROJECT ..."
+        continue
+    fi
+
+    if [[ " $INTERNAL_PROJECTS " =~ " $PROJECT " ]]; then
+        echo "Skipping excluded internal project $PROJECT ..."
+        continue
+    fi
+
+    for ENDING in $FILE_ENDINGS; do
+
+        FILE="${PROJECT}${ENDING}"
+
+        if [ ! -s "${OLDDATA}/${FILE}" ]; then
+            ERRORS="${ERRORS}ERROR: Missing or empty file: ${OLDDATA}/${FILE}${NEWLINE}"
+        else
+            if [[ "${FILE}" == *.json ]]; then
+                if ! jq empty "${OLDDATA}/${FILE}" >/dev/null 2>&1; then
+                    ERRORS="${ERRORS}ERROR: Invalid JSON file: ${OLDDATA}/${FILE}${NEWLINE}"
+                fi
+            fi
+        fi
+
+        if [ ! -s "${NEWDATA}/${FILE}" ]; then
+            ERRORS="${ERRORS}ERROR: Missing or empty file: ${NEWDATA}/${FILE}${NEWLINE}"
+        else
+            if [[ "${FILE}" == *.json ]]; then
+                if ! jq empty "${NEWDATA}/${FILE}" >/dev/null 2>&1; then
+                    ERRORS="${ERRORS}ERROR: Invalid JSON file: ${NEWDATA}/${FILE}${NEWLINE}"
+                fi
+            fi
+        fi
+
+    done
+
+done
+
+echo "Checking all user data files ..."
+
+for USER in $USERS; do
+    echo "USER: $USER"
+    if [ ! -s "${OLDDATA}/${USER}.status.txt" ]; then
+        ERRORS="${ERRORS}ERROR: Missing or empty ${OLDDATA}/${USER}.status${NEWLINE}"
+    fi
+    if [ ! -s "${NEWDATA}/${USER}.status.txt" ]; then
+        ERRORS="${ERRORS}ERROR: Missing or empty ${NEWDATA}/${USER}.status${NEWLINE}"
+    fi
+done
+
+echo "Comparing all files in /old with same named file in /new ..."
+
+OLD_FILES=$(cd $OLDDATA; ls | grep -v linecounts)
+for FILE in $OLD_FILES; do
+    echo "FILE: $FILE"
+    diff -w $OLDDATA/$FILE $NEWDATA/$FILE > $DIFFS/$FILE.diff || true
+done
+
+echo "Analyzing diffs ..."
+
+DIFF_ERRORS=$(find "$DIFFS" -type f -size +0c -exec ls -l {} +)
+
+if [ "$DIFF_ERRORS" ]; then
+    ERRORS="${ERRORS}ERROR: Differences found in the following files:${NEWLINE}"
+    ERRORS="${ERRORS}${DIFF_ERRORS}${NEWLINE}"
+fi
+
+if [ "$ERRORS" ]; then
+    echo "$NEWLINE"
+    echo "$ERRORS"
+    echo "*** Validation completed with errors! ***"
+else
+    echo "========================================"
+    echo "=== WOOHOO! SUCCESS! No issues found ==="
+    echo "========================================"
+    echo "Validation completed."
+fi
+
+echo "$NEWLINE"

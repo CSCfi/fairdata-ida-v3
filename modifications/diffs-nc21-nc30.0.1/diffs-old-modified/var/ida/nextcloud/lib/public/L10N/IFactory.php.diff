@@ -1,0 +1,10 @@
+--- /var/ida/nextcloud-old/lib/public/L10N/IFactory.php	2024-02-20 10:11:39.363443559 +0000
++++ /var/ida/nextcloud-old/lib/public/L10N/IFactory.php.original	2024-02-20 10:11:39.363443559 +0000
+@@ -135,7 +135,4 @@
+ 	 * @since 20.0.0
+ 	 */
+ 	public function getUserLanguage(IUser $user = null): string;
+-	
+-	/* Added missing definition */
+-	public function getLanguages();
+ }

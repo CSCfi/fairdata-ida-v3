@@ -1,0 +1,159 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2018 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+. `dirname $0`/../lib/init_script.sh
+
+USAGE="Usage: $SCRIPT [ ADD user_name proj_name | REMOVE user_name proj_name | JOIN user_name proj_name | DISABLE user_name | ENABLE user_name | DELETE user_name ]"
+
+# checks
+
+if [ -e "${STORAGE_OC_DATA_ROOT}/control/OFFLINE" ]; then
+    errorExit "The IDA service is in OFFLINE mode. Ignoring request: $SCRIPT $*"
+fi
+
+if [ "$1" = "ADD" -o "$1" = "REMOVE" -o "$1" = "JOIN" ]; then
+    if [ $# -ne 3 ]; then
+        errorExit "$USAGE"
+    fi
+    if [ -z "$2" -o -z "$3" ]; then
+        errorExit "$USAGE"
+    fi
+elif [ "$1" = "DELETE" -o "$1" = "DISABLE" -o "$1" = "ENABLE" ]; then
+    if [ $# -ne 2 ]; then
+        errorExit "$USAGE"
+    fi
+    if [ -z "$2" ]; then
+        errorExit "$USAGE"
+    fi
+else
+    errorExit "$USAGE"
+fi
+
+OPERATION="$1"
+USER="$2"
+PROJECT="$3"
+
+if [ "$OCC" = "" ]; then
+    errorExit "The OCC variable must be defined"
+fi
+
+if [ "$STORAGE_OC_DATA_ROOT" = "" ]; then
+    errorExit "The STORAGE_OC_DATA_ROOT variable must be defined"
+fi
+
+if [ "$PROJECT_USER_PREFIX" = "" ]; then
+    errorExit "The PROJECT_USER_PREFIX variable must be defined"
+fi
+
+# If not otherwise already defined in the environment, a new user account gets the static
+# password "$TEST_USER_PASS" (defined in config.sh) if in a non-production environment, else
+# gets a random password
+if [ "$OC_PASS" = "" ]; then
+    if [ "$IDA_ENVIRONMENT" != "PRODUCTION" ]; then
+        export OC_PASS="$TEST_USER_PASS"
+    else
+        export OC_PASS=`tr -cd '[:alnum:]' < /dev/urandom | head -c16`
+    fi
+    if [ "$OC_PASS" = "" ]; then
+        errorExit "Failed to initialize OC_PASS variable"
+    fi
+else
+    export OC_PASS="$OC_PASS"
+fi
+
+# execute
+
+if [ "$OPERATION" = "ADD" ]; then
+    # create non existing user
+    if [ `php "$OCC" user:info "$USER" | wc -l` -lt "2" ]; then
+        OUT=`php "$OCC" user:add "$USER" -g "$PROJECT" --password-from-env 2>&1`
+        echo "---"
+        echo "$OUT" | tr '\n' ' '
+        echo "---"
+        addToLog "$OUT"
+        HITS=`echo $OUT | grep 'created successfully' | wc -l`
+        if [ "$HITS" -ne 1 ]; then
+            errorExit "$OUT"
+        fi
+    else
+        OUT="User \"$USER\" already exists"
+        errorExit "$OUT"
+    fi
+
+    # set user quota
+    OUT=`php "$OCC" user:setting "$USER" files quota "$USER_QUOTA" 2>&1`
+    if [ -n "$OUT" ]; then
+        errorExit "$OUT"
+    fi
+
+    # force initialization of user root directory, because Nextcloud won't do it until first login otherwise
+    mkdir -p -m g+rw,o-rwx "$STORAGE_OC_DATA_ROOT/$USER/files"
+    php "$OCC" files:scan "$USER" >/dev/null
+
+    # In Nextcloud 30, we need to re-share the group folders after the user is created or else they are not
+    # visible to the new user
+    $ROOT/admin/ida_project SHARE "$PROJECT"
+fi
+
+if [ "$OPERATION" = "REMOVE" ]; then
+    OUT=`php "$OCC" group:removeuser "$PROJECT" "$USER" 2>&1`
+    if [ -n "$OUT" ]; then
+        errorExit "$OUT"
+    fi
+fi
+
+if [ "$OPERATION" = "JOIN" ]; then
+    OUT=`php "$OCC" group:adduser "$PROJECT" "$USER" 2>&1`
+    if [ -n "$OUT" ]; then
+        errorExit "$OUT"
+    fi
+fi
+
+if [ "$OPERATION" = "DELETE" ]; then
+    PROJECT_USER=`echo $USER | egrep -e "^$PROJECT_USER_PREFIX"`
+    if [ "$IDA_ENVIRONMENT" = "PRODUCTION" -a "$PROJECT_USER" != "" ]; then
+        errorExit "Project share owner users can not be deleted in a production environment."
+    fi
+    OUT=`php "$OCC" user:delete "$USER" 2>&1`
+    HITS=`echo $OUT | grep 'The specified user was deleted' | wc -l`
+    if [ "$HITS" -ne 1 ]; then
+        errorExit "$OUT"
+    fi
+    # TODO?: delete actual PSO user folder and symbolic link from filesystem
+fi
+
+if [ "$OPERATION" = "DISABLE" ]; then
+    OUT=`php "$OCC" user:disable "$USER" 2>&1`
+    HITS=`echo $OUT | grep 'The specified user is disabled' | wc -l`
+    if [ "$HITS" -ne 1 ]; then
+        errorExit "$OUT"
+    fi
+fi
+
+if [ "$OPERATION" = "ENABLE" ]; then
+    OUT=`php "$OCC" user:enable "$USER" 2>&1`
+    HITS=`echo $OUT | grep 'The specified user is enabled' | wc -l`
+    if [ "$HITS" -ne 1 ]; then
+        errorExit "$OUT"
+    fi
+fi

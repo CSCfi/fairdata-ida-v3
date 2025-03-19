@@ -1,0 +1,197 @@
+#!/bin/bash
+#
+# This script will generate inventories and project summaries for all Fairdata test projects
+# based on the migrated data.
+#
+# Strict assumptions are made about the location of git repositories; update as needed.
+
+SCRIPT=$(basename $0)
+
+PROJECT="$1"
+TARGETDIR="$2"
+TMPDIR="$3"
+
+JQ="jq --sort-keys . --indent 4"
+
+ERR="${TMPDIR}/${SCRIPT}.err"
+cleanup() {
+    rm -f "$ERR" 2>/dev/null
+}
+trap cleanup EXIT
+
+function errorExit {
+    MSG=`echo "$@" | tr '\n' ' '`
+    echo "$MSG" >&2
+    sync
+    sleep 0.1
+    exit 1
+}
+
+if [ -z "$PROJECT" ]; then
+    errorExit "No project specified. Aborting."
+fi
+
+if [ -z "$TARGETDIR" ]; then
+    errorExit "No target directory specified. Aborting."
+fi
+
+if [ ! -d "$TARGETDIR" ]; then
+    errorExit "The target directory $TARGETDIR does not exist. Aborting."
+fi
+
+if [ ! -d "$TMPDIR" ]; then
+    errorExit "The temp directory $TMPDIR does not exist. Aborting."
+fi
+
+# NOTE: All data is output in a consistent format, with fixed ordering, so if the data included in the output
+# has not changed or been lost during the migration (even if stored in a slightly different manner or table,
+# then the output before migration and after migration should be identical and should not produce any output
+# from diff when comparing old and new output versions.
+
+echo "Extracting status ..."
+
+# We attempt to extract the project status up to 10 times, with increasing delay between requests, because for
+# some reason postgres can get overloaded by the repeated requests and fail to return a successful result.
+
+MAX_RETRIES=10
+SLEEP_TIME=1
+ATTEMPT=1
+
+while [ "$ATTEMPT" -le "$MAX_RETRIES" ]; do
+
+    ERROR=""
+
+    # Execute command and capture exit status
+    sudo -u apache /var/ida/utils/admin/project-status "$PROJECT" 2>"$ERR" > "$TARGETDIR/$PROJECT.status.txt"
+
+    EXIT_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        ERROR="Error: Failed to retrieve project status (error output detected)"
+    elif [ "$EXIT_CODE" -ne 0 ]; then
+        ERROR="Error: Failed to retrieve project status (exit code: $EXIT_CODE)"
+    elif [ ! -s "$TARGETDIR/$PROJECT.status.txt" ]; then
+        ERROR="Error: Failed to retrieve project status (empty output)"
+    fi
+
+    if [ -z "$ERROR" ]; then
+        break  # Success, exit loop
+    fi
+
+    DURATION=$((SLEEP_TIME * ATTEMPT))
+    echo "$ERROR"
+    echo "Retrying after sleeping for $DURATION seconds ..."
+    sleep $DURATION
+    ((ATTEMPT++))
+
+done
+
+if [ -n "$ERROR" ]; then
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+    fi
+    errorExit "$ERROR"
+fi
+
+echo "Extracting stats ..."
+# Lists general project stats
+sudo -u apache /var/ida/utils/admin/fetch-project-stats $PROJECT 2>"$ERR" > "$TARGETDIR/$PROJECT.stats.txt"
+
+if [ -s "$ERR" ]; then
+    cat "$ERR" >&2
+    errorExit "Error: Failed to retrieve project stats"
+fi
+if [ ! -s "$TARGETDIR/$PROJECT.stats.txt" ]; then
+    errorExit "Error: Failed to retrieve project stats (empty output)"
+fi
+
+echo "Extracting inventory ..."
+# Lists all file details, both staging and frozen; aggregated from multiple table sources, but
+# exclude created timestamp and datasets (as we only care about data in IDA, not Metax)
+sudo -u apache /var/ida/utils/admin/fetch-project-inventory $PROJECT 2>"$ERR" | \
+    jq 'del(.created) | .frozen |= with_entries(.value |= del(.datasets))' | \
+    $JQ > "$TARGETDIR/$PROJECT.inventory.json"
+
+if [ -s "$ERR" ]; then
+    cat "$ERR" >&2
+    errorExit "Error: Failed to retrieve project inventory"
+fi
+if [ ! -s "$TARGETDIR/$PROJECT.inventory.json" ]; then
+    errorExit "Error: Failed to retrieve project inventory (empty output)"
+fi
+
+echo "Extracting actions ..."
+# Lists all IDA actions in all states
+for state in pending failed cleared completed incomplete initiating; do
+    sudo -u apache /var/ida/utils/admin/fetch-actions $PROJECT $state 2>"$ERR" | \
+        jq 'sort_by(.pid)' | $JQ > "$TARGETDIR/$PROJECT.actions.$state.json"
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to retrieve actions for state $state"
+    fi
+    if [ ! -s "$TARGETDIR/$PROJECT.actions.$state.json" ]; then
+        errorExit "Error: Failed to retrieve actions for state $state (empty output)"
+    fi
+done
+
+echo "Extracting action file sets ..."
+
+# Extract all action PIDs from all action JSON files just fetched, through sort -u
+# Create a final JSON file that has a dictionary with the action PID as the key
+# and the list of file records as the value
+
+TEMP_FILE="$TARGETDIR/$PROJECT.action.files.json.tmp"
+ACTION_PIDS=$(cat "$TARGETDIR/$PROJECT.actions."*.json | jq -r '.[].pid' | sort -u)
+
+echo "{" > "$TEMP_FILE"
+
+FIRST='true'
+
+for PID in $ACTION_PIDS; do
+
+    #echo "    PID: $PID"
+    if [ "$FIRST" = 'true' ]; then
+        FIRST='false'
+    else
+        echo "," >> "$TEMP_FILE"
+    fi
+
+    echo "\"$PID\": " >> "$TEMP_FILE"
+
+    sudo -u apache /var/ida/utils/admin/fetch-action-files $PROJECT $PID 2>"$ERR" >> "$TEMP_FILE"
+
+    EXIT_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to retrieve action files for PID $PID"
+    elif [ "$EXIT_CODE" -ne 0 ]; then
+        errorExit "Error: Failed to retrive action files for PID $PID (exit code: $EXIT_CODE)"
+    fi
+
+done
+
+echo "}" >> "$TEMP_FILE"
+
+cat "$TEMP_FILE" | $JQ > "$TARGETDIR/$PROJECT.action.files.json"
+
+rm "$TEMP_FILE"
+
+if [ ! -s "$TARGETDIR/$PROJECT.action.files.json" ]; then
+    errorExit "Error: Failed to retrieve action files (empty output)"
+fi
+
+echo "Extracting data change events ..."
+# Lists all data change events 
+sudo -u apache /var/ida/utils/admin/fetch-data-changes $PROJECT 99999 2>"$ERR" | \
+    jq 'sort_by(.timestamp, .project, .user, .change, .mode, .pathname, .target)' | \
+    $JQ > "$TARGETDIR/$PROJECT.changes.json"
+
+if [ -s "$ERR" ]; then
+    cat "$ERR" >&2
+    errorExit "Error: Failed to extract data changes"
+fi
+
+if [ ! -s "$TARGETDIR/$PROJECT.changes.json" ]; then
+    errorExit "Error: Failed to extract data changes (empty output)"
+fi

@@ -1,0 +1,5 @@
+include:
+  - project: fairdata/fairdata-ci
+    ref: master
+    file:
+      - /templates/pipelines/.fairdata-ida.yaml

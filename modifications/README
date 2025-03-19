@@ -1,0 +1,143 @@
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2018 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+
+The implementation of the IDA service aims to modify the Nextcloud core as little as possible, but certain
+modifications are unavoidable, due to the fact that we are coercing Nextcloud to function as a group-centric
+tool rather than its intended use primarily as a personal tool, in order to achieve specific UX goals.
+
+Where possible, modifications are done using the Nextcloud theme machinery, by copying the original core file to
+the IDA theme directory space using the same relative pathname and modifying the copied file accordingly. This
+results in Nextcloud loading the version of the file from the theme rather than the original core file. 
+e.g. /nextcloud/core/templates/layout.guest.php -> /nextcloud/themes/ida/core/templates/layout.guest.php
+
+Note that when updating files within the IDA theme, it may be necessary to apply updates to the new original core
+file not present in the modified theme file.
+
+To review the changes made to the core files in their theme-specific variants, or to see what changes must be made
+after updating to a new version, simply perform a diff of the core file in its original location and the modified
+file in the theme directory space.
+
+If a core file cannot be copied into the IDA theme directory space and must be modified in-place, in its original
+location, the original file will be backed up as a copy with the filename suffix '.original', and the modified
+code should be surrounded by comments "IDA MODIFIED START" and "IDA MODIFIED END" in the modified file.
+
+To review the changes made to the core files in-place, simply perform a diff of the backed up '.original' file
+and the modified file with the same filename without the '.original' suffix. 
+
+General aspects of server configuration are not covered here. Only those aspects which require addition to or
+modification of the /nextcloud directory tree after updating Nextcloud.
+
+1. Preparation
+
+>> Create a new feature branch for the update and checkout the branch
+>> Create a local test project and user account, distinct from any Fairdata test account or those used by the
+   automated tests, to use for manual testing during development; e.g. test_project and test_user
+>> Disable all Nextcloud housekeeping and IDA related cronjobs (auditing, reporting, etc.)
+>> Stop IDA postprocessing agents
+>> Complete steps 1-3 as detailed in /var/ida/update/README
+>> Execute /var/ida/utils/stop-all to halt apache and the postprocessing agents
+
+2. Environment updates
+
+>> Upgrade PHP version as required with latest updated configuration
+
+3. Configuration and codebase organization changes
+
+>> Rename the existing /nextcloud directory to /var/ida/nextcloud-old
+>> Download and install the latest Nextcloud source code as /var/ida/nextcloud
+>> Copy /var/ida/nextcloud-old/themes/ida to /var/ida/nextcloud/themes/ida
+>> Copy /var/ida/nextcloud-old/apps/ida to /var/ida/nextcloud/apps/ida
+>> Copy /var/ida/nextcloud-old/apps/idafirstrunwizard to /var/ida/nextcloud/apps/idafirstrunwizard
+>> Copy /var/ida/nextcloud-old/.htaccess to /var/ida/nextcloud/.htaccess
+>> Copy /var/ida/nextcloud-old/config/config.php to /var/ida/nextcloud/config/config.php
+>> Update config.sh and config.php to define the PostgreSQL database name as 'nextcloudXX' where 'XX' 
+   is the new version of Nextcloud, e.g. 'nextcloud30' (the current database will remain untouched and used
+   for the data migration)
+>> Update config.sh to define DBNAME_OLD as the previous database name
+>> Update config.php to define the new version of Nextcloud per /var/ida/nextcloud/version.php
+>> Ensure config.php defines the following:
+      'updatechecker' => false,
+      'upgrade.disable-web' => true,
+>> Ensure config.php does NOT define the following:
+      'theme' => 'ida',
+>> ensure config.php only defines the 'apps_paths' array to have the single path '/var/ida/nextcloud/apps'
+
+4. Install new version of Nextcloud
+
+>> Update /var/ida/utils/disable_nextcloud_apps as needed:
+   - Compare apps in /var/ida/nextcloud/apps and update list of unused apps accordingly
+>> Execute /var/ida/update/install-new-nextcloud (will execute disable_nextcloud_apps)
+>> Start apache
+>> Open IDA in browser with ?local_login=true, log in as admin and check for any reported errors or configuration issues
+   NOTE: It is expected and OK to see "Integrity checker has been disabled. Integrity cannot be verified."
+   No other errors should be reported by Nextcloud.
+>> Re-enable Nextcloud housekeeping cron job
+
+5. IDA and Nextcloud Implememtation Updates
+
+NOTE: Depending on how much Nextcloud has changed since the last update, some of the following steps may not be applicable
+and a more comprehensive refactoring or reimplementation of the IDA apps and customizations may be required.
+
+>> Edit /var/ida/var/ida/nextcloud/apps/ida/appinfo/info.xml and /var/ida/var/ida/nextcloud/apps/idafirstrunwizard/appinfo/info.xml
+   and update min-version and max-version to match the new Nextcloud major version
+>> Execute sudo -u apache php occ app:enable ida (when ready)
+>> Execute sudo -u apache php occ app:enable idafirstrunwizard (when ready)
+>> Update config.php to define the IDA them, when ready:
+      'theme' => 'ida',
+>> Refactor IDA code and Nextcloud modifications until everything is working correctly
+   - Use the utility script list-modified-files to identify all files that were modified during the last upgrade
+   - Analyze all previously modified files and compare to existing new files, and modify accordingly
+   - IMPORTANT! Be sure to create new '.original' copies of new files BEFORE modifying them, for use during the next upgrade!!!
+   - Where previously modified files don't exist in the new codebase, determine where those modifications need to be made
+   - In /var/ida/nextcloud, run composer require firebase-<version> (specifying appropriate recent stable version)
+>> DEBUG, DEBUG, DEBUG...
+
+6. Data migration and validation
+
+>> Install indices to new database (TODO specify how)
+>> Execute /var/ida/update/migrate-data
+>> Execute /var/ida/update/extract-migrated-validation-data
+>> Execute /var/ida/update/validate-migrated-data and ensure no errors reported
+
+
+-- UTILITY SCRIPTS
+
+Note that not all files which were modified previously will necessarily exist in the new version of Nextcloud, in which 
+case the new code base will have to be analyzed to determine where the modifications made previously will have to be made
+per the changes between versions of Nextcloud.
+
+The utility scripts in this directory expect that the old version of nextcloud is accessible as $ROOT/nextcloud-old and the
+new version of nextcloud is accessible as $ROOT/nextcloud-new, either by renaming of directories or via symbolic links.
+
+A list of modified Nextcloud files can be easily obtained with the script list-modified-files.
+
+Diffs of all modified files in the old version of nextcloud can be generated using the script generate-diffs, and will be
+stored in the ./diffs/ subdirectory by their relative pathnames.
+
+A list of files modified in the old version of nextcloud which do not exist in the new version of nextcloud can be obtained
+via the script list-missing-new-modified-files.
+
+Original copies of files modified in the old nextcloud can be created in the new nextcloud, for those that exist in the new
+nextcloud, using the script create-new-original-files.
+
+

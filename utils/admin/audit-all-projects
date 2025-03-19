@@ -1,0 +1,79 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2020 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+# --------------------------------------------------------------------------------
+# This script audits all existing projects in the IDA service, limited to nodes
+# created or modified before the start of the auditing process.
+# --------------------------------------------------------------------------------
+
+SCRIPT=`basename "$(realpath $0)"`
+
+USAGE="
+Usage: $SCRIPT [ ( --staging | --frozen ) ] [ --timestamps ] [ ( --report | --report-errors ) [ email ] ]
+       $SCRIPT -h
+
+       --staging        auditing will be limited to files in the staging area
+       --frozen         auditing will be limited to files in the frozen area
+       --timestamps     comparisons will be made between disk timestamps and database values
+       --report         auditing results will be emailed
+       --report-errors  auditing results will be emailed, but only if errors are detected
+       email            the email address where audit reports should be sent (defaults to dev team)
+"
+
+PROJECT="null"
+AUDIT_ARGS="$*"
+
+# --------------------------------------------------------------------------------
+# Initialize script with common definitions
+
+INIT_FILE=`dirname "$(realpath $0)"`/lib/init_audit_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+# --------------------------------------------------------------------------------
+
+PROJECTS=`$ROOT/utils/admin/list-projects`
+INTERNAL_PROJECTS=""
+
+if [ "$IDA_ENVIRONMENT" = "PRODUCTION" ]; then
+    INTERNAL_PROJECTS=`DEBUG=false $ROOT/utils/admin/list-internal-projects | tr '\n' ' '`
+fi
+
+if [ "$DEBUG" = "true" ]; then
+    echo "AUDIT_ARGS: $AUDIT_ARGS"
+    echo "INTERNAL:   $INTERNAL_PROJECTS"
+fi
+
+for PROJECT in $PROJECTS; do
+    INTERNAL=`echo " $INTERNAL_PROJECTS " | grep " $PROJECT "`
+    if [ "$INTERNAL" = "" ]; then
+        $ROOT/utils/admin/audit-project $PROJECT $AUDIT_ARGS
+    fi
+done
+
+addToLog "DONE"

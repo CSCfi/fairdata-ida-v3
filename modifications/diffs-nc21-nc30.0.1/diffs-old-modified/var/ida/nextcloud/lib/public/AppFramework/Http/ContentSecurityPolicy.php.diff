@@ -1,0 +1,49 @@
+--- /var/ida/nextcloud-old/lib/public/AppFramework/Http/ContentSecurityPolicy.php	2024-04-04 12:24:01.225437639 +0000
++++ /var/ida/nextcloud-old/lib/public/AppFramework/Http/ContentSecurityPolicy.php.original	2024-02-20 10:11:39.332443453 +0000
+@@ -48,18 +48,6 @@
+ 	/** @var array Domains from which scripts can get loaded */
+ 	protected $allowedScriptDomains = [
+ 		'\'self\'',
+-		'metrics.fairdata.fi',
+-		'metrics.fd-test.csc.fi',
+-		'sso.fairdata.fi',
+-		'sso.demo.fairdata.fi',
+-		'sso.fd-test.csc.fi',
+-		'sso.fd-stable.csc.fi',
+-		'sso.fd-staging.csc.fi',
+-		'sso.fd-rework.csc.fi',
+-		'sso.fd-dev.csc.fi',
+-		'ps.fd-dev.csc.fi:4443',
+-		'psdev.fd-dev.csc.fi:4443',
+-		'psdev-nc21.fd-dev.csc.fi:4443',
+ 	];
+ 	/**
+ 	 * @var bool Whether inline CSS is allowed
+@@ -70,18 +58,6 @@
+ 	/** @var array Domains from which CSS can get loaded */
+ 	protected $allowedStyleDomains = [
+ 		'\'self\'',
+-		'metrics.fairdata.fi',
+-		'metrics.fd-test.csc.fi',
+-		'sso.fairdata.fi',
+-		'sso.demo.fairdata.fi',
+-		'sso.fd-test.csc.fi',
+-		'sso.fd-stable.csc.fi',
+-		'sso.fd-staging.csc.fi',
+-		'sso.fd-rework.csc.fi',
+-		'sso.fd-dev.csc.fi',
+-		'ps.fd-dev.csc.fi:4443',
+-		'psdev.fd-dev.csc.fi:4443',
+-		'psdev-nc21.fd-dev.csc.fi:4443',
+ 	];
+ 	/** @var array Domains from which images can get loaded */
+ 	protected $allowedImageDomains = [
+@@ -92,8 +68,6 @@
+ 	/** @var array Domains to which connections can be done */
+ 	protected $allowedConnectDomains = [
+ 		'\'self\'',
+-		'metrics.fairdata.fi',
+-		'metrics.fd-test.csc.fi',
+ 	];
+ 	/** @var array Domains from which media elements can be loaded */
+ 	protected $allowedMediaDomains = [

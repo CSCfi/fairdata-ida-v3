@@ -1,0 +1,44 @@
+--- /var/ida/nextcloud-old/lib/private/Files/Storage/Local.php	2024-02-20 10:11:39.293443321 +0000
++++ /var/ida/nextcloud-old/lib/private/Files/Storage/Local.php.original	2024-02-20 10:11:39.293443321 +0000
+@@ -118,18 +118,14 @@
+ 					$it->next();
+ 					continue;
+ 				} elseif ($file->isDir()) {
+-					// rmdir($file->getPathname());  BUG: This fails if the directory is not empty. Using system call instead.
+-					@system('rm -rf -- ' . escapeshellarg($file->getPathname()), $retval);
+-					if ($retval != 0) {
+-				        throw new \Exception('Failed to remove directory: ' . $file->getPathname(), false);
+-					}
++					rmdir($file->getPathname());
+ 				} elseif ($file->isFile() || $file->isLink()) {
+-					@unlink($file->getPathname());
++					unlink($file->getPathname());
+ 				}
+ 				$it->next();
+ 			}
+ 			clearstatcache(true, $this->getSourcePath($path));
+-			return @rmdir($this->getSourcePath($path));
++			return rmdir($this->getSourcePath($path));
+ 		} catch (\UnexpectedValueException $e) {
+ 			return false;
+ 		}
+@@ -364,7 +360,7 @@
+ 
+ 	public function fopen($path, $mode) {
+ 		$oldMask = umask(022);
+-		$result = @fopen($this->getSourcePath($path), $mode);
++		$result = fopen($this->getSourcePath($path), $mode);
+ 		umask($oldMask);
+ 		return $result;
+ 	}
+@@ -474,10 +470,6 @@
+ 			return $fullPath;
+ 		}
+ 
+-	    if (strpos($realPath, "/mnt/storage_vol0") === 0) {
+-			return $fullPath;
+-		}
+-
+ 		\OCP\Util::writeLog('core', "Following symlinks is not allowed ('$fullPath' -> '$realPath' not inside '{$this->realDataDir}')", ILogger::ERROR);
+ 		throw new ForbiddenException('Following symlinks is not allowed', false);
+ 	}

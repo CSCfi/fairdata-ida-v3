@@ -1,0 +1,26 @@
+OC.L10N.register(
+    "viewer",
+    {
+    "Image saved" : "Gambar disimpan",
+    "Edit" : "Sunting",
+    "Open sidebar" : "Buka jendela samping",
+    "Download" : "Unduh",
+    "Delete" : "Hapus",
+    "View" : "Tampilan",
+    "Name" : "Nama",
+    "Save" : "Simpan",
+    "Back" : "Kembali",
+    "Reset" : "Setel ulang",
+    "Cancel" : "Membatalkan",
+    "Apply" : "Terapkan",
+    "Warning" : "Peringatan",
+    "Confirm" : "Konfirmasi",
+    "Undo" : "Undo",
+    "Value" : "Nilari",
+    "Image" : "Gambar",
+    "Line" : "Garis",
+    "Text" : "Teks",
+    "Size" : "Ukuran",
+    "Menu" : "Menu"
+},
+"nplurals=1; plural=0;");

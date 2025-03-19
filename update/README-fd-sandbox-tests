@@ -1,0 +1,54 @@
+
+In the fd-sandbox environment, the iterative test process should be as follows:
+
+1. Initialize fresh IDA instances comparable to current fd-stable configuration (with PHP 8.0)
+and deploying the latest master branch of fairdata-ida, so that it is as close as possible
+to the current production configuration
+
+2. Create the project and user accounts used by the safe tests, by executing the following commands:
+
+sudo -u apache /var/ida/admin/ida_project ADD 2011020 100
+sudo -u apache /var/ida/admin/ida_user ADD ida-test-user 2011020
+
+User password will default to test user password defined in TEST_USER_PASS in /var/ida/config/config.sh
+An alternative password can be defined with the command:
+
+sudo -u apache /var/ida/nextcloud/occ user:resetpassword ida-test-user
+
+3. Run all safe tests to ensure that everything is working 100%
+
+4. First test the update process with step variant 4a, then test the update process with variant 4b
+
+4a. Define IDA_ENVIRONMENT="DEV" and use non-production credentials per normal non-production
+environment practices; which will result in /var/ida/update/extract-baseline-validation-data 
+initializing and using test accounts using fairdata-test-accounts when it is run in step 4
+
+NOTE: The fairdata-test-accounts repository is assumed to be cloned in /usr/local/fd but its
+pathname can be redefined in init.sh in the FAIRDATA_TEST_ACCOUNTS environment variable
+
+4b. Define IDA_ENVIRONMENT="PRODUCTION", clone the production database, and use production
+credentials which match the cloned database; which will then fully test the production update
+process with actual production data
+
+5. Follow the update steps as defined in /var/ida/update/README
+
+NOTE: When following variant step 4a above, do not stop postprocessing agents or rabbitmq, as
+they will be needed to initialize test accounts used for the DEV based tests.
+
+As often as needed, repeat this process ...
+
+NOTE: Regarding interative testing in fd-staging, there is a utility script /var/ida/update/reset-database
+that can be used to discard all migrated data from the new database 'nextcloud30' and should enable iterative
+tests of the migration and validation process based on a cloned copy of the production database stored in the
+old database 'nextcloud', without having to repeat the server update process to Nextcloud 30 and PHP 8.3.
+
+Of course, testing of the full update process, including PHP 8.0->8.3, etc. would require discarding and
+rebuilding the IDA instances and fully deleting the new database 'nextcloud30', but presumably (optimally)
+the production database cloning would only need to be done once, and the database servers can be left out
+of any rebuilding of the fd-sandbox environment during iterative testing of the update process, leaving
+the old database 'nextcloud' entact and just deleting the new database.
+
+***************************************************************************************************
+*** Be sure to purge all production data and credentials from the fd-sandbox environment once all
+*** testing has been completed and the updated version of IDA is ready for deployment.
+***************************************************************************************************

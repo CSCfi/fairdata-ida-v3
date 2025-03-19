@@ -1,0 +1,74 @@
+--- /var/ida/nextcloud-new/apps/files/js/fileactionsmenu.js	2024-11-05 08:30:09.001704801 +0000
++++ /var/ida/nextcloud-old/apps/files/js/fileactionsmenu.js	2024-02-20 10:11:36.709434562 +0000
+@@ -1,7 +1,11 @@
+-/**
+- * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
+- * SPDX-FileCopyrightText: 2015-2016 ownCloud, Inc.
+- * SPDX-License-Identifier: AGPL-3.0-or-later
++/*
++ * Copyright (c) 2014
++ *
++ * This file is licensed under the Affero General Public License version 3
++ * or later.
++ *
++ * See the COPYING-README file.
++ *
+  */
+ 
+ (function() {
+@@ -45,8 +49,7 @@
+ 			var actions = fileActions.getActions(
+ 				fileActions.getCurrentMimeType(),
+ 				fileActions.getCurrentType(),
+-				fileActions.getCurrentPermissions(),
+-				fileActions.getCurrentFile()
++				fileActions.getCurrentPermissions()
+ 			);
+ 			var actionSpec = actions[actionName];
+ 			var fileName = this._context.$file.attr('data-file');
+@@ -68,11 +71,11 @@
+ 		render: function() {
+ 			var self = this;
+ 			var fileActions = this._context.fileActions;
++			var inRoot = this._context.dir === '/';
+ 			var actions = fileActions.getActions(
+ 				fileActions.getCurrentMimeType(),
+ 				fileActions.getCurrentType(),
+-				fileActions.getCurrentPermissions(),
+-				fileActions.getCurrentFile()
++				fileActions.getCurrentPermissions()
+ 			);
+ 
+ 			var defaultAction = fileActions.getCurrentDefaultFileAction();
+@@ -80,6 +83,19 @@
+ 			var items = _.filter(actions, function(actionSpec) {
+ 				return !defaultAction || actionSpec.name !== defaultAction.name;
+ 			});
++			items = items.filter(function(item) {
++				if (inRoot) {
++					if (
++						item.name === 'Remove'
++						|| item.name === 'MoveCopy'
++						|| item.name === 'Delete'
++						|| item.name === 'Unshare'
++						|| item.name === 'Rename'
++					)
++					return false;
++				}
++				return true;
++			});
+ 			items = _.map(items, function(item) {
+ 				if (_.isFunction(item.displayName)) {
+ 					item = _.extend({}, item);
+@@ -129,11 +145,6 @@
+ 			this.render();
+ 			this.$el.removeClass('hidden');
+ 
+-			window._nc_event_bus.emit('files:action-menu:opened', {
+-				el: this.$el[0],
+-				context,
+-			})
+-
+ 			OC.showMenu(null, this.$el);
+ 		}
+ 	});

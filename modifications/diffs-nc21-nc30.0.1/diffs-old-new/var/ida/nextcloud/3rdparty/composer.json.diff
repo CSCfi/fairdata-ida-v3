@@ -1,0 +1,110 @@
+--- /var/ida/nextcloud-new/3rdparty/composer.json	2024-11-05 08:30:09.295705819 +0000
++++ /var/ida/nextcloud-old/3rdparty/composer.json	2024-02-20 10:11:35.723431220 +0000
+@@ -1,6 +1,5 @@
+ {
+ 	"name": "nextcloud/3rdparty",
+-	"version": "dev-stable30",
+ 	"description": "All 3rdparty components",
+ 	"license": "MIT",
+ 	"config": {
+@@ -9,62 +8,51 @@
+ 		"optimize-autoloader": true,
+ 		"classmap-authoritative": true,
+ 		"platform": {
+-			"php": "8.1.0"
++			"php": "7.3.0"
+ 		},
+-		"sort-packages": true,
+-		"allow-plugins": {
+-			"cweagans/composer-patches": true
+-		}
++		"sort-packages": true
+ 	},
+ 	"require": {
+-		"php": "^8.1",
+-		"aws/aws-sdk-php": "^3.240",
++		"firebase/php-jwt": "^5.2",
++		"php": "^7.3|^8.0",
++		"aws/aws-sdk-php": "^3.35",
+ 		"bantu/ini-get-wrapper": "v1.0.1",
+-		"cweagans/composer-patches": "^1.7",
+-		"deepdiver/zipstreamer": "^2.0.3",
+-		"deepdiver1975/tarstreamer": "^2.1.0",
+-		"doctrine/dbal": "^3.9.1",
+-		"egulias/email-validator": "^4.0.2",
+-		"fusonic/opengraph": "^2.3.0",
+-		"giggsey/libphonenumber-for-php-lite": "^8.13.12",
+-		"guzzlehttp/guzzle": "^7.8.1",
+-		"icewind/searchdav": "^3.1.0",
+-		"icewind/streams": "^0.7.7",
+-		"kornrunner/blurhash": "^1.2",
+-		"laravel/serializable-closure": "^1.3.5",
+-		"mexitek/phpcolors": "^1.0",
+-		"microsoft/azure-storage-blob": "^1.5.4",
+-		"mlocati/ip-lib": "^1.18",
++		"christophwurst/id3parser": "^0.1.1",
++		"deepdiver/zipstreamer": "2.0.0",
++		"deepdiver1975/tarstreamer": "v2.0.0",
++		"doctrine/dbal": "3.0.0",
++		"egulias/email-validator": "2.1.25",
++		"giggsey/libphonenumber-for-php": "^8.12",
++		"guzzlehttp/guzzle": "^7.2",
++		"icewind/searchdav": "^2.0.0",
++		"icewind/streams": "v0.7.2",
++		"league/flysystem": "^1.0",
++		"microsoft/azure-storage-blob": "^1.5",
+ 		"nextcloud/lognormalizer": "^1.0",
++		"nikic/php-parser": "^4.2",
++		"patchwork/jsqueeze": "^2.0",
+ 		"pear/archive_tar": "^1.4.9",
+-		"pear/pear-core-minimal": "^1.10",
+-		"php-http/guzzle7-adapter": "^1.0.0",
++		"pear/pear-core-minimal": "^v1.10",
++		"phpseclib/phpseclib": "2.0.31",
++		"php-http/guzzle7-adapter": "^0.1.1",
+ 		"php-opencloud/openstack": "^3.1",
+-		"phpseclib/phpseclib": "^2.0.45",
+-		"pimple/pimple": "^3.5.0",
+-		"psr/clock": "^1.0",
+-		"psr/container": "^2.0.2",
+-		"psr/event-dispatcher": "^1.0",
+-		"punic/punic": "^3.8",
+-		"sabre/dav": "^4.4.0",
+-		"scssphp/scssphp": "^1.12",
++		"pimple/pimple": "3.3.1",
++		"psr/container": "^1.0",
++		"punic/punic": "^1.6",
++		"sabre/dav": "^4.1.3",
++		"scssphp/scssphp": "^1.4.0",
+ 		"stecman/symfony-console-completion": "^0.11.0",
+-		"symfony/console": "^5.4.24",
+-		"symfony/event-dispatcher": "^5.4.26",
+-		"symfony/http-foundation": "^5.4.24",
+-		"symfony/mailer": "^5.4.22",
+-		"symfony/polyfill-intl-grapheme": "^1.28",
+-		"symfony/polyfill-intl-normalizer": "^1.28",
+-		"symfony/process": "^5.4.34",
+-		"symfony/routing": "^5.4.24",
+-		"symfony/translation": "^6.4.4",
+-		"wapmorgan/mp3info": "^0.1.0",
+-		"web-auth/webauthn-lib": "^4.9.1"
+-	},
+-	"scripts": {
+-		"lint": "find . -name \\*.php -print0 | xargs -0 -n1 php -l"
+-	},
+-	"extra": {
+-		"patches-file": "composer.patches.json"
++		"swiftmailer/swiftmailer": "^6.0",
++		"symfony/console": "4.4.19",
++		"symfony/event-dispatcher": "4.4.19",
++		"symfony/event-dispatcher-contracts": "1.1.9",
++		"symfony/polyfill-intl-normalizer": "^1.20",
++		"symfony/polyfill-intl-grapheme": "^1.20",
++		"symfony/process": "4.4.19",
++		"symfony/routing": "4.4.19",
++		"symfony/translation": "4.4.19",
++		"web-auth/webauthn-lib": "^3.1",
++		"php-ds/php-ds": "^1.3",
++		"opis/closure": "^3.6"
+ 	}
+ }

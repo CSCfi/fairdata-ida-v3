@@ -1,0 +1,42 @@
+--- /var/ida/nextcloud-old/apps/settings/lib/Settings/Personal/PersonalInfo.php	2024-02-20 10:11:37.864438477 +0000
++++ /var/ida/nextcloud-old/apps/settings/lib/Settings/Personal/PersonalInfo.php.original	2024-02-20 10:11:37.864438477 +0000
+@@ -198,8 +198,6 @@
+ 		$uid = $user->getUID();
+ 
+ 		$userConfLang = $this->config->getUserValue($uid, 'core', 'lang', $this->l10nFactory->findLanguage());
+-
+-		try {
+ 		    $languages = $this->l10nFactory->getLanguages();
+ 
+ 		    // associate the user language with the proper array
+@@ -210,8 +208,6 @@
+ 			    $userLangIndex = array_search($userConfLang, array_column($languages['languages'], 'code'));
+ 			    $userLang = $languages['languages'][$userLangIndex];
+ 		    }
+-		} catch (\Exception $e) { ; }
+-
+ 		// if user language is not available but set somehow: show the actual code as name
+ 		if (!is_array($userLang)) {
+ 			$userLang = [
+@@ -241,10 +237,7 @@
+ 		$localeCodes = $this->l10nFactory->findAvailableLocales();
+ 
+ 		$userLocale = array_filter($localeCodes, function ($value) use ($userLocaleString) {
+-			if (isset($value['code'])) {
+ 			    return $userLocaleString === $value['code'];
+-			}
+-			return false;
+ 		});
+ 
+ 		if (!empty($userLocale)) {
+@@ -252,10 +245,7 @@
+ 		}
+ 
+ 		$localesForLanguage = array_filter($localeCodes, function ($localeCode) use ($userLang) {
+-			if (isset($localeCode['code'])) {
+ 			    return 0 === strpos($localeCode['code'], $userLang);
+-			}
+-			return false;
+ 		});
+ 
+ 		if (!$userLocale) {

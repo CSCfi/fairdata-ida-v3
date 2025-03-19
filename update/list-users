@@ -1,0 +1,43 @@
+#!/bin/bash
+#
+# This script will list all users defined in the old database, excluding admin
+
+. /var/ida/config/config.sh
+
+# Ensure DBNAME_OLD is defined in configuration
+if [[ -z "$DBNAME_OLD" ]]; then
+  echo "Error: Environment variable DBNAME_OLD must be defined" >&2
+  exit 1
+fi
+
+# Ensure DBHOST, DBPORT, DBROUSER, and DBROPASSWORD are defined in configuration
+if [[ -z "$DBHOST" ]]; then
+  echo "Error: Environment variable DBHOST must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPORT" ]]; then
+  echo "Error: Environment variable DBPORT must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBROUSER" ]]; then
+  echo "Error: Environment variable DBROUSER must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBROPASSWORD" ]]; then
+  echo "Error: Environment variable DBROPASSWORD must be defined" >&2
+  exit 1
+fi
+
+#------------------------------------------------------------------------------------------------------------------------
+
+export PGPASSWORD="$DBROPASSWORD"
+
+PSQL="psql -h $DBHOST -p $DBPORT -d $DBNAME_OLD -U $DBROUSER"
+
+USERS=$($PSQL -c "\COPY (SELECT uid FROM oc_users WHERE uid <> 'admin' ORDER BY uid) TO STDOUT")
+
+DISABLED_USERS=$($PSQL -c "\COPY (SELECT userid FROM oc_preferences WHERE appid = 'core' AND configkey = 'enabled' and configvalue = 'false' ORDER BY userid) TO STDOUT")
+
+DISABLED_USER_LIST=$(echo "$DISABLED_USERS" | sed 's/^/^/; s/$/$/; s/\n/\\|^/g')
+
+echo "$USERS" | grep -v -E "$DISABLED_USER_LIST"

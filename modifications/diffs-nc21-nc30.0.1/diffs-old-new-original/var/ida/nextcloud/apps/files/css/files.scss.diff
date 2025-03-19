@@ -1,0 +1,909 @@
+--- /var/ida/nextcloud-new/apps/files/css/files.scss	2024-11-05 08:30:08.999704795 +0000
++++ /var/ida/nextcloud-old/apps/files/css/files.scss.original	2024-02-20 10:11:36.585434142 +0000
+@@ -1,15 +1,14 @@
+-/*!
+- * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
+- * SPDX-FileCopyrightText: 2012-2016 ownCloud, Inc.
+- * SPDX-License-Identifier: AGPL-3.0-only
++/**
++ * Copyright (c) 2011, Jan-Christoph Borchardt, http://jancborchardt.net
++ * @copyright Copyright (c) 2019, Fabian Dreßler <nudelsalat@clouz.de>
++ *
++ * This file is licensed under the Affero General Public License version 3 or later.
++ * See the COPYING-README file.
+  */
+-@use 'variables';
+-@import 'functions';
+ 
+ /* FILE MENU */
+ .actions {
+-	// (50px - 44px) / 2
+-	padding: 3px;
++	padding: 5px;
+ 	height: 100%;
+ 	display: inline-block;
+ 	float: left;
+@@ -21,7 +20,7 @@
+ 	background-color: var(--color-background-hover);
+ }
+ .actions .button a:active {
+-	background-color: var(--color-primary-element-light);
++	background-color: var(--color-primary-light);
+ }
+ 
+ .actions.creatable {
+@@ -30,12 +29,6 @@
+ 	flex: 1 1;
+ 	.button:not(:last-child) {
+ 		margin-right: 3px;
+-		width: unset;
+-		gap: 14px;
+-		background-color: var(--color-primary-element-light);
+-		color: var(--color-primary-element-light-text);
+-		border: unset;
+-		padding: 0px 20px;
+ 	}
+ }
+ 
+@@ -53,28 +46,29 @@
+ 
+ .newFileMenu .error,
+ .newFileMenu .error + .icon-confirm,
+-.files-fileList .error {
++#fileList .error {
+ 	color: var(--color-error);
+ 	border-color: var(--color-error);
+ }
+ 
+ /* FILE TABLE */
+-.files-filestable {
++#filestable {
+ 	position: relative;
+ 	width: 100%;
+ 	min-width: 250px;
+ 	display: block;
+ 	flex-direction: column;
+ 	// hide table if emptycontent is not hidden
+-	.emptycontent:not(.hidden) ~ & {
++	#emptycontent:not(.hidden) ~ & {
+ 		display: none;
+ 	}
+ 	// floating header
+ 	thead {
+ 		position: -webkit-sticky;
+ 		position: sticky;
+-		// breadcrumbs
+-		top: 44px;
++		@include position('sticky');
++		// header + breadcrumbs
++		top: $header-height;
+ 		// under breadcrumbs, over file list
+ 		z-index: 60;
+ 		display: block;
+@@ -96,15 +90,10 @@
+ 				color: var(--color-text-maxcontrast);
+ 			}
+ 		}
+-
+-		// Deactivates the possiblility to checkmark or click on the encrypted folder
+-		tr[data-e2eencrypted="true"] .selection {
+-			pointer-events: none;
+-		}
+ 	}
+ }
+ 
+-.files-filestable.hidden {
++#filestable.hidden {
+ 	display: none;
+ }
+ 
+@@ -118,26 +107,62 @@
+ 	// force  the width to be the full width to not go bigger than the screen
+ 	// flex will grow for the mobile view if necessary
+ 	width: calc(100% - 300px);
+-	// disable overflow-anchor which causes undesired behaviour on Firefox
+-	overflow-anchor: none;
+ }
+ 
+-.file-drag, .file-drag .files-filestable tbody tr, .file-drag .files-filestable tbody tr:hover {
+-	background-color: var(--color-primary-element-light) !important;
++.file-drag, .file-drag #filestable tbody tr, .file-drag #filestable tbody tr:hover {
++	background-color: var(--color-primary-light) !important;
+ }
+ 
+ .app-files #app-content.dir-drop {
+ 	background-color: var(--color-main-background) !important;
+ }
+ 
+-.file-drag .files-filestable tbody tr, .file-drag .files-filestable tbody tr:hover{
++.file-drag #filestable tbody tr, .file-drag #filestable tbody tr:hover{
+ 	background-color: transparent !important;
+ }
+ 
+-.app-files #app-content.dir-drop .files-filestable tbody tr.dropping-to-dir{
+-	background-color: var(--color-primary-element-light) !important;
++.app-files #app-content.dir-drop #filestable tbody tr.dropping-to-dir{
++	background-color: var(--color-primary-light) !important;
++}
++
++/* icons for sidebar */
++.nav-icon-files {
++	@include icon-color('folder', 'files', $color-black);
++}
++.nav-icon-recent {
++	@include icon-color('recent', 'files', $color-black);
++}
++.nav-icon-favorites {
++	@include icon-color('star-dark', 'actions', $color-black, 2, true);
++}
++.nav-icon-sharingin,
++.nav-icon-sharingout,
++.nav-icon-pendingshares,
++.nav-icon-shareoverview {
++	@include icon-color('share', 'files', $color-black);
++}
++.nav-icon-sharinglinks {
++	@include icon-color('public', 'files', $color-black);
++}
++.nav-icon-extstoragemounts {
++	@include icon-color('external', 'files', $color-black);
++}
++.nav-icon-trashbin {
++	@include icon-color('delete', 'files', $color-black);
++}
++.nav-icon-trashbin-starred {
++	@include icon-color('delete', 'files', #ff0000);
++}
++.nav-icon-deletedshares {
++	@include icon-color('unshare', 'files', $color-black);
++}
++.nav-icon-favorites-starred {
++	@include icon-color('star-dark', 'actions', $color-yellow, 2, true);
+ }
+ 
++#app-navigation .nav-files a.nav-icon-files {
++	width: auto;
++}
+ /* button needs overrides due to navigation styles */
+ #app-navigation .nav-files a.new {
+ 	width: 40px;
+@@ -155,22 +180,22 @@
+ 	opacity: 0.3;
+ }
+ 
+-.files-filestable tbody tr {
++#filestable tbody tr {
+ 	height: 51px;
+ }
+-.files-filestable tbody tr:hover,
+-.files-filestable tbody tr:focus,
+-.files-filestable tbody .name:focus,
+-.files-filestable tbody tr:hover .filename form,
++#filestable tbody tr:hover,
++#filestable tbody tr:focus,
++#filestable tbody .name:focus,
++#filestable tbody tr:hover .filename form,
+ table tr.mouseOver td {
+ 	background-color: var(--color-background-hover);
+ }
+-.files-filestable tbody tr:active,
+-.files-filestable tbody tr.highlighted,
+-.files-filestable tbody tr.highlighted .name:focus,
+-.files-filestable tbody tr.selected,
+-.files-filestable tbody tr.searchresult {
+-	background-color: var(--color-primary-element-light);
++#filestable tbody tr:active,
++#filestable tbody tr.highlighted,
++#filestable tbody tr.highlighted .name:focus,
++#filestable tbody tr.selected,
++#filestable tbody tr.searchresult {
++	background-color: var(--color-primary-light);
+ }
+ 
+ tbody a { color: var(--color-main-text); }
+@@ -206,21 +231,13 @@
+ 	box-sizing: border-box;
+ 	-moz-box-sizing: border-box;
+ 	vertical-align: middle;
+-	&:focus-visible {
+-		border-radius: 2px;
+-	}
+ }
+ table.multiselect th .columntitle {
+ 	display: inline-block;
+-	margin-right: -20px;
+ }
+ table th .columntitle.name {
+ 	padding-left: 0;
+-	margin-left: 44px;
+-}
+-
+-table.multiselect th .columntitle.name {
+-	margin-left: 0;
++	margin-left: 50px;
+ }
+ 
+ table th .sort-indicator {
+@@ -257,30 +274,33 @@
+ 	background-position: 8px center;
+ 	background-repeat: no-repeat;
+ }
+-table th.column-name {
++table th#headerName {
+ 	position: relative;
+ 	width: 9999px; /* not really sure why this works better than 100% … table styling */
+ 	padding: 0;
+ }
+ 
+-.column-name-container {
++#headerName-container {
+ 	position: relative;
+ 	height: 50px;
+ }
+ 
+-table th.column-selection {
+-	padding-top: 2px;
+-}
+-table th.column-size, table td.filesize {
++table th#headerSize, table td.filesize {
+ 	text-align: right;
+ }
+-table th.column-mtime, table td.date,
++table th#headerDate, table td.date,
+ table th.column-last, table td.column-last {
+ 	-moz-box-sizing: border-box;
+ 	box-sizing: border-box;
+ 	position: relative;
+ 	/* this can not be just width, both need to be set … table styling */
+ 	min-width: 130px;
++	max-width: 130px;
++}
++
++#app-content-files thead,
++#app-content-trashbin thead {
++	top: 94px;
+ }
+ 
+ #app-content-recent,
+@@ -292,9 +312,6 @@
+ #app-content-deletedshares,
+ #app-content-pendingshares {
+ 	margin-top: 22px;
+-	thead {
+-		top: 0;
+-	}
+ }
+ 
+ table.multiselect thead th {
+@@ -306,11 +323,11 @@
+ 	margin-right: 27%;
+ }
+ 
+-table.multiselect .column-name {
++table.multiselect #headerName {
+ 	position: relative;
+ 	width: 9999px; /* when we use 100%, the styling breaks on mobile … table styling */
+ }
+-table.multiselect .column-mtime>a {
++table.multiselect #modified {
+ 	display: none;
+ }
+ 
+@@ -349,9 +366,7 @@
+ 	display: inline-block;
+ 	width: 32px;
+ 	height: 32px;
+-	background-size: contain;
+-	background-position: center;
+-	background-repeat: no-repeat;
++	background-size: 32px;
+ 	margin-left: 9px;
+ 	margin-top: 9px;
+ 	border-radius: var(--border-radius);
+@@ -368,9 +383,9 @@
+ 	border: 1px solid var(--color-border);
+ }
+ 
+-table:not(.view-grid) td.filename input.filename {
+-	width: 70% !important;
+-	margin-left: 48px !important;
++table td.filename input.filename {
++	width: 70%;
++	margin-left: 48px;
+ 	cursor: text;
+ }
+ table td.filename form {
+@@ -405,20 +420,25 @@
+ 			padding: 0 20px 0 0;
+ 		}
+ 	}
++
++	.uploadtext {
++		position: absolute;
++		left: 55px;
++	}
+ }
+ 
+-.hide-hidden-files .files-filestable .files-fileList tr.hidden-file,
+-.hide-hidden-files .files-filestable .files-fileList tr.hidden-file.dragging {
+-	display: none !important;
++.hide-hidden-files #filestable #fileList tr.hidden-file,
++.hide-hidden-files #filestable #fileList tr.hidden-file.dragging {
++	display: none;
+ }
+ 
+-.files-fileList tr.animate-opacity {
++#fileList tr.animate-opacity {
+ 	-webkit-transition:opacity 250ms;
+ 	-moz-transition:opacity 250ms;
+ 	-o-transition:opacity 250ms;
+ 	transition:opacity 250ms;
+ }
+-.files-fileList tr.dragging {
++#fileList tr.dragging {
+ 	opacity: 0.2;
+ }
+ 
+@@ -432,22 +452,13 @@
+ /* for smaller resolutions - see mobile.css */
+ 
+ table td.filename .uploadtext {
+-	position: absolute;
+ 	font-weight: normal;
+-	// checkbox width
+-	margin-left: 50px;
+-	left: 0;
+-	bottom: 0;
++	margin-left: 55px;
++	margin-top: 5px;
+ 	height: 20px;
+-	padding: 0 4px;
+-	// align with file name
+-	padding-left: 1px;
++	padding: 10px 0;
+ 	font-size: 11px;
+-	// double the font size
+-	line-height: 22px;
+-	color: var(--color-text-maxcontrast);
+-	text-overflow: ellipsis;
+-	white-space: nowrap;
++	opacity: .5;
+ }
+ 
+ table td.selection {
+@@ -455,46 +466,38 @@
+ }
+ 
+ /* File checkboxes */
+-.files-fileList tr td.selection>.selectCheckBox + label:before {
++#fileList tr td.selection>.selectCheckBox + label:before {
+ 	opacity: 0.3;
+ 	margin-right: 0;
+ }
+ 
+ /* Show checkbox with full opacity when hovering, checked, or selected */
+-.files-fileList tr:hover td.selection>.selectCheckBox + label:before,
+-.files-fileList tr:focus td.selection>.selectCheckBox + label:before,
+-.files-fileList tr td.selection>.selectCheckBox:checked + label:before,
+-.files-fileList tr.selected td.selection>.selectCheckBox + label:before {
++#fileList tr:hover td.selection>.selectCheckBox + label:before,
++#fileList tr:focus td.selection>.selectCheckBox + label:before,
++#fileList tr td.selection>.selectCheckBox:checked + label:before,
++#fileList tr.selected td.selection>.selectCheckBox + label:before {
+ 	opacity: 1;
+ }
+ 
+ /* Show checkbox with half opacity when selecting range */
+-.files-fileList tr.halfselected td.selection>.selectCheckBox + label:before {
++#fileList tr.halfselected td.selection>.selectCheckBox + label:before {
+ 	opacity: 0.5;
+ }
+ 
+ /* Use label to have bigger clickable size for checkbox */
+-.files-fileList tr td.selection>.selectCheckBox,
++#fileList tr td.selection>.selectCheckBox,
+ .select-all {
+ 	& + label {
+ 		padding: 16px;
+ 	}
+ 
+-	&:focus-visible + label {
++	&:focus + label {
+ 		background-color: var(--color-background-hover);
+ 		border-radius: var(--border-radius-pill);
+-		outline: none !important;
+-		border: 2px solid var(--color-primary-element) !important;
+-		padding: 14px;
+ 	}
+ }
+ 
+-.files-fileList tr td.selection>.selectCheckBox:focus-visible + label,
+-.select-all:focus-visible + label {
+-	outline-offset: 0px;
+-}
+-
+-.files-fileList tr td.filename {
++#fileList tr td.filename {
+ 	position: relative;
+ 	width: 100%;
+ 	padding-left: 0;
+@@ -502,39 +505,24 @@
+ 	-webkit-transition:background-image 500ms; -moz-transition:background-image 500ms; -o-transition:background-image 500ms; transition:background-image 500ms;
+ }
+ 
+-.files-fileList tr td.filename a.name label,
+-.files-fileList tr td.filename p.name label {
++#fileList tr td.filename a.name label,
++#fileList tr td.filename p.name label {
+ 	position: absolute;
+ 	width: 80%;
+ 	height: 50px;
+ }
+ 
+-.files-fileList tr td.filename .favorite {
++#fileList tr td.filename .favorite {
+ 	display: inline-block;
+ 	float: left;
+ }
+-.files-fileList tr td.filename .favorite-mark {
++#fileList tr td.filename .favorite-mark {
+ 	position: absolute;
+ 	display: block;
+-	top: -8px;
+-	right: -8px;
++	top: -6px;
++	right: -6px;
+ 	line-height: 100%;
+ 	text-align: center;
+-	&.permanent {
+-		// Create background around the favorite marker to ensure there is enough contrast
+-		background-color: var(--color-main-background);
+-		mask: var(--icon-star-rounded-white) no-repeat;
+-		mask-size: 22px 22px;
+-
+-		width: 22px;
+-		height: 22px;
+-		display: flex;
+-		align-content: center;
+-		justify-content: center;
+-	}
+-}
+-.files-fileList tr:hover td.filename .favorite-mark.permanent {
+-	background-color: var(--color-background-hover);
+ }
+ 
+ #uploadsize-message,#delete-confirm { display:none; }
+@@ -551,23 +539,24 @@
+ /* fix position of bubble pointer for Files app */
+ .bubble,
+ #app-navigation .app-navigation-entry-menu {
++	border-top-right-radius: 3px;
+ 	min-width: 100px;
+ }
+ 
+ /* force show the loading icon, not only on hover */
+-.files-fileList .icon-loading-small {
++#fileList .icon-loading-small {
+ 	opacity: 1 !important;
+ 	display: inline !important;
+ }
+ 
+-.files-fileList .action.action-share-notification span, .files-fileList a.name {
++#fileList .action.action-share-notification span, #fileList a.name {
+ 	cursor: default !important;
+ }
+ 
+ /*
+  * Make the disabled link look not like a link in file list rows
+  */
+-.files-fileList a.name.disabled {
++#fileList a.name.disabled {
+ 	* {
+ 		cursor: default;
+ 	}
+@@ -587,13 +576,6 @@
+ 	vertical-align: text-bottom;
+ }
+ 
+-a.action.action-editlocally,
+-a.action.action-setreminder {
+-	img.icon {
+-		filter: var(--background-invert-if-dark);
+-	}
+-}
+-
+ /* Actions for selected files */
+ .selectedActions {
+     position: relative;
+@@ -622,7 +604,7 @@
+ 	margin-top: -3px;
+ }
+ 
+-.files-fileList td a {
++#fileList td a {
+ 	a.action {
+ 		display: inline;
+ 		padding: 17px 8px;
+@@ -685,7 +667,7 @@
+ }
+ 
+ // Ellipsize long sharer names
+-.files-fileList .action.action-share.permanent.shared-style span:not(.icon) {
++#fileList .action.action-share.permanent.shared-style span:not(.icon) {
+ 	display: inline-block;
+ 	max-width: 70px;
+ 	overflow: hidden;
+@@ -694,32 +676,32 @@
+ 	margin-left: 6px;
+ }
+ 
+-.files-fileList .remoteAddress .userDomain {
++#fileList .remoteAddress .userDomain {
+ 	margin-left: 0 !important;
+ }
+ 
+-.files-fileList .favorite-mark.permanent {
++#fileList .favorite-mark.permanent {
+ 	opacity: 1;
+ }
+ 
+-.files-fileList .fileActionsMenu a.action:hover,
+-.files-fileList .fileActionsMenu a.action:focus,
++#fileList .fileActionsMenu a.action:hover,
++#fileList .fileActionsMenu a.action:focus,
+ /* show share action of shared items darker to distinguish from non-shared */
+-.files-fileList a.action.action-share.shared-style:hover,
+-.files-fileList a.action.action-share.shared-style:focus {
++#fileList a.action.action-share.shared-style:hover,
++#fileList a.action.action-share.shared-style:focus {
+ 	opacity: 1;
+ }
+ 
+-.files-fileList tr a.action.disabled {
++#fileList tr a.action.disabled {
+ 	background: none;
+ }
+ 
+-.selectedActions a.download.disabled,
+-.files-fileList tr a.action.action-download.disabled {
++#selectedActionsList a.download.disabled,
++#fileList tr a.action.action-download.disabled {
+ 	color: #000000;
+ }
+ 
+-.files-fileList tr:hover a.action.disabled:hover * {
++#fileList tr:hover a.action.disabled:hover * {
+ 	cursor: default;
+ }
+ 
+@@ -729,7 +711,7 @@
+ 	$action-menu-items-count: 7; // list view has currently max 7 items in its action menu
+ 	height: 44px * ($action-menu-items-count + 0.5); // 0.5 is added to show some whitespace below
+ }
+-.files-filestable .summary .filesummary {
++#filestable .filesummary {
+ 	width: 100%;
+ 	/* Width of checkbox and file preview */
+ 	padding-left: 101px;
+@@ -804,111 +786,53 @@
+ 
+ 	/* Center triangle */
+ 	&::after {
+-		left: 84px !important;
++		left: 57px !important;
+ 	}
+ }
+ 
+-
+-.files-controls {
+-	box-sizing: border-box;
+-	position: -webkit-sticky;
+-	position: sticky;
+-	height: 50px; /* height of the nav toggle button; */
+-	padding: 0;
+-	margin: 0;
+-	background-color: var(--color-main-background-translucent);
+-	z-index: 62; /* must be above the filelist sticky header and texteditor menubar */
+-	-webkit-user-select: none;
+-	-moz-user-select: none;
+-	-ms-user-select: none;
+-	user-select: none;
+-	display: flex;
+-	top: 0;
+-	padding-left: 50px; /* width of the nav toggle button; */
+-
+-	.actions {
+-		> div,
+-		& {
+-			> .button, button {
+-				box-sizing: border-box;
+-				display: inline-block;
+-				display: flex;
+-				height: 44px;
+-				width: 44px;
+-				padding: 9px; // width - border - icon width = 18px
+-				align-items: center;
+-				justify-content: center;
+-			}
+-			.button.hidden {
+-				display: none;
+-			}
+-		}
+-	}
+-}
+-
+-/* position controls for apps with app-navigation */
+-
+-.viewer-mode #app-navigation + #app-content .files-controls {
+-	left: 0;
+-}
+-
+-.files-filestable .filename .action .icon,
+-.files-filestable .selectedActions a .icon,
+-.files-filestable .filename .favorite-mark .icon,
+-.files-controls .actions .button .icon {
++#filestable .filename .action .icon,
++#filestable .selectedActions a .icon,
++#filestable .filename .favorite-mark .icon,
++#controls .actions .button .icon {
+ 	display: inline-block;
+ 	vertical-align: middle;
+ 	background-size: 16px 16px;
+ }
+ 
+-.files-filestable .filename .favorite-mark {
++#filestable .filename .favorite-mark {
+ 	// Override default icons to always hide the star icon and always show the
+ 	// starred icon even when hovered or focused.
+ 	& .icon-star {
+ 		background-image: none;
+ 	}
+ 	& .icon-starred {
+-		background-image: var(--icon-starred-yellow) !important;
++		@include icon-color('star-dark', 'actions', $color-yellow, 1, true);
+ 	}
+ }
+ 
+-.files-filestable .filename .action .icon.hidden,
+-.files-filestable .selectedActions a .icon.hidden,
+-.files-controls .actions .button .icon.hidden {
++#filestable .filename .action .icon.hidden,
++#filestable .selectedActions a .icon.hidden,
++#controls .actions .button .icon.hidden {
+ 	display: none;
+ }
+ 
+-.files-filestable .filename .action .icon.loading,
+-.files-filestable .selectedActions a .icon.loading,
+-.files-controls .actions .button .icon.loading {
++#filestable .filename .action .icon.loading,
++#filestable .selectedActions a .icon.loading,
++#controls .actions .button .icon.loading {
+ 	width: 15px;
+ 	height: 15px;
+ }
+ 
+ .app-files .actions .button.new {
+ 	position: relative;
+-	width: unset;
+-	gap: 14px;
+-	background-color: var(--color-primary-element-light);
+-	color: var(--color-primary-element-light-text);
+-	border: unset;
+-	padding: 0px 20px;
+-}
+-
+-.breadcrumb {
+-	align-items: center;
+-
+-	.icon-home {
+-		border-radius: var(--border-radius);
+-	}
+ }
+ 
+ .breadcrumb .canDrop > a,
+-.files-filestable tbody tr.canDrop {
+-	background-color: rgba( variables.$color-primary, .3 );
++#filestable tbody tr.canDrop {
++	background-color: rgba( $color-primary, .3 );
+ }
+ .dropzone-background {
+-	background-color: rgba( variables.$color-primary, .3 );
++	background-color: rgba( $color-primary, .3 );
+ 	:hover{
+ 		box-shadow: none !important;
+ 	}
+@@ -934,35 +858,40 @@
+ 	}
+ }
+ 
+-.quota-navigation-item {
++#quota {
+ 	margin: 0 !important;
+ 	border: none;
+ 	border-radius: 0;
+ 	background-color: transparent;
+ 	z-index:1;
+-	height: 44px;
+-	display: flex !important;
+-	flex-direction: column;
+ 
+-	&__text {
+-		height: 30px;
+-	}
+-
+-	&[href='#'] {
++	> a[href='#'] {
+ 		// if no link is set, no mouse feedback
++		box-shadow: none !important;
+ 		&, * {
+ 			cursor: default !important;
+ 		}
+ 	}
+ 
+-	&__container {
++	.quota-container {
+ 		height: 5px;
+ 		border-radius: var(--border-radius);
++
++		div {
++			height: 100%;
++			background-color: var(--color-primary);
+ 	}
+ }
++}
++
++#quotatext {
++	padding: 0;
++	height: 30px;
++	line-height: 30px;
++}
+ 
+ /* GRID */
+-.files-filestable.view-grid:not(.hidden) {
++#filestable.view-grid:not(.hidden) {
+ 	$grid-size: 160px;
+ 	$grid-pad: 14px;
+ 
+@@ -1038,25 +967,14 @@
+ 						 * Position is inherited from the selection while in grid view
+ 						 */
+ 						.favorite-mark {
++							padding: $grid-pad;
+ 							left: auto;
+-							top: -11px; // center in corner of thumbnail
+-							right: -11px; // center in corner of thumbnail
++							top: -22px; // center in corner of thumbnail
++							right: -22px; // center in corner of thumbnail
+ 						}
+ 					}
+ 				}
+ 
+-				.uploadtext {
+-					width: 100%;
+-					margin: 0;
+-					top: 0;
+-					bottom: auto;
+-					// checkbox align
+-					height: 28px;
+-					padding-top: 4px;
+-					// checkbox margins
+-					padding-left: calc(44px - 16px);
+-				}
+-
+ 				.name {
+ 					height: 100%;
+ 					border-radius: var(--border-radius);
+@@ -1066,7 +984,7 @@
+ 					overflow: hidden;
+ 					// we but the thumbnail in background to ensure
+ 					// the name is the default click handler
+-					// force back the cursor which has been overridden
++					// force back the cursor which have been overrided
+ 					// and disabled for some reason...
+ 					cursor: pointer !important;
+ 
+@@ -1102,11 +1020,6 @@
+ 						}
+ 					}
+ 
+-					/* System tags */
+-					.system-tags {
+-						display: none;
+-					}
+-
+ 					.fileactions {
+ 						height: initial;
+ 						margin-top: $grid-size - $grid-pad;
+@@ -1158,7 +1071,6 @@
+ 					input.filename {
+ 						width: 100%;
+ 						margin-left: 0;
+-						cursor: text;
+ 					}
+ 				}
+ 			}
+@@ -1175,7 +1087,10 @@
+ 				top: -8px; // half the checkbox width, center on corner of thumbnail
+ 				left: -8px; // half the checkbox width, center on corner of thumbnail
+ 				display: flex;
++				width: 44px;
++				height: 44px;
+ 				z-index: 10;
++				background: transparent;
+ 
+ 				label {
+ 					width: 44px;
+@@ -1237,27 +1152,20 @@
+ 
+ /* Grid view toggle */
+ #view-toggle {
+-	background-color: var(--color-main-background-translucent);
++	background-color: transparent;
+ 	border: none;
+ 	margin: 0;
+ 	padding: 22px;
+ 	opacity: .5;
+-	float: right;
+-	right: var(--default-grid-baseline);
+-	top: var(--default-grid-baseline);
++	position: fixed;
++	right: 0;
+ 	z-index: 100;
+-	position: sticky;
+ 
+ 	&:hover,
+ 	&:focus,
+ 	#showgridview:focus + & {
+ 		opacity: 1;
+ 	}
+-
+-	&:focus-visible,
+-	#showgridview:focus-visible + & {
+-		box-shadow: inset 0 0 0 2px var(--color-primary-element) !important;
+-	}
+ }
+ 
+ /**
+@@ -1272,7 +1180,7 @@
+ 
+ /* Adjustments for link share page */
+ #body-public {
+-	.files-filestable.view-grid:not(.hidden) tbody td {
++	#filestable.view-grid:not(.hidden) tbody td {
+ 		/* More space for filename since there is no share icon */
+ 		&.filename .name .nametext .innernametext {
+ 			max-width: 124px;
+@@ -1288,7 +1196,6 @@
+ 	#view-toggle {
+ 		position: absolute;
+ 		right: 0;
+-		top: 0;
+ 	}
+ }
+ 
+@@ -1296,24 +1203,3 @@
+ #gallery-button {
+ 	display: none;
+ }
+-
+-#tag_multiple_files_container {
+-	overflow: hidden;
+-	background-color: #fff;
+-	border-radius: 3px;
+-	position: relative;
+-	display: flex;
+-	flex-wrap: wrap;
+-	margin-bottom: 10px;
+-
+-	h3 {
+-		width: 100%;
+-		padding: 0 18px;
+-	}
+-
+-	.systemTagsInputFieldContainer {
+-		flex: 1 1 80%;
+-		min-width: 0;
+-		margin: 0 12px;
+-	}
+-}

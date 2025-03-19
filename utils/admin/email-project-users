@@ -1,0 +1,162 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2019 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#---------------------------------------------------------------------------------
+# NOTE: Unlike most admin scripts, this particular script does not load any
+# common configuration or initialization script but is fully stand-alone.
+#--------------------------------------------------------------------------------
+
+SCRIPT=`basename "$(realpath $0)"`
+
+USAGE="
+Usage: $SCRIPT project subject message
+       $SCRIPT -h
+
+The environment variable EMAIL_SENDER must be defined with a valid email address
+
+The environment variable EMAIL_RECIPIENTS may optionally be defined with a comma
+separated list of email addresses
+"
+
+if [ "$1" = "-h" ]; then
+    echo "$USAGE"
+    exit
+fi
+
+#--------------------------------------------------------------------------------
+
+ERR="/var/tmp/ida_${SCRIPT}_$$.err"
+
+cleanup() {
+    rm -f $ERR 2>/dev/null
+}
+
+trap cleanup EXIT
+
+#--------------------------------------------------------------------------------
+
+# If there is no email sender defined in the environment, we do nothing
+
+if [ "$EMAIL_SENDER" = "" ]; then
+    echo "Error: No EMAIL_SENDER environment variable defined. Exiting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+
+PROJECT="$1"
+
+if [ "$PROJECT" = "" ]; then
+    echo "Error: No project specified. Exiting." >&2
+    exit 1
+fi
+
+SUBJECT="$2"
+
+if [ "$SUBJECT" = "" ]; then
+    echo "Error: No email subject specified. Exiting." >&2
+    exit 1
+fi
+
+MESSAGE="$3"
+
+if [ "$MESSAGE" = "" ]; then
+    echo "Error: No email message specified. Exiting." >&2
+    exit 1
+fi
+
+SNAIL=`mail --version 2>/dev/null | grep -- 's-nail' 2>/dev/null`
+
+#--------------------------------------------------------------------------------
+
+SUBJECT=`echo "$2" | tr '\n' ' '`
+SUBJECT="[IDA Service] ${SUBJECT}"
+
+if [ "$IDA_ENVIRONMENT" != "PRODUCTION" ]; then
+    SUBJECT="${IDA_ENVIRONMENT} (${HOSTNAME}) ${SUBJECT}"
+fi
+
+MESSAGE="${MESSAGE}
+
+[This is an automated IDA service message regarding project ${PROJECT} sent to all project users]
+"
+
+#--------------------------------------------------------------------------------
+
+RECIPIENTS=`$ROOT/utils/admin/fetch-project-emails "$PROJECT" 2>/dev/null`
+
+# If neither project nor internal recipients are defined, we do nothing
+
+if [ "${RECIPIENTS}${EMAIL_RECIPIENTS}" = "" ]; then
+    echo "No project nor internal recipients. Exiting."
+    exit
+fi
+
+if [ "$RECIPIENTS" = "" ]; then
+    echo "Warning: The project ${PROJECT} has no users!"
+fi
+
+if [ "$SNAIL" ]; then
+    # Convert comma delimited recipient lists to space delimited
+    RECIPIENTS=`echo "$RECIPIENTS" | sed -e 's/,/ /g'`
+    # If internal recipients are defined in configuration, add internal recipients
+    if [ "$EMAIL_RECIPIENTS" != "" ]; then
+        if [ "$RECIPIENTS" = "" ]; then
+            EMAIL_RECIPIENTS=`echo "$EMAIL_RECIPIENTS" | sed -e 's/,/ /g'`
+            RECIPIENTS="$EMAIL_RECIPIENTS"
+        else
+            EMAIL_RECIPIENTS=`echo "$EMAIL_RECIPIENTS" | sed -e 's/,/ -b /g'`
+            RECIPIENTS="-b $EMAIL_RECIPIENTS $RECIPIENTS"
+        fi
+    fi
+    COMMAND="mail -s \"${SUBJECT}\" -r ${EMAIL_SENDER} ${RECIPIENTS}"
+else
+    # If internal recipients are defined in configuration, add internal recipients
+    if [ "$EMAIL_RECIPIENTS" != "" ]; then
+        if [ "$RECIPIENTS" = "" ]; then
+            RECIPIENTS="$EMAIL_RECIPIENTS"
+        else
+            RECIPIENTS="-b $EMAIL_RECIPIENTS $RECIPIENTS"
+        fi
+    fi
+    COMMAND="mail -s \"${SUBJECT}\" -r ${EMAIL_SENDER} -S \"replyto=${EMAIL_SENDER}\" ${RECIPIENTS}"
+fi
+
+if [ "$DEBUG" = "true" ]; then
+    echo "EMAIL_SENDER:     ${EMAIL_SENDER}"
+    echo "EMAIL_RECIPIENTS: ${EMAIL_RECIPIENTS}"
+    echo "RECIPIENTS:       ${RECIPIENTS}"
+    echo "PROJECT:          ${PROJECT}"
+    echo "SUBJECT:          ${SUBJECT}"
+    echo "MESSAGE:          ${MESSAGE}"
+    echo "COMMAND:          ${COMMAND}"
+fi
+
+echo "$MESSAGE" | eval "$COMMAND" 2>$ERR
+
+if [ -s $ERR ]; then
+    cat $ERR >&2
+    echo "Failed to send email to project users!" >&2
+    exit 1
+fi
+
+echo "Email sent to all project ${PROJECT} users and/or default internal recipients."

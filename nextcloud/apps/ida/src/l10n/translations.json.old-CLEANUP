@@ -1,0 +1,742 @@
+{
+    "Action": {
+        "fi": "Toiminto",
+        "sv": "Åtgärd"
+    },
+    "Action ID": {
+        "fi": "Toiminnon tunniste",
+        "sv": "Id för åtgärd"
+    },
+    "Action initiated successfully. Files deleted.": {
+        "fi": "Toiminto aloitettu onnistuneesti. Tiedostot poistettu.",
+        "sv": "Åtgärden påbörjad. Filer borttagna."
+    },
+    "Action initiated successfully. Show frozen data?": {
+        "fi": "Toiminto aloitettu onnistuneesti. Näytä jäädytetty data?",
+        "sv": "Åtgärden påbörjad. Visa frysta data?"
+    },
+    "Action initiated successfully. Show unfrozen data?": {
+        "fi": "Toiminto aloitettu onnistuneesti. Näytä valmistelualueelle palautettu data?",
+        "sv": "Åtgärden påbörjad. Visa återtagna data?"
+    },
+    "Actions": {
+        "new": true,
+        "fi": "Toiminnot",
+        "sv": "Åtgärder"
+    },
+    "Actions may not be performed on root project folders.": {
+        "new": true,
+        "fi": "Toimintoja ei voida suorittaa juuriprojektikansioissa.",
+        "sv": "Åtgärder kan inte utföras på rotprojektmappar."
+    },
+    "An error occurred when checking for datasets which may be deprecated by the requested action.": {
+        "new": true,
+        "fi": "Virhe tapahtui tarkistettaessa tutkimusaineistoja, jotka saattavat rikkoutua pyydetyn toiminnon seurauksena.",
+        "sv": "Ett fel inträff  vid kontroll av dataset som kan rikkas av den begärda åtgärden."
+    },
+    "An unknown error occurred.": {
+        "new": true,
+        "fi": "Tuntematon virhe tapahtui.",
+        "sv": "Ett okänt fel inträffade."
+    },
+    "Are you sure you want to freeze all files within this folder, moving them to the frozen area and making them read-only?": {
+        "new": true,
+        "fi": "Oletko varma, että haluat jäädyttää kaikki tämän kansion tiedostot, siirtää ne jäädytettyyn tilaan ja tehdä niistä vain lukuoikeudella olevia?",
+        "sv": "Är du säker på att du vill frysa alla filer i den här mappen, flytta dem till det frysta området och göra dem skrivskyddade?"
+    },
+    "Are you sure you want to freeze this file, moving it to the frozen area and making it read-only?": {
+        "new": true,
+        "fi": "Oletko varma, että haluat jäädyttää tämän tiedoston, siirtää sen jäädytettyyn tilaan ja tehdä siitä vain lukuoikeudella olevan?",
+        "sv": "Är du säker på att du vill frysa den här filen, flytta den till det frysta området och göra den skrivskyddad?"
+    },
+    "Are you sure you want to unfreeze all files within this folder, moving them back to the staging area and making them writable again?": {
+        "new": true,
+        "fi": "Oletko varma, että haluat poistaa kaikkien tämän kansion tiedostojen jäädytyksen, siirtää ne takaisin valmistelualueelle ja tehdä niistä jälleen muokattavia?",
+        "sv": "Är du säker på att du vill tina upp alla filer i den här mappen, flytta dem tillbaka till staging-området och göra dem skrivbara igen?"
+    },
+    "Are you sure you want to unfreeze this file, moving it back to the staging area and making it writable again?": {
+        "new": true,
+        "fi": "Oletko varma, että haluat poistaa tämän tiedoston jäädytyksen, siirtää sen takaisin valmistelualueelle ja tehdä siitä jälleen muokattavan?",
+        "sv": "Är du säker på att du vill tina upp den här filen, flytta den tillbaka till staging-området och göra den skrivbar igen?"
+    },
+    "Are you sure you want to permanently delete all files within this folder?": {
+        "new": true,
+        "fi": "Oletko varma, että haluat poistaa pysyvästi kaikki tämän kansion tiedostot?",
+        "sv": "Är du säker på att du vill ta bort alla filer i den här mappen permanent?"
+    },
+    "Are you sure you want to permanently delete this file?": {
+        "new": true,
+        "fi": "Oletko varma, että haluat poistaa tämän tiedoston pysyvästi?",
+        "sv": "Är du säker på att du vill ta bort den här filen permanent?"
+    },
+    "Be absolutely sure you want to delete all files within the selected folder before proceeding.": {
+        "new": true,
+        "fi": "Varmista, että haluat poistaa kaikki valitun kansion tiedostot ennen jatkamista.",
+        "sv": "Var säker på att du vill radera alla filer i den valda mappen innan du fortsätter."
+    },
+    "Be absolutely sure you want to delete the file before proceeding.": {
+        "new": true,
+        "fi": "Varmista, että haluat poistaa tiedoston ennen jatkamista.",
+        "sv": "Var säker på att du vill radera filen innan du fortsätter."
+    },
+    "Be absolutely sure you want to freeze the file before proceeding.": {
+        "fi": "Olethan täysin varma, että haluat jäädyttää tiedoston ennen kuin jatkat.",
+        "sv": "Frys inte filer om du inte är säker på vad det innebär."
+    },
+    "Be absolutely sure you want to freeze the folder before proceeding.": {
+        "fi": "Olethan täysin varma, että haluat jäädyttää kansion ennen kuin jatkat.",
+        "sv": "Frys inte mappen om du inte är säker på vad det innebär."
+    },
+    "Be absolutely sure you want to unfreeze all files within the selected folder before proceeding.": {
+        "new": true,
+        "fi": "Varmista, että haluat palauttaa kaikki valitun kansion tiedostot valmistelualueelle ennen jatkamista.",
+        "sv": "Var säker på att du vill flytta alla filer i den valda mappen tillbaka till preparering innan du fortsätter."
+    },
+    "Be absolutely sure you want to unfreeze the file before proceeding.": {
+        "new": true,
+        "fi": "Varmista, että haluat palauttaa tiedoston valmistelualueelle ennen jatkamista.",
+        "sv": "Var säker på att du vill flytta filen tillbaka till preparering innan du fortsätter."
+    },
+    "Cancel": {
+        "new": true,
+        "fi": "Peruuta",
+        "sv": "Avbryt"
+    },
+    "Checksum": {
+        "fi": "Tarkistussumma",
+        "sv": "Kontrollsumma"
+    },
+    "Cleared": {
+        "fi": "Hylätty",
+        "sv": "Borttaget"
+    },
+    "Cleared Actions": {
+        "fi": "Hylätyt toiminnot",
+        "sv": "Borttagna åtgärder"
+    },
+    "Close": {
+        "new": true,
+        "fi": "Sulje",
+        "sv": "Stäng"
+    },
+    "Completed": {
+        "fi": "Suoritettu",
+        "sv": "Genomförd"
+    },
+    "Completed Actions": {
+        "fi": "Suoritetut toiminnot",
+        "sv": "Genomförda åtgärder"
+    },
+    "Delete": {
+        "fi": "Poista",
+        "sv": "Ta bort"
+    },
+    "Delete permanently": {
+        "new": true,
+        "fi": "Poista pysyvästi",
+        "sv": "Ta bort permanent"
+    },
+    "Delete action failed": {
+        "new": true,
+        "fi": "Poistotoiminto epäonnistui",
+        "sv": "Borttagning misslyckades"
+    },
+    "Deleted files will no longer be accessible to other services, making all external references to them invalid. All replicated copies of deleted files will be removed.": {
+        "new": true,
+        "fi": "Poistettuja tiedostoja ei voida enää käyttää muissa palveluissa, mikä tekee kaikki ulkoiset viittaukset niihin virheellisiksi. Kaikki poistettujen tiedostojen kopiot poistetaan.",
+        "sv": "Borttagna filer kommer inte längre att vara tillgängliga för andra tjänster, vilket gör alla externa referenser till dem ogiltiga. Alla replikerade kopior av borttagna filer kommer att tas bort."
+    },
+    "Deleting will entirely remove all files within the selected folder from the service.": {
+        "fi": "Poistaminen tarkoittaa, että kaikki valitun kansion sisältämät tiedostot poistetaan palvelusta pysyvästi.",
+        "sv": "Borttagning betyder att alla filer i den valda mappen kommer att raderas från servicen."
+    },
+    "Deleting will entirely remove the selected file from the service.": {
+        "fi": "Poistaminen tarkoittaa, että valittu tiedosto poistetaan pysyvästi palvelusta.",
+        "sv": "Om du tar bort den valda filen betyder det att den avlägsnas slutgiltigt."
+    },
+    "Depending on the amount of data, the background operations may still take several hours.": {
+        "fi": "Datan määrästä riippuen taustaoperaatiot voivat kestää vielä useita tunteja.",
+        "sv": "Åtgärden kan ta upp till flera timmar om datamängden är stor."
+    },
+    "Depending on the amount of data, the background operations may take several hours.": {
+        "new": true,
+        "fi": "Taustaoperaatiot voivat kestää useita tunteja riippuen datan määrästä.",
+        "sv": "Beroende på datamängden kan bakgrundsoperationerna ta flera timmar."
+    },
+    "Do you wish to proceed?": {
+        "fi": "Haluatko jatkaa?",
+        "sv": "Vill du fortsätta?"
+    },
+    "Do you wish to view the data in its frozen location?": {
+        "fi": "Haluatko siirtyä tarkastelemaan dataa jäädytetyllä alueella?",
+        "sv": "Vill du se materialet på det frysta området?"
+    },
+    "Do you wish to view the data in its staging location?": {
+        "fi": "Haluatko siirtyä tarkastelemaan dataa valmistelualueella?",
+        "sv": "Vill du se materialet i området för preparering?"
+    },
+    "Error fetching file details": {
+        "new": true,
+        "fi": "Virhe haettaessa tiedoston tietoja",
+        "sv": "Fel vid hämtning av filinformation"
+    },
+    "Error fetching frozen file details": {
+        "new": true,
+        "fi": "Virhe haettaessa jäädytetyn tiedoston tietoja",
+        "sv": "Fel vid hämtning av fryst filinformation"
+    },
+    "Error fetching pending actions": {
+        "new": true,
+        "fi": "Virhe haettaessa odottavia toimintoja",
+        "sv": "Fel vid hämtning av väntande åtgärder"
+    },
+    "Error fetching project title": {
+        "new": true,
+        "fi": "Virhe haettaessa projektin otsikkoa",
+        "sv": "Fel vid hämtning av projekttitel"
+    },
+    "Failed": {
+        "fi": "Epäonnistunut",
+        "sv": "Misslyckade åtgärder"
+    },
+    "Failed Actions": {
+        "fi": "Epäonnistuneet toiminnot",
+        "sv": "Misslyckade åtgärder"
+    },
+    "Failed to check dataset intersection": {
+        "new": true,
+        "fi": "Tutkimusaineistojen leikkausta ei voitu tarkistaa",
+        "sv": "Misslyckades med att kontrollera datasetöverlappning"
+    },
+    "Failed to load action files": {
+        "new": true,
+        "fi": "Toimintotiedostojen lataaminen epäonnistui.",
+        "sv": "Misslyckades med att ladda åtgärdsfiler."
+    },
+    "Failed to lock project when initiating requested action.": {
+        "new": true,
+        "fi": "Epäonnistui projektin lukitsemisessa pyydetyn toiminnon aloituksessa.",
+        "sv": "Misslyckades med att låsa projektet vid initiering av begärd åtgärd."
+    },
+    "Failed to retrieve action details": {
+        "new": true,
+        "fi": "Toimintojen tietojen hakeminen epäonnistui.",
+        "sv": "Misslyckades med att hämta åtgärdsdetaljer."
+    },
+    "Failed to retrieve action files": {
+        "new": true,
+        "fi": "Toimintotiedostojen hakeminen epäonnistui.",
+        "sv": "Misslyckades med att hämta åtgärdsfiler."
+    },
+    "Failed to retrieve actions": {
+        "new": true,
+        "fi": "Toimintojen hakeminen epäonnistui.",
+        "sv": "Misslyckades med att hämta åtgärder."
+    },
+    "Failed to retry action": {
+        "new": true,
+        "fi": "Toiminnon uudelleenkäynnistäminen epäonnistui.",
+        "sv": "Misslyckades med att försöka om åtgärden."
+    },
+    "File": {
+        "fi": "Tiedosto",
+        "sv": "Fil"
+    },
+    "File Checksums Generated": {
+        "fi": "Tiedoston tarkistussumma luotu",
+        "sv": "Kontrollsummor skapade"
+    },
+    "File Count": {
+        "new": true,
+        "fi": "Tiedostojen määrä",
+        "sv": "Antal filer"
+    },
+    "File ID": {
+        "fi": "Tiedoston tunniste",
+        "sv": "Filidentifierare"
+    },
+    "File IDs Generated": {
+        "fi": "Tiedostojen tunnisteet luotu",
+        "sv": "Filidentifierare skapade"
+    },
+    "File Metadata Stored": {
+        "fi": "Tiedostometatiedot tallennettu",
+        "sv": "Filmetadata sparad"
+    },
+    "File no longer frozen at this location": {
+        "new": true,
+        "fi": "Tiedosto ei enää jäädytetty tässä sijainnissa",
+        "sv": "Filen är inte längre fryst på denna plats"
+    },
+    "File Storage Updated": {
+        "fi": "Tallennustila päivitetty",
+        "sv": "Lagringsuppgifter uppdaterade"
+    },
+    "Files": {
+        "new": true,
+        "fi": "Tiedostot",
+        "sv": "Filer"
+    },
+    "Files Replicated": {
+        "fi": "Tiedostot replikoitu",
+        "sv": "Filer replikerade"
+    },
+    "Files are safely stored in the IDA service when they are in the Frozen area.": {
+        "new": true,
+        "fi": "Tiedostot ovat turvallisesti tallennettu IDA-palveluun, kun ne ovat jäädytetyllä alueella.",
+        "sv": "Filerna är säkert lagrade i IDA-tjänsten när de är i det frysta området."
+    },
+    "Files can be added only in the Staging area (root folder ending in +)": {
+        "fi": "Tiedostoja voidaan lisätä ainoastaan Valmistelualueelle (juurikansio jonka päätteenä on +)",
+        "sv": "Filer kan läggas till endast i mappar med plustecken (+, område för preparering)"
+    },
+    "Folder": {
+        "new": true,
+        "fi": "Kansio",
+        "sv": "Mapp"
+    },
+    "For more information, see the IDA User Quide.": {
+        "new": true,
+        "fi": "Lisätietoja löydät IDA:n käyttöoppaasta.",
+        "sv": "För mer information, se IDA:s användarhandbok."
+    },
+    "Freeze": {
+        "fi": "Jäädytä",
+        "sv": "Frys"
+    },
+    "Freeze action failed": {
+        "new": true,
+        "fi": "Jäädytystoiminto epäonnistui",
+        "sv": "Frysåtgärden misslyckades"
+    },
+    "Freezing will move all files within the selected folder to the frozen area, making all files read-only and visible to other services.": {
+        "new": true,
+        "fi": "Jäädyttäminen siirtää kaikki valitun kansion tiedostot jäädytetylle alueelle, jolloin ne muuttuvat vain-luku -tilaan ja ovat näkyvissä muille palveluille.",
+        "sv": "Frysning kommer att flytta alla filer i den valda mappen till det frysta området, vilket gör alla filer skrivskyddade och synliga för andra tjänster."
+    },
+    "Freezing will move the selected file to the frozen area, making it read-only and visible to other services.": {
+        "new": true,
+        "fi": "Jäädyttäminen siirtää valitun tiedoston jäädytetylle alueelle, jolloin se muuttuu vain-luku -tilaan ja on näkyvissä muille palveluille.",
+        "sv": "Frysning kommer att flytta den valda filen till det frysta området, vilket gör den skrivskyddad och synlig för andra tjänster."
+    },
+    "Frozen": {
+        "fi": "Jäädytetty",
+        "sv": "Fryst"
+    },
+    "Frozen files will be replicated to separate physical storage to guard against loss of data due to hardware failure.": {
+        "fi": "Jäädytetyt tiedostot kopioidaan toiselle fyysiselle tallennusmedialle, mikä suojaa niitä vakavissa vikatilanteissa.",
+        "sv": "Frysta filer replikeras till annan media vilket skyddar data."
+    },
+    "IDA Quick Start Guide": {
+        "fi": "IDAn pikaopas",
+        "sv": "IDA Quick Start Guide"
+    },
+    "IDA User Guide": {
+        "new": true,
+        "fi": "IDAn käyttäjänopas",
+        "sv": "IDA Användarguide"
+    },
+    "Initiated": {
+        "fi": "Aloitettu",
+        "sv": "Initierad"
+    },
+    "Insufficient parameters specified.": {
+        "new": true,
+        "fi": "Puuttuvat parametrit määritelty.",
+        "sv": "Otillräckliga parametrar angivna."
+    },
+    "Invalid action specified.": {
+        "new": true,
+        "fi": "Virheellinen toiminto määritelty.",
+        "sv": "Ogiltig åtgärd angiven."
+    },
+    "Invalid change specified.": {
+        "new": true,
+        "fi": "Virheellinen muutos määritelty.",
+        "sv": "Ogiltig förändring angiven."
+    },
+    "Invalid mode specified.": {
+        "new": true,
+        "fi": "Virheellinen tila määritelty.",
+        "sv": "Ogiltigt läge angivet."
+    },
+    "Invalid status specified.": {
+        "new": true,
+        "fi": "Virheellinen tila määritelty.",
+        "sv": "Ogiltig status angiven."
+    },
+    "Modified": {
+        "new": true,
+        "fi": "Muutettu",
+        "sv": "Modifierad"
+    },
+    "More information": {
+        "new": true,
+        "fi": "Lisätietoja",
+        "sv": "Läs mer"
+    },
+    "No": {
+        "new": true,
+        "fi": "Ei",
+        "sv": "Nej"
+    },
+    "No action specified.": {
+        "fi": "Ei valittua toimintoa.",
+        "sv": "Ingen åtgärd vald."
+    },
+    "No checksums specified.": {
+        "fi": "Ei valittua tarkistussummaa.",
+        "sv": "Ingen kontrollsumma vald."
+    },
+    "No cleared actions found.": {
+        "new": true,
+        "fi": "Hylättyjä toimintoja ei löytynyt.",
+        "sv": "Inga borttagna åtgärder hittades."
+    },
+    "No completed actions found.": {
+        "new": true,
+        "fi": "Suoritettuja toimintoja ei löytynyt.",
+        "sv": "Inga slutförda åtgärder hittades."
+    },
+    "No failed actions found.": {
+        "new": true,
+        "fi": "Epäonnistuneita toimintoja ei löytynyt.",
+        "sv": "Inga misslyckade åtgärder hittades."
+    },
+    "No lock exists for the service.": {
+        "new": true,
+        "fi": "Palvelulle ei ole olemassa lukkoa.",
+        "sv": "Ingen låsning finns för tjänsten."
+    },
+    "No lock exists for the specified project.": {
+        "fi": "Valitulle projektille ei löydy lukkoa.",
+        "sv": "Saknar lås för det valda projektet."
+    },
+    "No pending actions found.": {
+        "new": true,
+        "fi": "Odottavia toimintoja ei löytynyt.",
+        "sv": "Inga väntande åtgärder hittades."
+    },
+    "Node Type": {
+        "new": true,
+        "fi": "Solmun tyyppi",
+        "sv": "Nodtyp"
+    },
+    "not shown": {
+        "new": true,
+        "fi": "ei näytetä",
+        "sv": "inte visas"
+    },
+    "Note": {
+        "new": true,
+        "fi": "Huomautus",
+        "sv": "Notera"
+    },
+    "OK": {
+        "fi": "OK",
+        "sv": "OK"
+    },
+    "Once initiated, the progress of the action can be checked from the Pending Actions view.": {
+        "new": true,
+        "fi": "Kun toiminto on aloitettu, sen etenemistä voidaan tarkastella odottavien toimien näkymästä.",
+        "sv": "När åtgärden har initierats kan dess framsteg ses i den väntande åtgärder-vyn."
+    },
+    "Once Frozen, the files will be visible in Qvain and may be included in one or more datasets.": {
+        "new": true,
+        "fi": "Jäädyttämisen jälkeen tiedostot näkyvät Qvainissa ja ne voidaan sisällyttää yhteen tai useampaan aineistoon.",
+        "sv": "När de är frysta kommer filerna att vara synliga i Qvain och kan inkluderas i en eller flera dataset."
+    },
+    "Once unfrozen, the files will no longer be visible in Qvain, and any datasets which include any of the unfrozen files will become invalid and marked as deprecated.": {
+        "new": true,
+        "fi": "Jäädytyksen poistamisen jälkeen tiedostot eivät enää näy Qvainissa, ja kaikki aineistot, jotka sisältävät jäädytyksen poistetut tiedostot, muuttuvat virheellisiksi ja merkitään vanhentuneiksi.",
+        "sv": "När de har tinats upp kommer filerna inte längre att vara synliga i Qvain, och dataset som inkluderar de tinade filerna blir ogiltiga och markeras som föråldrade."
+    },
+    "One or more files included in the specified action belong to a dataset. Proceeding with the specified action will permanently deprecate the datasets listed below.": {
+        "fi": "Yksi tai useampi valitsemistasi tiedostoista on osa tutkimusaineistoa. Jos jatkat, alle listatut tutkimusaineistot rikkoutuvat pysyvästi.",
+        "sv": "En eller flera av de filer du valt för åtgärden ingår i ett dataset. Om du fortsätter förstörs de dataset som listas nedan permanent."
+    },
+    "Operation is only permitted in test environment": {
+        "new": true,
+        "fi": "Toiminto sallittu vain testitilassa.",
+        "sv": "Åtgärden är endast tillåten i testmiljö."
+    },
+    "Pathname": {
+        "new": true,
+        "fi": "Polkunimi",
+        "sv": "Sökväg"
+    },
+    "Pathname must begin with staging or frozen root folder": {
+        "new": true,
+        "fi": "Polun tulee alkaa valmistelu- tai jäädytetystä juurihakemistosta.",
+        "sv": "Sökvägen måste börja med preparerings- eller fryst rotmapp."
+    },
+    "Pending": {
+        "new": true,
+        "fi": "Odottamassa",
+        "sv": "Väntar"
+    },
+    "Pending Actions": {
+        "fi": "Odottavat toiminnot",
+        "sv": "Väntande åtgärder"
+    },
+    "Project": {
+        "fi": "Projekti",
+        "sv": "Projekt"
+    },
+    "Project suspended. Action not permitted.": {
+        "new": true,
+        "fi": "Projekti on keskeytetty. Toiminto ei sallittu.",
+        "sv": "Projektet är avstängt. Åtgärd ej tillåten."
+    },
+    "... remainder of files not shown ...": {
+        "new": true,
+        "fi": "... loppuja tiedostoja ei näytetä ...",
+        "sv": "... resten av filerna visas inte ..."
+    },
+    "RETRY": {
+        "fi": "YRITÄ UUDELLEEN",
+        "sv": "FÖRSÖK IGEN"
+    },
+    "Retried by": {
+        "fi": "Uudelleenyrityksen käynnistänyt",
+        "sv": "Omförsök gjort av"
+    },
+    "Retry of": {
+        "fi": "Uudelleenyritetty toiminto",
+        "sv": "Omförsök av"
+    },
+    "Scope": {
+        "fi": "Kohde",
+        "sv": "Objekt"
+    },
+    "Session user does not belong to any projects.": {
+        "fi": "Istunnon käyttäjä ei kuulu mihinkään projektiin.",
+        "sv": "Användaren i sessionen hör inte till något projekt."
+    },
+    "Session user does not belong to the specified project": {
+        "new": true,
+        "fi": "Istunnon käyttäjä ei kuulu määriteltyyn projektiin.",
+        "sv": "Sessionens användare tillhör inte det angivna projektet."
+    },
+    "Session user does not have permission to modify the specified action.": {
+        "new": true,
+        "fi": "Istunnon käyttäjällä ei ole oikeuksia muokata määriteltyä toimintoa.",
+        "sv": "Användaren i sessionen har inte rättigheter att ändra den angivna åtgärden."
+    },
+    "Session user does not have permission to modify the specified file.": {
+        "new": true,
+        "fi": "Istunnon käyttäjällä ei ole oikeuksia muokata määriteltyä tiedostoa.",
+        "sv": "Användaren i sessionen har inte rättigheter att ändra den angivna filen."
+    },
+    "Session user does not have permission to update the specified value.": {
+        "fi": "Istunnon käyttäjällä ei ole lupaa päivittää valittua arvoa.",
+        "sv": "Användaren har inte rättighet att uppdatera värdet i fråga."
+    },
+    "Size": {
+        "fi": "Koko",
+        "sv": "Storlek"
+    },
+    "Specified action is neither failed nor pending.": {
+        "fi": "Valittu toiminto ei ole epäonnistunut tai odottava.",
+        "sv": "Den valda åtgärden är varken misslyckad eller i kö."
+    },
+    "Specified action is not a failed action.": {
+        "fi": "Valittu toiminto ei ole epäonnistunut toiminto.",
+        "sv": "Den valda åtgärden är inte misslyckad."
+    },
+    "Staging": {
+        "fi": "Valmistelu",
+        "sv": "Preparering"
+    },
+    "The action cannot be terminated after it has been initiated.": {
+        "new": true,
+        "fi": "Toimintoa ei voida keskeyttää sen käynnistämisen jälkeen.",
+        "sv": "Åtgärden kan inte avbrytas efter att den har påbörjats."
+    },
+    "THIS ACTION CANNOT BE UNDONE!": {
+        "fi": "TÄTÄ TOIMINTOA EI VOIDA PERUUTTAA!",
+        "sv": "DENNA ÅTGÄRD KAN INTE ÅNGRAS!"
+    },
+    "Target must be specified.": {
+        "new": true,
+        "fi": "Kohde on määriteltävä.",
+        "sv": "Mål måste anges."
+    },
+    "Target must begin with staging or frozen root folder": {
+        "new": true,
+        "fi": "Kohteen on alettava valmistelu- tai jäädytetystä juurihakemistosta.",
+        "sv": "Målet måste börja med preparerings- eller fryst rotmapp."
+    },
+    "The action cannot be terminated before it is complete.": {
+        "fi": "Toimintoa ei voida peruuttaa ennen kuin se on suoritettu loppuun.",
+        "sv": "Åtgärden kan inte avbrytas."
+    },
+    "The action will initiate several background operations.": {
+        "new": true,
+        "fi": "Toiminto käynnistää useita taustaoperaatioita.",
+        "sv": "Åtgärden kommer att initiera flera bakgrundsoperationer."
+    },
+    "The current user does not belong to any projects.": {
+        "fi": "Nykyinen käyttäjä ei kuulu mihinkään projektiin.",
+        "sv": "Användaren hör inte till något projekt."
+    },
+    "The data has been successfully frozen and moved to the frozen project space.": {
+        "fi": "Data on jäädytetty onnistuneesti ja siirretty projektin jäädytetylle alueelle.",
+        "sv": "Materialet har frysts och flyttats till det frysta området."
+    },
+    "The data has been successfully unfrozen and moved back to the project staging space.": {
+        "fi": "Data on onnistuneesti palautettu projektin valmistelualueelle ja jäädytystoimenpiteet on mitätöity.",
+        "sv": "Materialet har flyttats tillbaka till preparering och är inte längre skrivskyddat."
+    },
+    "The error parameter is required when recording a failed timestamp.": {
+        "fi": "Virheilmoitus -parametri vaaditaan epäonnistuneen aikaleiman kirjaamiseen.",
+        "sv": "Felets parameter krävs då man registrerar tidstämpel för en misslyckad åtgärd."
+    },
+    "The files have been successfully deleted.": {
+        "fi": "Tiedostot ovat onnistuneesti poistettu.",
+        "sv": "Filerna har tagits bort."
+    },
+    "The frozen file will be replicated to separate physical storage to guard against loss of data due to hardware failure.": {
+        "fi": "Jäädytetty tiedosto kopioidaan toiselle fyysiselle tallennusmedialle, mikä suojaa sitä vakavissa vikatilanteissa.",
+        "sv": "Den frysta filen kopieras till ett annat medium, vilket skyddar den vill allvarliga tillbud."
+    },
+    "The initiated action is": {
+        "fi": "Aloitettu toiminto on",
+        "sv": "Den initierade operationen är"
+    },
+    "The requested action conflicts with an existing file in the frozen area.": {
+        "fi": "Pyydetty toiminto on yhteensopimaton jäädytetyllä alueella jo olemassaolevan tiedoston kanssa.",
+        "sv": "Den begärda åtgärden står i konflikt med en existerande fil på det frysta området."
+    },
+    "The requested action conflicts with an existing file in the staging area.": {
+        "fi": "Pyydetty toiminto on yhteensopimaton valmistelualueella jo olemassaolevan tiedoston kanssa.",
+        "sv": "Den begärda åtgärden står i konflikt med en existerande fil på preparering"
+    },
+    "The requested action conflicts with an ongoing action in the specified project.": {
+        "new": true,
+        "fi": "Pyydetty toiminto on ristiriidassa meneillään olevan toiminnon kanssa valitussa projektissa.",
+        "sv": "Den begärda åtgärden är i konflikt med en pågående åtgärd i det angivna projektet."
+    },
+    "The requested change conflicts with an ongoing action in the specified project.": {
+        "fi": "Pyydetty muutos on yhteensopimaton toisen projektilla käynnissä olevan toiminnon kanssa.",
+        "sv": "Förändringen står i konflikt med en pågående åtgärd."
+    },
+    "The specified action does not exist.": {
+        "fi": "Valittua toimintoa ei ole olemassa.",
+        "sv": "Den begärda åtgärden finns inte."
+    },
+    "The specified action was not found.": {
+        "fi": "Valittua toimintoa ei löytynyt.",
+        "sv": "Den begärda åtgärden hittades inte."
+    },
+    "The specified file was not found.": {
+        "fi": "Valittua tiedostoa ei löytynyt.",
+        "sv": "Den valda filen hittades inte."
+    },
+    "The specified folder contains no files which can be frozen.": {
+        "fi": "Valittu kansio ei sisällä tiedostoja, jotka voitaisiin jäädyttää.",
+        "sv": "Den valda mappen innehåller inga filer som kunde frysas."
+    },
+    "The specified folder contains no files which can be unfrozen.": {
+        "fi": "Valittu kansio ei sisällä tiedostoja, jotka voitaisiin palauttaa valmistelualueelle.",
+        "sv": "Den valda mappen innehåller inga filer som kunde flyttas bort från det frysta området."
+    },
+    "The specified project was not found.": {
+        "new": true,
+        "fi": "Määriteltyä projektia ei löytynyt.",
+        "sv": "Det angivna projektet hittades inte."
+    },
+    "The specified scope conflicts with an ongoing action in the specified project.": {
+        "fi": "Valittu konteksti on yhteensopimaton toisen projektilla käynnissä olevan toiminnon kanssa.",
+        "sv": "Den valda kontexten står i konflikt med en pågående åtgärd för projektet."
+    },
+    "The specified scope could not be found in the frozen area of the project.": {
+        "new": true,
+        "fi": "Määriteltyä aluetta ei löytynyt projektin jäädytetystä osasta.",
+        "sv": "Det angivna området kunde inte hittas i projektets frysta område."
+    },
+    "The specified scope could not be found in the staging area of the project.": {
+        "new": true,
+        "fi": "Määriteltyä aluetta ei löytynyt projektin valmistelualueelta.",
+        "sv": "Det angivna området kunde inte hittas i projektets prepareringsområde."
+    },
+    "Unable to lock the service.": {
+        "new": true,
+        "fi": "Palvelun lukitseminen epäonnistui.",
+        "sv": "Kunde inte låsa tjänsten."
+    },
+    "Unable to lock the specified project.": {
+        "fi": "Valittua projektia ei voitu lukita.",
+        "sv": "Det valda projektet kunde inte låsas."
+    },
+    "Unable to put the service into offline mode.": {
+        "new": true,
+        "fi": "Palvelua ei voitu asettaa offline-tilaan.",
+        "sv": "Kunde inte sätta tjänsten i offlineläge."
+    },
+    "Unable to put the service into online mode.": {
+        "new": true,
+        "fi": "Palvelua ei voitu asettaa online-tilaan.",
+        "sv": "Kunde inte sätta tjänsten i onlineläge."
+    },
+    "Unable to unlock the service.": {
+        "new": true,
+        "fi": "Palvelun lukituksen poistaminen epäonnistui.",
+        "sv": "Kunde inte låsa upp tjänsten."
+    },
+    "Unable to unlock the specified project.": {
+        "fi": "Valitun projektin lukitusta ei voitu poistaa.",
+        "sv": "Det valda projektet kunde inte låsas upp."
+    },
+    "Unfreeze": {
+        "fi": "Palauta valmistelualueelle",
+        "sv": "Flytta tillbaka till preparering"
+    },
+    "Unfreeze action failed": {
+        "new": true,
+        "fi": "Palautustoiminto epäonnistui",
+        "sv": "Återställningsåtgärden misslyckades"
+    },
+    "Unfreezing will move all files within the selected folder back to the staging area, making them fully editable.": {
+        "fi": "Valmistelualueelle palauttaminen siirtää valitun kansion kaikki tiedostot valmistelualueelle ja tekee niistä muokattavia.",
+        "sv": "Om du väljer att flytta tillbaka mappen till preparering kommer alla filer i den valda mappen bli redigerbara."
+    },
+    "Unfreezing will move the selected file back to the staging area, making it fully editable.": {
+        "fi": "Palauttaminen siirtää valitun tiedoston takaisin valmistelualueelle, jolloin se on täysin muokattavissa.",
+        "sv": "Återställning av filen till preparering gör den helt redigerbar."
+    },
+    "Unfrozen files will no longer be accessible to Qvain or Etsin, making all published datasets that refer to them invalid. All replicated file copies will be removed.": {
+        "new": true,
+        "fi": "Jäädytetyt tiedostot eivät ole enää saatavilla Qvainille tai Etsinille, mikä tekee kaikki niihin viittaavat julkaistut aineistot virheellisiksi. Kaikki toistetut tiedostokopiot poistetaan.",
+        "sv": "Avfrostade filer kommer inte längre vara tillgängliga för Qvain eller Etsin, vilket gör alla publicerade dataset som refererar till dem ogiltiga. Alla replikerade filkopior tas bort."
+    },
+    "Unknown project.": {
+        "new": true,
+        "fi": "Tuntematon projekti.",
+        "sv": "Okänt projekt."
+    },
+    "Upload files or folders by using drag and drop or by using the New menu above": {
+        "new": true,
+        "fi": "Lataa tiedostoja tai kansioita vetämällä ja pudottamalla tai käyttämällä yllä olevaa Uusi-valikkoa",
+        "sv": "Ladda upp filer eller mappar genom att dra och släppa eller använda menyn Ny ovanför"
+    },
+    "Uploaded": {
+        "new": true,
+        "fi": "Ladattu",
+        "sv": "Uppladdad"
+    },
+    "User": {
+        "new": true,
+        "fi": "Käyttäjä",
+        "sv": "Användare"
+    },
+    "Warning: Datasets will be deprecated!": {
+        "new": true,
+        "fi": "Varoitus: Tutkimusaineistot tullaan poistamaan käytöstä!",
+        "sv": "Varning: Dataset kommer att avvecklas!"
+    },
+    "Yes": {
+        "fi": "Kyllä",
+        "sv": "Ja"
+    }
+}

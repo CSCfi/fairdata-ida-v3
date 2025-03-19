@@ -1,0 +1,29 @@
+--- /var/ida/nextcloud-new/core/templates/login.php	2024-11-05 08:30:08.259702233 +0000
++++ /var/ida/nextcloud-old/core/templates/login.php.original	2024-02-20 10:11:39.210443040 +0000
+@@ -1,14 +1,16 @@
++<?php /** @var \OCP\IL10N $l */ ?>
+ <?php
+-
+-/**
+- * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
+- * SPDX-FileCopyrightText: 2011-2016 ownCloud, Inc.
+- * SPDX-License-Identifier: AGPL-3.0-only
+- *
+- * @var \OCP\IL10N $l
+- */
+-script('core', 'login');
++script('core', 'dist/login');
+ ?>
+-<div>
++
+ 	<div id="login"></div>
++
++<?php if (!empty($_['alt_login'])) { ?>
++    <div id="alternative-logins">
++        <?php foreach ($_['alt_login'] as $login): ?>
++            <a class="button <?php p($login['style'] ?? ''); ?>" href="<?php print_unescaped($login['href']); ?>" >
++                <?php p($login['name']); ?>
++            </a>
++        <?php endforeach; ?>
+ </div>
++<?php } ?>

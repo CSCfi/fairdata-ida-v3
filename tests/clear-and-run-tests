@@ -1,0 +1,66 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2018 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+# Load service constants and configuration settings
+
+PARENT_FOLDER=`dirname "$(realpath $0)"`
+PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+
+while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
+    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
+    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+done
+
+CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+
+if [ -e $CONFIG_FILE ]
+then
+    . $CONFIG_FILE
+else
+    echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+if [ "$ROOT" = "" ]; then
+    echo "The configuration variable $ROOT has not been defined Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+# Verify that we are in a non-production environment
+
+if [ "$IDA_ENVIRONMENT" == "PRODUCTION" ]; then
+    echo "This script can not be run in a production environment. Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+
+LOGDIR=`dirname "$LOG"`
+
+rm -f $LOGDIR/*.log 2>/dev/null
+rm -f $LOGDIR/old_data/*.log 2>/dev/null
+rm -f $LOGDIR/audits/* 2>/dev/null
+rm -f $LOGDIR/rabbitmq_monitoring/* 2>/dev/null
+$ROOT/utils/restart
+$ROOT/tests/run-tests $*

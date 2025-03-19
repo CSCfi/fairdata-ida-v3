@@ -1,0 +1,148 @@
+--- /var/ida/nextcloud-new/remote.php	2024-11-05 08:30:09.124705227 +0000
++++ /var/ida/nextcloud-old/remote.php	2024-02-20 10:11:39.377443606 +0000
+@@ -1,14 +1,40 @@
+ <?php
+-
+ /**
+- * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
+- * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
+- * SPDX-License-Identifier: AGPL-3.0-only
++ * @copyright Copyright (c) 2016, ownCloud, Inc.
++ *
++ * @author Brice Maron <brice@bmaron.net>
++ * @author Christopher Schäpers <kondou@ts.unde.re>
++ * @author Christoph Wurst <christoph@winzerhof-wurst.at>
++ * @author Georg Ehrke <oc.list@georgehrke.com>
++ * @author Joas Schilling <coding@schilljs.com>
++ * @author Jörn Friedrich Dreyer <jfd@butonic.de>
++ * @author Lukas Reschke <lukas@statuscode.ch>
++ * @author Morris Jobke <hey@morrisjobke.de>
++ * @author Robin Appelman <robin@icewind.nl>
++ * @author Robin McCorkell <robin@mccorkell.me.uk>
++ * @author Roeland Jago Douma <roeland@famdouma.nl>
++ * @author Thomas Müller <thomas.mueller@tmit.eu>
++ * @author Vincent Petry <vincent@nextcloud.com>
++ *
++ * @license AGPL-3.0
++ *
++ * This code is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License, version 3,
++ * as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License, version 3,
++ * along with this program. If not, see <http://www.gnu.org/licenses/>
++ *
+  */
++
+ require_once __DIR__ . '/lib/versioncheck.php';
+ 
+ use OCA\DAV\Connector\Sabre\ExceptionLoggerPlugin;
+-use Psr\Log\LoggerInterface;
+ use Sabre\DAV\Exception\ServiceUnavailable;
+ use Sabre\DAV\Server;
+ 
+@@ -17,14 +43,13 @@
+  * Dummy exception class to be use locally to identify certain conditions
+  * Will not be logged to avoid DoS
+  */
+-class RemoteException extends \Exception {
++class RemoteException extends Exception {
+ }
+ 
+ /**
+  * @param Exception|Error $e
+  */
+ function handleException($e) {
+-	try {
+ 		$request = \OC::$server->getRequest();
+ 		// in case the request content type is text/xml - we assume it's a WebDAV request
+ 		$isXmlContentType = strpos($request->getHeader('Content-Type'), 'text/xml');
+@@ -33,7 +58,7 @@
+ 			$server = new Server();
+ 			if (!($e instanceof RemoteException)) {
+ 				// we shall not log on RemoteException
+-				$server->addPlugin(new ExceptionLoggerPlugin('webdav', \OC::$server->get(LoggerInterface::class)));
++			$server->addPlugin(new ExceptionLoggerPlugin('webdav', \OC::$server->getLogger()));
+ 			}
+ 			$server->on('beforeMethod:*', function () use ($e) {
+ 				if ($e instanceof RemoteException) {
+@@ -49,7 +74,8 @@
+ 				throw new ServiceUnavailable("$class: $msg");
+ 			});
+ 			$server->exec();
+-		} else {
++	}
++	else {
+ 			$statusCode = 500;
+ 			if ($e instanceof \OC\ServiceUnavailableException) {
+ 				$statusCode = 503;
+@@ -58,13 +84,10 @@
+ 				// we shall not log on RemoteException
+ 				OC_Template::printErrorPage($e->getMessage(), '', $e->getCode());
+ 			} else {
+-				\OC::$server->get(LoggerInterface::class)->error($e->getMessage(), ['app' => 'remote','exception' => $e]);
++			\OC::$server->getLogger()->logException($e, ['app' => 'remote']);
+ 				OC_Template::printExceptionErrorPage($e, $statusCode);
+ 			}
+ 		}
+-	} catch (\Exception $e) {
+-		OC_Template::printExceptionErrorPage($e, 500);
+-	}
+ }
+ 
+ /**
+@@ -111,8 +135,41 @@
+ 	if (!$pos = strpos($pathInfo, '/', 1)) {
+ 		$pos = strlen($pathInfo);
+ 	}
++
+ 	$service = substr($pathInfo, 1, $pos - 1);
+ 
++	// BEGIN IDA MODIFICATION:
++	//
++	// If the request URL path contains a project root directory (staging or frozen), and either the
++	// entire service or the specific project is suspended, and the request method has side effects,
++	// report a conflict (return 409 response)
++
++    $projectSuspended = false;
++
++	try {
++		$parts = explode('/', $pathInfo);
++	    $project = rtrim($parts[2], '+');
++		$config = \OC::$server->getConfig();
++		$dataRootPathname = $config->getSystemValue('datadirectory', '/mnt/storage_vol01/ida');
++        $serviceSuspendedPathname = $dataRootPathname . '/control/SUSPENDED';
++        $projectSuspendedPathname = $dataRootPathname . '/' . \OCA\IDA\Util\Constants::PROJECT_USER_PREFIX . $project . '/files/SUSPENDED';
++		if (file_exists($serviceSuspendedPathname) || file_exists($projectSuspendedPathname)) {
++		    $projectSuspended = true;
++		}
++    } catch (Exception $e) { 
++		$projectSuspended = false;
++	}
++
++	if ($projectSuspended
++        && in_array($request->getMethod(), array('PUT', 'DELETE', 'MKCOL', 'COPY', 'MOVE', 'PROPPATCH', 'POST'))) {
++        // TODO: log conflicting request
++        header('Content-Type: text/plain; charset=utf-8');
++        http_response_code(409);
++        print("Project suspended. Action not permitted.");
++        die();
++	}
++	// END IDA MODIFICATION
++
+ 	$file = resolveService($service);
+ 
+ 	if (is_null($file)) {
+@@ -127,7 +184,6 @@
+ 	// Load all required applications
+ 	\OC::$REQUESTEDAPP = $app;
+ 	OC_App::loadApps(['authentication']);
+-	OC_App::loadApps(['extended_authentication']);
+ 	OC_App::loadApps(['filesystem', 'logging']);
+ 
+ 	switch ($app) {

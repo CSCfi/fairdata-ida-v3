@@ -1,0 +1,15 @@
+OC.L10N.register(
+    "viewer",
+    {
+    "Edit" : "সম্পাদনা",
+    "Download" : "ডাউনলোড",
+    "Delete" : "মুছে",
+    "Name" : "নাম",
+    "Save" : "সংরক্ষণ",
+    "Back" : "পেছনে যাও",
+    "Reset" : "পূণঃনির্ধানণ",
+    "Cancel" : "বাতির",
+    "Warning" : "সতর্কবাণী",
+    "Size" : "আকার"
+},
+"nplurals=2; plural=(n != 1);");

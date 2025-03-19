@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Base directory to search
+BASE_DIR="/var/ida/nextcloud/apps/ida/lib"
+
+# Execute the find command with exclusions and extract translations
+find "$BASE_DIR" \
+    -name "*.php" -type f -exec \
+    grep -Eho "API::[a-zA-Z0-9]*Response\s*\([^\)]*\)" {} + | \
+    grep -Ev "API::successResponse\s*\(" | \
+    sed -E "s/^[^\(]*\(//" | \
+    sed -E "s/\s*\)$//" | \
+    grep -Ev "^\s*$" | \
+    grep -v '$e->getMessage(' | \
+    sed -E "s/^['\"]\s*//" | \
+    sed -E "s/\s*['\"]$//" | \
+    sort -u > /var/ida/nextcloud/apps/ida/src/l10n/utils/api_response_strings.txt

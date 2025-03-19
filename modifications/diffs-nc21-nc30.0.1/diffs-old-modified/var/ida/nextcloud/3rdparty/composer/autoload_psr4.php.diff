@@ -1,0 +1,10 @@
+--- /var/ida/nextcloud-old/3rdparty/composer/autoload_psr4.php	2024-02-20 10:11:35.729431240 +0000
++++ /var/ida/nextcloud-old/3rdparty/composer/autoload_psr4.php.original	2024-02-20 10:11:35.729431240 +0000
+@@ -74,7 +74,6 @@
+     'GuzzleHttp\\' => array($vendorDir . '/guzzlehttp/guzzle/src'),
+     'Giggsey\\Locale\\' => array($vendorDir . '/giggsey/locale/src'),
+     'FG\\' => array($vendorDir . '/fgrosse/phpasn1/lib'),
+-    'Firebase\\JWT\\' => array($vendorDir . '/firebase/php-jwt/src'),
+     'Egulias\\EmailValidator\\' => array($vendorDir . '/egulias/email-validator/src'),
+     'Ds\\' => array($vendorDir . '/php-ds/php-ds/src'),
+     'Doctrine\\DBAL\\' => array($vendorDir . '/doctrine/dbal/src'),

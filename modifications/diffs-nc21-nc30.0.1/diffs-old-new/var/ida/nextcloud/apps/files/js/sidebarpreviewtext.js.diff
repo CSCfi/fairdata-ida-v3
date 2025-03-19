@@ -1,0 +1,42 @@
+--- /var/ida/nextcloud-new/apps/files/js/sidebarpreviewtext.js	2024-11-05 08:30:09.001704801 +0000
++++ /var/ida/nextcloud-old/apps/files/js/sidebarpreviewtext.js	2024-02-20 10:11:36.712434572 +0000
+@@ -1,6 +1,11 @@
+-/**
+- * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
+- * SPDX-License-Identifier: AGPL-3.0-or-later
++/*
++ * Copyright (c) 2016
++ *
++ * This file is licensed under the Affero General Public License version 3
++ * or later.
++ *
++ * See the COPYING-README file.
++ *
+  */
+ 
+ (function () {
+@@ -13,6 +18,7 @@
+ 		},
+ 
+ 		handlePreview: function (model, $thumbnailDiv, $thumbnailContainer, fallback) {
++			/*
+ 			var previewWidth = $thumbnailContainer.parent().width() + 50;  // 50px for negative margins
+ 			var previewHeight = previewWidth / (16 / 9);
+ 
+@@ -20,13 +26,15 @@
+ 				$thumbnailDiv.removeClass('icon-loading icon-32');
+ 				$thumbnailContainer.addClass('large');
+ 				$thumbnailContainer.addClass('text');
+-				var $textPreview = $('<pre></pre>').text(content);
++				var $textPreview = $('<pre/>').text(content);
+ 				$thumbnailDiv.children('.stretcher').remove();
+ 				$thumbnailDiv.append($textPreview);
+ 				$thumbnailContainer.css("max-height", previewHeight);
+ 			}, function () {
+ 				fallback();
+ 			});
++			*/
++			fallback();
+ 		},
+ 
+ 		getFileContent: function (path) {

@@ -1,0 +1,13 @@
+--- /var/ida/nextcloud-old/lib/private/Files/FileInfo.php	2024-02-20 10:11:39.287443301 +0000
++++ /var/ida/nextcloud-old/lib/private/Files/FileInfo.php.original	2024-02-20 10:11:39.288443304 +0000
+@@ -239,10 +239,7 @@
+ 	 * @return int
+ 	 */
+ 	public function getPermissions() {
+-		try {
+ 		    $perms = (int) $this->data['permissions'];
+-		}
+-		catch (\Exception $e) { ; }
+ 		if (\OCP\Util::isSharingDisabledForUser() || ($this->isShared() && !\OC\Share\Share::isResharingAllowed())) {
+ 			$perms = $perms & ~\OCP\Constants::PERMISSION_SHARE;
+ 		}

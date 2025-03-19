@@ -1,0 +1,11 @@
+--- /var/ida/nextcloud-old/apps/files/templates/index.php	2024-02-20 10:11:36.750434701 +0000
++++ /var/ida/nextcloud-old/apps/files/templates/index.php.original	2024-02-20 10:11:36.750434701 +0000
+@@ -2,8 +2,6 @@
+ <?php $_['appNavigation']->printPage(); ?>
+ <div id="app-content">
+ 
+-    <meta name="fdwe-scope" content="FILES">
+-
+ 	<?php if (!$_['isIE']) { ?>
+ 		<input type="checkbox" class="hidden-visually" id="showgridview"
+ 			aria-label="<?php p($l->t('Toggle grid view'))?>"

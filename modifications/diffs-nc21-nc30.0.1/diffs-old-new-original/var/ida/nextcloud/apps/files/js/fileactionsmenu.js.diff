@@ -1,0 +1,50 @@
+--- /var/ida/nextcloud-new/apps/files/js/fileactionsmenu.js	2024-11-05 08:30:09.001704801 +0000
++++ /var/ida/nextcloud-old/apps/files/js/fileactionsmenu.js.original	2024-02-20 10:11:36.709434562 +0000
+@@ -1,7 +1,11 @@
+-/**
+- * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
+- * SPDX-FileCopyrightText: 2015-2016 ownCloud, Inc.
+- * SPDX-License-Identifier: AGPL-3.0-or-later
++/*
++ * Copyright (c) 2014
++ *
++ * This file is licensed under the Affero General Public License version 3
++ * or later.
++ *
++ * See the COPYING-README file.
++ *
+  */
+ 
+ (function() {
+@@ -45,8 +49,7 @@
+ 			var actions = fileActions.getActions(
+ 				fileActions.getCurrentMimeType(),
+ 				fileActions.getCurrentType(),
+-				fileActions.getCurrentPermissions(),
+-				fileActions.getCurrentFile()
++				fileActions.getCurrentPermissions()
+ 			);
+ 			var actionSpec = actions[actionName];
+ 			var fileName = this._context.$file.attr('data-file');
+@@ -71,8 +74,7 @@
+ 			var actions = fileActions.getActions(
+ 				fileActions.getCurrentMimeType(),
+ 				fileActions.getCurrentType(),
+-				fileActions.getCurrentPermissions(),
+-				fileActions.getCurrentFile()
++				fileActions.getCurrentPermissions()
+ 			);
+ 
+ 			var defaultAction = fileActions.getCurrentDefaultFileAction();
+@@ -129,11 +131,6 @@
+ 			this.render();
+ 			this.$el.removeClass('hidden');
+ 
+-			window._nc_event_bus.emit('files:action-menu:opened', {
+-				el: this.$el[0],
+-				context,
+-			})
+-
+ 			OC.showMenu(null, this.$el);
+ 		}
+ 	});

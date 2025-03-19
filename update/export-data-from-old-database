@@ -1,0 +1,102 @@
+#!/bin/bash
+#
+# This script will export all essential data from the old database.
+
+. /var/ida/update/init.sh
+
+# Ensure DBDATA is defined in configuration, and that the subdirectory exists
+if [[ -z "$DBDATA" ]]; then
+  echo "Error: Environment variable DBDATA must be defined" >&2
+  exit 1
+fi
+if [[ ! -d "$DBDATA" ]]; then
+  mkdir -p "$DBDATA" || { echo "Error: Failed to create directory $DBDATA" >&2; exit 1; }
+fi
+
+if [ "$1" = "--test" ]; then
+    echo "TEST MODE: Data will be extracted from new database!"
+    DBNAME_OLD="$DBNAME_NEW"
+    OC_IDA_ACTION_FIELDS="$OC_IDA_ACTION_FIELDS_TEST"
+fi
+
+#------------------------------------------------------------------------------------------------------------------------
+
+echo "Exporting essential data from $DBNAME_OLD ..."
+
+# NOTES:
+# 
+# When exporting account related data, we exclude the admin user account and group.
+#
+# When Nextcloud is installed, storage 1 is created for the admin user account and storage 2 corresponds to 
+# the data root. All new users get storage ids starting from 3, so when exporting from oc_filecache and
+# oc_mounts, we limit data to storage ids greater than 2.
+# 
+# Copying of records in oc_filecache_extended is where we may get some collisions if we use a brute
+# force approach that copies everything, as it will include the default files belonging to admin, unless we
+# first get the fileid values of all files belonging to admin and excluding them in the export query...
+#
+# The table oc_mounts has changed and now requires the class of the mount to be specified, e.g. whether
+# local or shared. Need to clarify how best to handle this. It may be that we only copy mounts for PSO users and
+# brute force inject the correct class for local mounts -- then reshare the frozen and staging folders to all
+# project users, which will add database entries for those sharea mounts accordingly.
+
+export PGPASSWORD="$DBROPASSWORD"
+
+PSQL="psql -h $DBHOST -p $DBPORT -d $DBNAME_OLD -U $DBROUSER"
+
+echo "Exporting data from oc_accounts ..."
+$PSQL -c "\COPY (SELECT $OC_ACCOUNTS_FIELDS FROM oc_accounts WHERE uid <> 'admin') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_accounts.csv"
+
+echo "Exporting data from oc_storages ..."
+$PSQL -c "\COPY (SELECT $OC_STORAGES_FIELDS FROM oc_storages WHERE id LIKE 'home::%' AND id <> 'home::admin') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_storages.csv"
+
+echo "Exporting data from oc_accounts_data ..."
+$PSQL -c "\COPY (SELECT $OC_ACCOUNTS_DATA_FIELDS FROM oc_accounts_data WHERE uid <> 'admin') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_accounts_data.csv"
+
+echo "Exporting data from oc_groups ..."
+$PSQL -c "\COPY (SELECT $OC_GROUPS_FIELDS FROM oc_groups WHERE gid <> 'admin') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_groups.csv"
+
+echo "Exporting data from oc_group_user ..."
+$PSQL -c "\COPY (SELECT $OC_GROUP_USER_FIELDS FROM oc_group_user WHERE uid <> 'admin') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_group_user.csv"
+
+echo "Exporting data from oc_users ..."
+$PSQL -c "\COPY (SELECT $OC_USERS_FIELDS FROM oc_users WHERE uid <> 'admin') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_users.csv"
+
+echo "Exporting data from oc_preferences ..."
+$PSQL -c "\COPY (SELECT $OC_PREFERENCES_FIELDS FROM oc_preferences WHERE userid <> 'admin') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_preferences.csv"
+
+echo "Exporting data from oc_share ..."
+# Only export group shares (type 2) and exclude shares owned by admin
+$PSQL -c "\COPY (SELECT $OC_SHARE_FIELDS FROM oc_share WHERE share_type = 2 AND uid_owner <> 'admin') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_share.csv"
+
+echo "Exporting data from oc_filecache ..."
+$PSQL -c "\COPY (SELECT $OC_FILECACHE_FIELDS FROM oc_filecache WHERE storage > 2 AND path LIKE 'files/%') TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_filecache.csv"
+
+echo "Exporting data from oc_filecache_extended ..."
+# Get list of fileids for all files belonging to admin (storage 1), and exclude them from the oc_filecache_extended export query
+EXCLUDED_FILEIDS=$($PSQL -t -A -c "SELECT fileid FROM oc_filecache WHERE storage = 1" | tr '\n' ',' | sed 's/,$//')
+echo "Excluded fileid values: $EXCLUDED_FILEIDS"
+if [[ -z "$EXCLUDED_FILEIDS" ]]; then
+    $PSQL -c "\COPY (SELECT $OC_FILECACHE_EXTENDED_FIELDS FROM oc_filecache_extended) TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_filecache_extended.csv"
+else
+    $PSQL -c "\COPY (SELECT $OC_FILECACHE_EXTENDED_FIELDS FROM oc_filecache_extended WHERE fileid NOT IN ($EXCLUDED_FILEIDS)) TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_filecache_extended.csv"
+fi
+
+echo "Exporting data from oc_ida_action ..."
+$PSQL -c "\COPY (SELECT ${OC_IDA_ACTION_FIELDS//user/\"user\"} FROM oc_ida_action) TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_ida_action.csv"
+
+echo "Exporting data from oc_ida_data_change ..."
+$PSQL -c "\COPY (SELECT ${OC_IDA_DATA_CHANGE_FIELDS//user/\"user\"} FROM oc_ida_data_change) TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_ida_data_change.csv"
+
+echo "Exporting data from oc_ida_frozen_file ..."
+$PSQL -c "\COPY (SELECT $OC_IDA_FROZEN_FILE_FIELDS FROM oc_ida_frozen_file) TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_ida_frozen_file.csv"
+
+echo "Exporting data from oc_mounts ..."
+$PSQL -c "\COPY (SELECT $OC_MOUNTS_FIELDS FROM oc_mounts WHERE storage_id > 2) TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_mounts.csv"
+
+echo "Exporting data from oc_mimetypes ..."
+$PSQL -c "\COPY (SELECT $OC_MIMETYPES_FIELDS FROM oc_mimetypes) TO STDOUT WITH CSV HEADER" > "$DBDATA/oc_mimetypes.csv"
+
+echo "Exporting completed."
+
+ls -l "$DBDATA"/*.csv

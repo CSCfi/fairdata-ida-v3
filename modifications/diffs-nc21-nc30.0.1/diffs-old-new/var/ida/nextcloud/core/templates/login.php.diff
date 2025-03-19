@@ -1,0 +1,47 @@
+--- /var/ida/nextcloud-new/core/templates/login.php	2024-11-05 08:30:08.259702233 +0000
++++ /var/ida/nextcloud-old/core/templates/login.php	2024-02-20 10:11:39.210443040 +0000
+@@ -1,14 +1,33 @@
++<?php /** @var \OCP\IL10N $l */ ?>
+ <?php
+-
+-/**
+- * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
+- * SPDX-FileCopyrightText: 2011-2016 ownCloud, Inc.
+- * SPDX-License-Identifier: AGPL-3.0-only
+- *
+- * @var \OCP\IL10N $l
+- */
+-script('core', 'login');
++script('core', 'dist/login');
++$CURRENT_LANGUAGE = $l->getLanguageCode();
++$CURRENT_LANGUAGE = $CURRENT_LANGUAGE ? substr($CURRENT_LANGUAGE, 0, 2) : 'en';
+ ?>
+-<div>
+-	<div id="login"></div>
++
++<form method="post" name="login" action="/login">
++    <fieldset>
++		<?php if (!empty($_['redirect_url'])) {
++			print_unescaped('<input type="hidden" name="redirect_url" value="' . \OCP\Util::sanitizeHTML($_['redirect_url']) . '">');
++		} ?>
++        <div id="message" class="hidden">
++            <img alt="" src="/core/img/loading-dark.gif" class="float-spinner"> <span id="messageText"></span> 
++            <div style="clear: both;"></div>
++        </div>
++        <p class="grouptop">
++			<input id="user" type="text" name="user" autocapitalize="off" autocomplete="on" placeholder="Username" aria-label="Username" required="required">
++			<label for="user" class="infield">Username</label>
++		</p>
++        <p class="groupbottom">
++			<input id="password" type="password" name="password" autocomplete="on" placeholder="Password" aria-label="Password" required="required">
++			<label for="password" class="infield"></label>
++		</p>
++        <div id="submit-wrapper">
++            <input id="submit-form" type="submit" title="" class="login primary" value="Login"> 
++            <div class="submit-icon icon-confirm-white"></div>
+ </div>
++		<input type="hidden" name="timezone_offset" id="timezone_offset" />
++		<input type="hidden" name="timezone" id="timezone" />
++		<input type="hidden" name="requesttoken" value="<?php p($_['requesttoken']) ?>">
++    </fieldset>
++</form>

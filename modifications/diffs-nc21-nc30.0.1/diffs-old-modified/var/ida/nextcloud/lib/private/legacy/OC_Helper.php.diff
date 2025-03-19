@@ -1,0 +1,55 @@
+--- /var/ida/nextcloud-old/lib/private/legacy/OC_Helper.php	2024-02-20 10:11:39.328443440 +0000
++++ /var/ida/nextcloud-old/lib/private/legacy/OC_Helper.php.original	2024-02-20 10:11:39.328443440 +0000
+@@ -71,23 +71,23 @@
+ 		}
+ 		$bytes = round($bytes / 1024, 0);
+ 		if ($bytes < 1024) {
+-			return "$bytes KiB";
++			return "$bytes KB";
+ 		}
+ 		$bytes = round($bytes / 1024, 1);
+ 		if ($bytes < 1024) {
+-			return "$bytes MiB";
++			return "$bytes MB";
+ 		}
+ 		$bytes = round($bytes / 1024, 1);
+ 		if ($bytes < 1024) {
+-			return "$bytes GiB";
++			return "$bytes GB";
+ 		}
+ 		$bytes = round($bytes / 1024, 1);
+ 		if ($bytes < 1024) {
+-			return "$bytes TiB";
++			return "$bytes TB";
+ 		}
+ 
+ 		$bytes = round($bytes / 1024, 1);
+-		return "$bytes PiB";
++		return "$bytes PB";
+ 	}
+ 
+ 	/**
+@@ -109,19 +109,14 @@
+ 			'b'   => 1,
+ 			'k'   => 1024,
+ 			'kb'  => 1024,
+-			'kib' => 1024,
+-			'm'   => 1024 * 1024,
+ 			'mb'  => 1024 * 1024,
+-			'mib' => 1024 * 1024,
+-			'g'   => 1024 * 1024 * 1024,
++			'm' => 1024 * 1024,
+ 			'gb'  => 1024 * 1024 * 1024,
+-			'gib' => 1024 * 1024 * 1024,
+-			't'   => 1024 * 1024 * 1024 * 1024,
++			'g' => 1024 * 1024 * 1024,
+ 			'tb'  => 1024 * 1024 * 1024 * 1024,
+-			'tib' => 1024 * 1024 * 1024 * 1024,
+-			'p'   => 1024 * 1024 * 1024 * 1024 * 1024,
++			't' => 1024 * 1024 * 1024 * 1024,
+ 			'pb'  => 1024 * 1024 * 1024 * 1024 * 1024,
+-			'pib' => 1024 * 1024 * 1024 * 1024 * 1024,
++			'p' => 1024 * 1024 * 1024 * 1024 * 1024,
+ 		];
+ 
+ 		$bytes = (float)$str;

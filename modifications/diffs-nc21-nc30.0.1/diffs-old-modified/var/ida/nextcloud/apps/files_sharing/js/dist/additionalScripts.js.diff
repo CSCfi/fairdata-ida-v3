@@ -1,0 +1,11 @@
+--- /var/ida/nextcloud-old/apps/files_sharing/js/dist/additionalScripts.js	2024-02-20 10:11:36.947435369 +0000
++++ /var/ida/nextcloud-old/apps/files_sharing/js/dist/additionalScripts.js.original	2024-02-20 10:11:36.947435369 +0000
+@@ -454,7 +454,7 @@
+             },
+             _formatRemoteShare: function(e, t, r) {
+                 var n = OCA.Sharing.Util._REMOTE_OWNER_REGEXP.exec(e);
+-                if ( /*console.error(n),*/ !n || !n[7]) return '<span class="avatar" data-username="' + i()(e) + '" title="' + r + " " + i()(t) + '"></span><span class="hidden-visually">' + r + " " + i()(t) + "</span> ";
++                if (console.error(n), !n || !n[7]) return '<span class="avatar" data-username="' + i()(e) + '" title="' + r + " " + i()(t) + '"></span><span class="hidden-visually">' + r + " " + i()(t) + "</span> ";
+                 var a = n[2],
+                     s = n[4],
+                     o = n[5],

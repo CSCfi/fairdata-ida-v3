@@ -1,0 +1,14 @@
+--- /var/ida/nextcloud-old/lib/private/legacy/OC_App.php	2024-02-20 10:11:39.327443436 +0000
++++ /var/ida/nextcloud-old/lib/private/legacy/OC_App.php.original	2024-02-20 10:11:39.327443436 +0000
+@@ -177,11 +177,9 @@
+ 				'app' => $app,
+ 			]);
+ 		} elseif ($hasAppPhpFile) {
+-			/*
+ 			\OC::$server->getLogger()->debug('/appinfo/app.php is deprecated, use \OCP\AppFramework\Bootstrap\IBootstrap on the application class instead.', [
+ 				'app' => $app,
+ 			]);
+-			*/
+ 			\OC::$server->getEventLogger()->start('load_app_' . $app, 'Load app: ' . $app);
+ 			try {
+ 				self::requireAppFile($app);

@@ -1,0 +1,17 @@
+--- /var/ida/nextcloud-old/lib/private/EventDispatcher/SymfonyAdapter.php	2024-02-20 10:11:39.284443291 +0000
++++ /var/ida/nextcloud-old/lib/private/EventDispatcher/SymfonyAdapter.php.original	2024-02-20 10:11:39.284443291 +0000
+@@ -78,14 +78,11 @@
+ 		} else {
+ 			$newEvent = $event;
+ 
+-		    // Do not log any deprecation notices at all.
+-			/*
+ 			// Legacy event
+ 			$this->logger->info(
+ 				'Deprecated event type for {name}: {class}',
+ 				['name' => $eventName, 'class' => is_object($event) ? get_class($event) : 'null']
+ 			);
+-			*/
+ 		}
+ 
+ 		// Event with no payload (object) need special handling

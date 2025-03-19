@@ -1,0 +1,8 @@
+--- /var/ida/nextcloud-old/core/css/server.scss	2024-02-20 10:11:38.372440199 +0000
++++ /var/ida/nextcloud-old/core/css/server.scss.original	2024-02-20 10:11:38.372440199 +0000
+@@ -9,4 +9,3 @@
+ @import 'tooltip.scss';
+ @import 'toast.scss';
+ @import 'public.scss';
+-@import 'fonts.scss';
+\ No newline at end of file

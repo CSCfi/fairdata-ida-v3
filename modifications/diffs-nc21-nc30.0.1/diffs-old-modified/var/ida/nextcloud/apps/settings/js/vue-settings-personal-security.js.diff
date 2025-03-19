@@ -1,0 +1,52 @@
+--- /var/ida/nextcloud-old/apps/settings/js/vue-settings-personal-security.js	2024-02-20 10:11:37.740438057 +0000
++++ /var/ida/nextcloud-old/apps/settings/js/vue-settings-personal-security.js.original	2024-02-20 10:11:37.752438098 +0000
+@@ -5457,13 +5457,9 @@
+         "use strict";
+ 
+         function o() {
+-            console.log("t=" + JSON.stringify(t) + " e=" + JSON.stringify(e));
+-            return Promise.resolve();
+-            /*
+             return "undefined" == typeof OC ? Promise.reject(new Error("OC not defined")) : void 0 === OC.PasswordConfirmation ? Promise.reject(new Error("OC.PasswordConfirmation not defined")) : OC.PasswordConfirmation.requiresPasswordConfirmation() ? new Promise((function(t, e) {
+                 OC.PasswordConfirmation.requirePasswordConfirmation(t, {}, e)
+             })) : Promise.resolve()
+-            */
+         }
+         n.r(e), n.d(e, "default", (function() {
+             return o
+@@ -43760,7 +43756,7 @@
+                                 return e.stopPropagation(), e.preventDefault(), t.revoke.apply(null, arguments)
+                             }
+                         }
+-                    }, [t._v("\n\t\t\t\t\t\t" + t._s(t.t("settings", "Revoke")) + "\n\t\t\t\t\t")]), /* t._v(" "), n("ActionButton", {
++                    }, [t._v("\n\t\t\t\t\t\t" + t._s(t.t("settings", "Revoke")) + "\n\t\t\t\t\t")]), t._v(" "), n("ActionButton", {
+                         attrs: {
+                             "icon": "icon-delete"
+                         },
+@@ -43769,7 +43765,7 @@
+                                 return e.stopPropagation(), e.preventDefault(), t.wipe.apply(null, arguments)
+                             }
+                         }
+-                    }, [t._v("\n\t\t\t\t\t\t" + t._s(t.t("settings", "Wipe device")) + "\n\t\t\t\t\t")])*/] : 2 === t.token.type ? n("ActionButton", {
++                    }, [t._v("\n\t\t\t\t\t\t" + t._s(t.t("settings", "Wipe device")) + "\n\t\t\t\t\t")])] : 2 === t.token.type ? n("ActionButton", {
+                         attrs: {
+                             "icon": "icon-delete",
+                             "title": t.t("settings", "Revoke")
+@@ -44036,7 +44032,7 @@
+                 staticClass: "app-password-row"
+             }, [n("span", {
+                 staticClass: "app-password-label"
+-            }), t._v(" "), /* t.showQR ? n("QR", {
++            }), t._v(" "), t.showQR ? n("QR", {
+                 attrs: {
+                     "value": t.qrUrl
+                 }
+@@ -44046,7 +44042,7 @@
+                         t.showQR = !0
+                     }
+                 }
+-            }, [t._v("\n\t\t\t" + t._s(t.t("settings", "Show QR code for mobile apps")) + "\n\t\t")])*/], 1)]) : n("div", [n("input", {
++            }, [t._v("\n\t\t\t" + t._s(t.t("settings", "Show QR code for mobile apps")) + "\n\t\t")])], 1)]) : n("div", [n("input", {
+                 directives: [{
+                     name: "model",
+                     rawName: "v-model",

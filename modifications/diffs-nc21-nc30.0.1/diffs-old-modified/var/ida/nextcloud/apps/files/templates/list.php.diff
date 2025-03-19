@@ -1,0 +1,21 @@
+--- /var/ida/nextcloud-old/apps/files/templates/list.php	2024-02-20 10:11:36.750434701 +0000
++++ /var/ida/nextcloud-old/apps/files/templates/list.php.original	2024-02-20 10:11:36.750434701 +0000
+@@ -5,7 +5,8 @@
+ 		</div>
+ 		<div id="file_action_panel"></div>
+ 		<div class="notCreatable notPublic hidden">
+-            <?php p($l->t('Files can be added only in the Staging area (root folder ending in +)'))?>
++			<div class="icon-alert-outline"></div>
++			<?php p($l->t('You don’t have permission to upload or create files here'))?>
+ 		</div>
+ 	<?php /* Note: the template attributes are here only for the public page. These are normally loaded
+ 			 through ajax instead (updateStorageStatistics).
+@@ -24,7 +25,7 @@
+ <div id="emptycontent" class="hidden">
+ 	<div class="icon-folder"></div>
+ 	<h2><?php p($l->t('No files in here')); ?></h2>
+-	<p class="uploadmessage hidden"><?php p($l->t('Upload files or folders by using drag and drop or by using the upload ( + ) menu')); ?></p>
++	<p class="uploadmessage hidden"><?php p($l->t('Upload some content or sync with your devices!')); ?></p>
+ </div>
+ 
+ <div class="nofilterresults emptycontent hidden">

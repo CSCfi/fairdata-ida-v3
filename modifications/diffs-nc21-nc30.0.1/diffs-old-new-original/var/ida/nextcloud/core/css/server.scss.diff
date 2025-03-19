@@ -1,0 +1,18 @@
+--- /var/ida/nextcloud-new/core/css/server.scss	2024-11-05 08:30:08.201702032 +0000
++++ /var/ida/nextcloud-old/core/css/server.scss.original	2024-02-20 10:11:38.372440199 +0000
+@@ -1,7 +1,3 @@
+-/*!
+- * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
+- * SPDX-License-Identifier: AGPL-3.0-or-later
+- */
+ @import 'styles.scss';
+ @import 'inputs.scss';
+ @import 'header.scss';
+@@ -11,6 +7,5 @@
+ @import 'fixes.scss';
+ @import 'mobile.scss';
+ @import 'tooltip.scss';
+-// If you include .css, it will be imported as url
+-@import '../../node_modules/@nextcloud/dialogs/dist/style';
++@import 'toast.scss';
+ @import 'public.scss';
