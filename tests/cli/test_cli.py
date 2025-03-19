@@ -130,11 +130,13 @@ class TestIdaCli(unittest.TestCase):
 
         self.success = True
 
-        #noflush = self.config["NO_FLUSH_AFTER_TESTS"]
-        #self.config["NO_FLUSH_AFTER_TESTS"] = "false"
-        #self.tearDown()
-        #self.success = False
-        #self.config["NO_FLUSH_AFTER_TESTS"] = noflush
+        print("Unlock service")
+        response = requests.delete("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+        self.assertEqual(response.status_code, 200, "Failed to unlock service while cleaning up!")
+
+        print("Verify that service is unlocked")
+        response = requests.get("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+        self.assertEqual(response.status_code, 404, "Failed to unlock service while cleaning up!")
 
         # Initialize clean test accounts
 
@@ -170,22 +172,20 @@ class TestIdaCli(unittest.TestCase):
 
     def tearDown(self):
 
-        print("(cleaning)")
-
-        # Always unlock the service, even if a test failed
-
-        print("Unlock service")
-        response = requests.delete("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
-        self.assertEqual(response.status_code, 200, "Failed to unlock service while cleaning up!")
-
-        print("Verify that service is unlocked")
-        response = requests.get("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
-        self.assertEqual(response.status_code, 404, "Failed to unlock service while cleaning up!")
-
         # Flush all test projects, user accounts, and data, but only if all tests passed,
         # else leave projects and data as-is so test project state can be inspected
 
         if self.success and self.config.get("NO_FLUSH_AFTER_TESTS", "false") == "false":
+
+            print("(cleaning)")
+
+            print("Unlock service")
+            response = requests.delete("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+            self.assertEqual(response.status_code, 200, "Failed to unlock service while cleaning up!")
+
+            print("Verify that service is unlocked")
+            response = requests.get("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+            self.assertEqual(response.status_code, 404, "Failed to unlock service while cleaning up!")
 
             #shutil.rmtree(self.tempdir, ignore_errors=True)
 
