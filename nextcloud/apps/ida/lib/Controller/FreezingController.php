@@ -255,7 +255,7 @@ class FreezingController extends Controller
 
             if ($isFrozen) {
 
-                $fullPathname = $this->buildFullPathname('unfreeze', $project, $pathname);
+                $fullPathname = $this->buildFullPathname('frozen', $project, $pathname);
 
                 $this->logger->debug('getFileDetails:' . ' fullPathname=' . $fullPathname);
 
@@ -298,7 +298,7 @@ class FreezingController extends Controller
             }
             else {
 
-                $fullPathname = $this->buildFullPathname('freeze', $project, $pathname);
+                $fullPathname = $this->buildFullPathname('staging', $project, $pathname);
 
                 $this->logger->debug('getFileDetails:' . ' fullPathname=' . $fullPathname);
 
@@ -408,7 +408,7 @@ class FreezingController extends Controller
 
                 $this->logger->debug('getFileInventory: aggregating files from staging area ...');
 
-                $nextcloudFiles = $this->getNextcloudFiles('freeze', $project, $scope, 0);
+                $nextcloudFiles = $this->getNextcloudFiles('staging', $project, $scope, 0);
 
                 $i = 0;
 
@@ -464,7 +464,7 @@ class FreezingController extends Controller
                 $this->logger->debug('getFileInventory: aggregating files from frozen area ...');
 
                 $idaFrozenFiles = $this->fileDetailsHelper->getIdaFrozenFileDetails($project, $scope);
-                $nextcloudFiles = $this->getNextcloudFiles('unfreeze', $project, $scope, 0);
+                $nextcloudFiles = $this->getNextcloudFiles('frozen', $project, $scope, 0);
 
                 $filePIDs = array();
 
@@ -1008,7 +1008,7 @@ class FreezingController extends Controller
             // Verify Nextcloud node ID per specified pathname
 
             try {
-                $nextcloudNodeId = $this->resolveNextcloudNodeId($nextcloudNodeId, 'freeze', $project, $pathname);
+                $nextcloudNodeId = $this->resolveNextcloudNodeId($nextcloudNodeId, 'staging', $project, $pathname);
             } catch (Exception $e) {
                 return API::badRequestErrorResponse($e->getMessage());
             }
@@ -1049,7 +1049,7 @@ class FreezingController extends Controller
 
             // Ensure specified pathname identifies a node in the staging area
 
-            $fullPathname = $this->buildFullPathname('freeze', $project, $pathname);
+            $fullPathname = $this->buildFullPathname('staging', $project, $pathname);
 
             $fileInfo = $this->fsView->getFileInfo($fullPathname);
 
@@ -1063,7 +1063,7 @@ class FreezingController extends Controller
 
             // If node is folder, ensure folder is not empty (has at least one descendant file)
 
-            if ($this->isEmptyFolder('freeze', $project, $pathname)) {
+            if ($this->isEmptyFolder('staging', $project, $pathname)) {
 
                 $this->actionMapper->deleteAction($actionEntity->getPid());
                 Access::unlockProject($project);
@@ -1083,9 +1083,9 @@ class FreezingController extends Controller
                         . ' project=' . $project
                         . ' pathname=' . $pathname
                     );
-                    $nextcloudFiles = $this->getNextcloudFiles('freeze', $project, $pathname, 0);
+                    $nextcloudFiles = $this->getNextcloudFiles('staging', $project, $pathname, 0);
                 } else {
-                    $nextcloudFiles = $this->getNextcloudFiles('freeze', $project, $pathname);
+                    $nextcloudFiles = $this->getNextcloudFiles('staging', $project, $pathname);
                 }
             } catch (Exception $e) {
 
@@ -1107,7 +1107,7 @@ class FreezingController extends Controller
 
             // Ensure no files in the scope of the action intersect with any existing file(s) in the target space
 
-            if ($this->checkIntersectionWithExistingFiles('freeze', $project, $nextcloudFiles)) {
+            if ($this->checkIntersectionWithExistingFiles('frozen', $project, $nextcloudFiles)) {
 
                 $this->actionMapper->deleteAction($actionEntity->getPid());
                 Access::unlockProject($project);
@@ -1123,7 +1123,7 @@ class FreezingController extends Controller
 
             try {
 
-                $this->checkFileSizes('freeze', $project, $nextcloudFiles);
+                $this->checkFileSizes('staging', $project, $nextcloudFiles);
 
             } catch (Exception $e) {
 
@@ -1252,7 +1252,7 @@ class FreezingController extends Controller
             // Verify Nextcloud node ID per specified pathname
 
             try {
-                $nextcloudNodeId = $this->resolveNextcloudNodeId($nextcloudNodeId, 'unfreeze', $project, $pathname);
+                $nextcloudNodeId = $this->resolveNextcloudNodeId($nextcloudNodeId, 'frozen', $project, $pathname);
             } catch (Exception $e) {
                 return API::badRequestErrorResponse($e->getMessage());
             }
@@ -1293,7 +1293,7 @@ class FreezingController extends Controller
 
             // Ensure specified pathname identifies a node in the frozen area
 
-            $fullPathname = $this->buildFullPathname('unfreeze', $project, $pathname);
+            $fullPathname = $this->buildFullPathname('frozen', $project, $pathname);
 
             $fileInfo = $this->fsView->getFileInfo($fullPathname);
 
@@ -1307,7 +1307,7 @@ class FreezingController extends Controller
 
             // If node is folder, ensure folder is not empty (has at least one descendant file)
 
-            if ($this->isEmptyFolder('unfreeze', $project, $pathname)) {
+            if ($this->isEmptyFolder('frozen', $project, $pathname)) {
 
                 $this->actionMapper->deleteAction($actionEntity->getPid());
                 Access::unlockProject($project);
@@ -1327,9 +1327,9 @@ class FreezingController extends Controller
                         . ' project=' . $project
                         . ' pathname=' . $pathname
                     );
-                    $nextcloudFiles = $this->getNextcloudFiles('unfreeze', $project, $pathname, 0);
+                    $nextcloudFiles = $this->getNextcloudFiles('frozen', $project, $pathname, 0);
                 } else {
-                    $nextcloudFiles = $this->getNextcloudFiles('unfreeze', $project, $pathname);
+                    $nextcloudFiles = $this->getNextcloudFiles('frozen', $project, $pathname);
                 }
             } catch (Exception $e) {
 
@@ -1351,7 +1351,7 @@ class FreezingController extends Controller
 
             // Ensure no files in the scope of the action intersect with any existing file(s) in the target space
 
-            if ($this->checkIntersectionWithExistingFiles('unfreeze', $project, $nextcloudFiles)) {
+            if ($this->checkIntersectionWithExistingFiles('staging', $project, $nextcloudFiles)) {
 
                 $this->actionMapper->deleteAction($actionEntity->getPid());
                 Access::unlockProject($project);
@@ -1361,7 +1361,7 @@ class FreezingController extends Controller
 
             // Record file details within scope of action
 
-            $this->registerFiles('unfreeze', $project, $nextcloudFiles, $actionEntity->getPid(), $actionEntity->getInitiated());
+            $this->registerFiles('frozen', $project, $nextcloudFiles, $actionEntity->getPid(), $actionEntity->getInitiated());
 
             // Record node type and file count
 
@@ -1381,7 +1381,7 @@ class FreezingController extends Controller
 
             // Move all files in scope from frozen to staging space
 
-            $this->moveNextcloudNode('unfreeze', $project, $pathname);
+            $this->moveNextcloudNode('frozen', $project, $pathname);
 
             $actionEntity->setStorage(Generate::newTimestamp());
             $this->actionMapper->update($actionEntity);
@@ -1473,7 +1473,7 @@ class FreezingController extends Controller
             // Verify Nextcloud node ID per specified pathname
 
             try {
-                $nextcloudNodeId = $this->resolveNextcloudNodeId($nextcloudNodeId, 'delete', $project, $pathname);
+                $nextcloudNodeId = $this->resolveNextcloudNodeId($nextcloudNodeId, 'frozen', $project, $pathname);
             } catch (Exception $e) {
                 return API::badRequestErrorResponse($e->getMessage());
             }
@@ -1514,7 +1514,7 @@ class FreezingController extends Controller
 
             // Ensure specified pathname identifies a node in the frozen area
 
-            $fullPathname = $this->buildFullPathname('delete', $project, $pathname);
+            $fullPathname = $this->buildFullPathname('frozen', $project, $pathname);
 
             $fileInfo = $this->fsView->getFileInfo($fullPathname);
 
@@ -1529,7 +1529,7 @@ class FreezingController extends Controller
             // If the target node is an empty folder (has zero descendant files), take note of the fact, which will result in skipping file
             // related steps and publication to RabbitMQ
 
-            if ($this->isEmptyFolder('delete', $project, $pathname)) {
+            if ($this->isEmptyFolder('frozen', $project, $pathname)) {
 
                 $isEmptyFolder = true;
 
@@ -1547,9 +1547,9 @@ class FreezingController extends Controller
                             . ' project=' . $project
                             . ' pathname=' . $pathname
                         );
-                        $nextcloudFiles = $this->getNextcloudFiles('delete', $project, $pathname, 0);
+                        $nextcloudFiles = $this->getNextcloudFiles('frozen', $project, $pathname, 0);
                     } else {
-                        $nextcloudFiles = $this->getNextcloudFiles('delete', $project, $pathname);
+                        $nextcloudFiles = $this->getNextcloudFiles('frozen', $project, $pathname);
                     }
                 } catch (Exception $e) {
 
@@ -1854,6 +1854,7 @@ class FreezingController extends Controller
                 if ($retryActionEntity->getAction() === 'delete') {
 
                     $this->deleteNextcloudNode($retryActionEntity->getProject(), $retryActionEntity->getPathname());
+
                 } else { // action === 'freeze' or 'unfreeze'
 
                     // Move node from staging to frozen space, or frozen space to staging, depending on action
@@ -2088,14 +2089,14 @@ class FreezingController extends Controller
             // Verify Nextcloud node ID per specified pathname
 
             try {
-                $nextcloudNodeId = $this->resolveNextcloudNodeId($nextcloudNodeId, 'delete', $project, $pathname);
+                $nextcloudNodeId = $this->resolveNextcloudNodeId($nextcloudNodeId, 'frozen', $project, $pathname);
             } catch (Exception $e) {
                 return API::badRequestErrorResponse($e->getMessage());
             }
 
             // Ensure specified pathname identifies a node in the frozen area
 
-            $fullPathname = $this->buildFullPathname('delete', $project, $pathname);
+            $fullPathname = $this->buildFullPathname('frozen', $project, $pathname);
 
             $fileInfo = $this->fsView->getFileInfo($fullPathname);
 
@@ -2105,7 +2106,7 @@ class FreezingController extends Controller
 
             // If the target node is an empty folder (has zero descendant files), return empty array
 
-            if ($this->isEmptyFolder('delete', $project, $pathname)) {
+            if ($this->isEmptyFolder('frozen', $project, $pathname)) {
 
                 return new DataResponse(array());
 
@@ -2124,9 +2125,9 @@ class FreezingController extends Controller
                             . ' project=' . $project
                             . ' pathname=' . $pathname
                         );
-                        $nextcloudFiles = $this->getNextcloudFiles('delete', $project, $pathname, 0);
+                        $nextcloudFiles = $this->getNextcloudFiles('frozen', $project, $pathname, 0);
                     } else {
-                        $nextcloudFiles = $this->getNextcloudFiles('delete', $project, $pathname);
+                        $nextcloudFiles = $this->getNextcloudFiles('frozen', $project, $pathname);
                     }
                 } catch (Exception $e) {
                     return API::badRequestErrorResponse($e->getMessage());
@@ -2557,7 +2558,7 @@ class FreezingController extends Controller
      * Check that file size on disk matches what is recorded in Nextcloud cache, for all files. Throws exception
      * if any size differs, or if the file does not exist on disk.
      *
-     * @param string     $action         the action being performed, one of 'freeze', 'unfreeze', or 'delete'
+     * @param string     $area           the storage area, either 'staging' or 'frozen'
      * @param string     $project        the project to which the files belong
      * @param FileInfo[] $nextcloudFiles one or more FileInfo instances
      *
@@ -2566,7 +2567,7 @@ class FreezingController extends Controller
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    protected function checkFileSizes($action, $project, $nextcloudFiles)
+    protected function checkFileSizes($area, $project, $nextcloudFiles)
     {
         $this->logger->debug('checkFileSizes:' . ' project=' . $project . ' nextcloudFiles=' . count($nextcloudFiles));
 
@@ -2577,8 +2578,8 @@ class FreezingController extends Controller
             if ($fileInfo->getType() === FileInfo::TYPE_FILE) {
 
                 $relativePathname = $this->stripRootProjectFolder($project, $fileInfo->getPath());
-                $fullPathname = $this->buildFullPathname($action, $project, $relativePathname);
-                $filesystemPathname = $this->buildFilesystemPathname($action, $project, $relativePathname);
+                $fullPathname = $this->buildFullPathname($area, $project, $relativePathname);
+                $filesystemPathname = $this->buildFilesystemPathname($area, $project, $relativePathname);
 
                 // If file does not exist on disk, throw exception
 
@@ -2704,7 +2705,7 @@ class FreezingController extends Controller
      * project, and pathname.
      *
      * @param int    $nextcloudNodeId the Nextcloud node ID
-     * @param string $action          the action being performed, one of 'freeze', 'unfreeze', or 'delete'
+     * @param string $area            the storage area, either 'staging' or 'frozen'
      * @param string $project         the project to which the node belongs
      * @param string $pathname        the relative pathname of the node within the shared project staging or frozen folder
      *
@@ -2715,9 +2716,9 @@ class FreezingController extends Controller
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    protected function resolveNextcloudNodeId($nextcloudNodeId, $action, $project, $pathname)
+    protected function resolveNextcloudNodeId($nextcloudNodeId, $area, $project, $pathname)
     {
-        //$this->logger->debug('resolveNextcloudNodeId:' . ' nextcloudNodeId=' . $nextcloudNodeId . ' action=' . $action . ' project=' . $project . ' pathname=' . $pathname);
+        //$this->logger->debug('resolveNextcloudNodeId:' . ' nextcloudNodeId=' . $nextcloudNodeId . ' area=' . $area . ' project=' . $project . ' pathname=' . $pathname);
 
         try {
 
@@ -2725,7 +2726,7 @@ class FreezingController extends Controller
 
                 $nextcloudNodeId = 0;
 
-                $fullPathname = $this->buildFullPathname($action, $project, $pathname);
+                $fullPathname = $this->buildFullPathname($area, $project, $pathname);
                 $fileInfo = $this->fsView->getFileInfo($fullPathname);
 
                 if ($fileInfo) {
@@ -2830,11 +2831,11 @@ class FreezingController extends Controller
     }
 
     /**
-     * Return true if any of the pathnames of any files in the specified Nextcloud FileInfo instances, per the
-     * specified action, which intersect with any files occupying the same pathname within the target space; else
+     * Return true if any of the pathnames of any files in the specified Nextcloud FileInfo instances
+     * intersect with any files occupying the same pathname within the specified target area; else
      * return false.
      *
-     * @param string     $action         the action being performed, one of 'freeze', 'unfreeze', or 'delete'
+     * @param string     $area           the storage area, either 'staging' or 'frozen'
      * @param string     $project        the project with which the files are associated
      * @param FileInfo[] $nextcloudFiles one or more FileInfo instances within the scope of the action
      *
@@ -2845,12 +2846,12 @@ class FreezingController extends Controller
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    protected function checkIntersectionWithExistingFiles($action, $project, $nextcloudFiles)
+    protected function checkIntersectionWithExistingFiles($area, $project, $nextcloudFiles)
     {
         $this->logger->debug(
             'checkIntersectionWithExistingFiles:'
             . ' project=' . $project
-            . ' action=' . $action
+            . ' area=' . $area
             . ' nextcloudFiles=' . count($nextcloudFiles)
         );
 
@@ -2861,20 +2862,14 @@ class FreezingController extends Controller
             if ($fileInfo->getType() === FileInfo::TYPE_FILE) {
 
                 $pathname = $this->stripRootProjectFolder($project, $fileInfo->getPath());
-
-                if ($action === 'freeze') {
-                    $targetPathname = $this->buildFullPathname('unfreeze', $project, $pathname);
-                } else {
-                    $targetPathname = $this->buildFullPathname('freeze', $project, $pathname);
-                }
-
+                $targetPathname = $this->buildFullPathname($area, $project, $pathname);
                 $fileInfo = $this->fsView->getFileInfo($targetPathname);
 
                 if ($fileInfo) {
                     $this->logger->debug(
                         'checkIntersectionWithExistingFiles: INTERSECTION EXISTS'
                         . ' project=' . $project
-                        . ' action=' . $action
+                        . ' area=' . $area
                         . ' pathname=' . $targetPathname
                     );
 
@@ -2982,7 +2977,7 @@ class FreezingController extends Controller
      * a file within the scope of the specified folder, returning false upon encountering the first file, else return
      * true.
      *
-     * @param string $action   the action being performed, one of 'freeze', 'unfreeze', or 'delete'
+     * @param string $area     the storage area, either 'staging' or 'frozen'
      * @param string $project  the project to which the node belongs
      * @param string $pathname the relative pathname of the node
      *
@@ -2993,11 +2988,11 @@ class FreezingController extends Controller
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    protected function isEmptyFolder($action, $project, $pathname)
+    protected function isEmptyFolder($area, $project, $pathname)
     {
-        //$this->logger->debug('isEmptyFolder: action=' . $action . ' project=' . $project . ' pathname=' . $pathname);
+        //$this->logger->debug('isEmptyFolder: area=' . $area . ' project=' . $project . ' pathname=' . $pathname);
 
-        $fullPathname = $this->buildFullPathname($action, $project, $pathname);
+        $fullPathname = $this->buildFullPathname($area, $project, $pathname);
 
         //$this->logger->debug('isEmptyFolder: fullPathname=' . $fullPathname);
 
@@ -3023,7 +3018,7 @@ class FreezingController extends Controller
             }
 
             foreach ($folders as $folder) {
-                if ($this->isEmptyFolder($action, $project, $this->stripRootProjectFolder($project, $folder->getPath())) === false) {
+                if ($this->isEmptyFolder($area, $project, $this->stripRootProjectFolder($project, $folder->getPath())) === false) {
                     return false;
                 }
             }
@@ -3054,7 +3049,7 @@ class FreezingController extends Controller
 
         foreach ($pathnames as $pathname) {
 
-            $fullPathname = $this->buildFullPathname('unfreeze', $project, $pathname);
+            $fullPathname = $this->buildFullPathname('frozen', $project, $pathname);
 
             //$this->logger->debug('getNextcloudFrozenFilesByPathnames: fullPathname=' . $fullPathname);
 
@@ -3079,7 +3074,7 @@ class FreezingController extends Controller
      *
      * If the maximum number of files is exceeded for a single action, an exception will be thrown.
      *
-     * @param string $action   the action being performed, one of 'freeze', 'unfreeze', or 'delete'
+     * @param string $area     the storage area, either 'staging' or 'frozen'
      * @param string $project  the project to which the files belong
      * @param string $pathname the pathname of a node relative to the root shared folder
      * @param int    $limit    the maximum total number of files allowed (zero = no limit)
@@ -3093,17 +3088,17 @@ class FreezingController extends Controller
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    protected function getNextcloudFiles($action, $project, $pathname, $limit = Constants::MAX_FILE_COUNT)
+    protected function getNextcloudFiles($area, $project, $pathname, $limit = Constants::MAX_FILE_COUNT)
     {
         $this->logger->debug(
             'getNextcloudFiles:'
-                . ' action=' . $action
+                . ' area=' . $area
                 . ' project=' . $project
                 . ' pathname=' . $pathname
                 . ' limit=' . $limit
         );
 
-        $fullPathname = $this->buildFullPathname($action, $project, $pathname);
+        $fullPathname = $this->buildFullPathname($area, $project, $pathname);
 
         $this->logger->debug('getNextcloudFiles: fullPathname=' . $fullPathname);
 
@@ -3123,7 +3118,7 @@ class FreezingController extends Controller
     /**
      * Construct and return the full filesystem pathname of a node based on the action, project, and its relative pathname
      *
-     * @param string $action   the action being performed, one of 'freeze', 'unfreeze', or 'delete'
+     * @param string $area     the storage area, either 'staging' or 'frozen'
      * @param string $project  the project to which the node belongs
      * @param string $pathname the relative pathname of the node within the shared project staging or frozen folder
      *
@@ -3134,11 +3129,11 @@ class FreezingController extends Controller
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    protected function buildFilesystemPathname($action, $project, $pathname)
+    protected function buildFilesystemPathname($area, $project, $pathname)
     {
-        //$this->logger->debug('buildFilesystemPathname:' . ' action=' . $action . ' project=' . $project . ' pathname=' . $pathname);
+        //$this->logger->debug('buildFilesystemPathname:' . ' area=' . $area . ' project=' . $project . ' pathname=' . $pathname);
 
-        $fullPathname = $this->buildFullPathname($action, $project, $pathname);
+        $fullPathname = $this->buildFullPathname($area, $project, $pathname);
 
         $filesystemPathname = $this->config->getSystemValueString('datadirectory')
             . '/'
@@ -3155,7 +3150,7 @@ class FreezingController extends Controller
     /**
      * Construct and return the full Nextcloud pathname of a node based on the action, project, and its relative pathname
      *
-     * @param string $action   the action being performed, one of 'freeze', 'unfreeze', or 'delete'
+     * @param string $area     the storage area, either 'staging' or 'frozen'
      * @param string $project  the project to which the node belongs
      * @param string $pathname the relative pathname of the node within the shared project staging or frozen folder
      *
@@ -3166,15 +3161,15 @@ class FreezingController extends Controller
      */
     #[NoAdminRequired]
     #[NoCSRFRequired]
-    protected function buildFullPathname($action, $project, $pathname)
+    protected function buildFullPathname($area, $project, $pathname)
     {
-        //$this->logger->debug('buildFullPathname:' . ' action=' . $action . ' project=' . $project . ' pathname=' . $pathname);
+        //$this->logger->debug('buildFullPathname:' . ' area=' . $area . ' project=' . $project . ' pathname=' . $pathname);
 
         if ($pathname === '/') {
             $pathname = '';
         }
 
-        if ($action === 'freeze') {
+        if ($area === 'staging') {
             $fullPathname = '/' . $project . Constants::STAGING_FOLDER_SUFFIX . $pathname;
         } else {
             $fullPathname = '/' . $project . $pathname;
@@ -3345,9 +3340,9 @@ class FreezingController extends Controller
         $this->logger->debug('moveNextcloudNodeChildren:' . ' action=' . $action . ' project=' . $project . ' pathname=' . $pathname);
 
         if ($action === 'freeze') {
-            $sourcePathname = $this->buildFullPathname('freeze', $project, $pathname);
+            $sourcePathname = $this->buildFullPathname('staging', $project, $pathname);
         } else {
-            $sourcePathname = $this->buildFullPathname('unfreeze', $project, $pathname);
+            $sourcePathname = $this->buildFullPathname('frozen', $project, $pathname);
         }
 
         $children = $this->fsView->getDirectoryContent($sourcePathname);
@@ -3396,11 +3391,11 @@ class FreezingController extends Controller
         }
 
         if ($action === 'freeze') {
-            $sourcePathname = $this->buildFullPathname('freeze', $project, $pathname);
-            $targetPathname = $this->buildFullPathname('unfreeze', $project, $pathname);
+            $sourcePathname = $this->buildFullPathname('staging', $project, $pathname);
+            $targetPathname = $this->buildFullPathname('frozen', $project, $pathname);
         } else {
-            $sourcePathname = $this->buildFullPathname('unfreeze', $project, $pathname);
-            $targetPathname = $this->buildFullPathname('freeze', $project, $pathname);
+            $sourcePathname = $this->buildFullPathname('frozen', $project, $pathname);
+            $targetPathname = $this->buildFullPathname('staging', $project, $pathname);
         }
 
         $this->logger->debug('moveNextcloudNode:' . ' sourcePathname=' . $sourcePathname . ' targetPathname=' . $targetPathname);
@@ -3533,7 +3528,6 @@ class FreezingController extends Controller
      * It is presumed that there are no file conflicts (i.e. that checkIntersectionWithExistingFiles() has been called prior to
      * calling this function on the root node of the action).
      *
-     * @param string $action   the action being performed, one of 'freeze', 'unfreeze', or 'delete'
      * @param string $project  the project to which the node belongs
      * @param string $pathname the relative pathname of the folder node
      *
@@ -3546,7 +3540,7 @@ class FreezingController extends Controller
     {
         $this->logger->debug('deleteNextcloudNodeChildren:' . ' project=' . $project . ' pathname=' . $pathname);
 
-        $sourcePathname = $this->buildFullPathname('unfreeze', $project, $pathname);
+        $sourcePathname = $this->buildFullPathname('frozen', $project, $pathname);
 
         $children = $this->fsView->getDirectoryContent($sourcePathname);
 
@@ -4252,7 +4246,7 @@ class FreezingController extends Controller
             }
             else {
                 // Disable file count limit by specifying limit as zero.
-                $nextcloudFiles = $this->getNextcloudFiles('unfreeze', $project, '/', 0);
+                $nextcloudFiles = $this->getNextcloudFiles('frozen', $project, '/', 0);
             }
 
             // Register all files in frozen area, associating them with the new 'repair' action...
@@ -4326,20 +4320,16 @@ class FreezingController extends Controller
 
             $project = substr($this->userId, strlen(Constants::PROJECT_USER_PREFIX));
 
-            // If pathname starts with 'frozen/' then use action 'unfreeze' to get full pathname,
-            // else pathname starts with 'staging/' so use action 'freeze' to get full pathname;
-            // and remove the prefix from the pathname.
-
             if (str_starts_with($pathname, 'frozen/')) {
-                $action = 'unfreeze';
+                $area = 'frozen';
                 $relativePathname = substr($pathname, strlen('frozen'));
             }
             else {
-                $action = 'freeze';
+                $area = 'staging';
                 $relativePathname = substr($pathname, strlen('staging'));
             }
 
-            $fullPathname = $this->buildFullPathname($action, $project, $relativePathname);
+            $fullPathname = $this->buildFullPathname($area, $project, $relativePathname);
 
             $this->logger->debug('repairNodeTimestamp: fullPathname=' . $fullPathname);
 
@@ -4407,20 +4397,16 @@ class FreezingController extends Controller
 
             $project = substr($this->userId, strlen(Constants::PROJECT_USER_PREFIX));
 
-            // If pathname starts with 'frozen/' then use action 'unfreeze' to get full pathname,
-            // else pathname starts with 'staging/' so use action 'freeze' to get full pathname;
-            // and remove the prefix from the pathname.
-
             if (str_starts_with($pathname, 'frozen/')) {
-                $action = 'unfreeze';
+                $area = 'frozen';
                 $relativePathname = substr($pathname, strlen('frozen'));
             }
             else {
-                $action = 'freeze';
+                $area = 'staging';
                 $relativePathname = substr($pathname, strlen('staging'));
             }
 
-            $fullPathname = $this->buildFullPathname($action, $project, $relativePathname);
+            $fullPathname = $this->buildFullPathname($area, $project, $relativePathname);
 
             $this->logger->debug('repairCacheChecksum: fullPathname=' . $fullPathname);
 
@@ -4491,20 +4477,16 @@ class FreezingController extends Controller
 
             API::verifyRequiredStringParameter('pathname', $pathname);
 
-            // If pathname starts with 'frozen/' then use action 'unfreeze' to get full pathname,
-            // else pathname starts with 'staging/' so use action 'freeze' to get full pathname;
-            // and remove the prefix from the pathname.
-
             if (str_starts_with($pathname, 'frozen/')) {
-                $action = 'unfreeze';
+                $area = 'frozen';
                 $relativePathname = substr($pathname, strlen('frozen'));
             }
             else {
-                $action = 'freeze';
+                $area = 'staging';
                 $relativePathname = substr($pathname, strlen('staging'));
             }
 
-            $fullPathname = $this->buildFullPathname($action, $project, $relativePathname);
+            $fullPathname = $this->buildFullPathname($area, $project, $relativePathname);
 
             $this->logger->debug('retrieveCacheChecksum: fullPathname=' . $fullPathname);
 

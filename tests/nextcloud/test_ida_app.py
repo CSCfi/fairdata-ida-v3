@@ -269,7 +269,6 @@ class TestIdaApp(unittest.TestCase):
 
         print("Attempt to remove root frozen folder with DELETE request to WebDAV API")
         url = "%s/test_user_d/test_project_d" % self.config["FILE_API"]
-        print("-u test_user_d:test -X DELETE '%s'" % url);
         response = requests.request(method='DELETE', url=url, auth=test_user_d, verify=False)
         self.assertEqual(response.status_code, 403)
         self.assertIn('Root project folders cannot be modified by project users', response.text)
