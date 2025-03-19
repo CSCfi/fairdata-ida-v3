@@ -62,48 +62,31 @@ class TestIdaCli(unittest.TestCase):
         # timeout when waiting for actions to complete
         self.timeout = 10800 # 3 hours
 
-        self.cli_root = self.config["IDA_CLI_ROOT"]
+        self.ida_root = self.config["ROOT"]
+        self.cli_root = self.ida_root + "/cli"
         self.cli_cmd = "%s/ida" % self.cli_root
-        self.tempdir = "%s/tests/cli/tmp" % (self.cli_root)
-        self.ignore_file = "-i %s/tests/cli/ida-ignore" % (self.cli_root)
+        self.tempdir = "%s/tests/tmp" % (self.ida_root)
+        self.ignore_file = "-i %s/tests/cli/ida-ignore" % (self.ida_root)
         self.config_file = "%s/ida-config" % self.tempdir
         self.info_args = "-c %s" % self.config_file
         self.args = "-V %s" % self.info_args
    
-        self.ida_host = self.config["IDA_HOST"]
-        self.ida_api = self.config["IDA_API_ROOT_URL"]
+        self.ida_environment = self.config["IDA_ENVIRONMENT"]
+        self.ida_api = self.config["IDA_API"]
+        self.ida_host = self.config.get("IDA_HOST", self.ida_api[:-len("/apps/ida/api")])
 
-        self.config_source = self.config["CONFIG_SOURCE"]
-
-        if self.config_source == "IDA":
-            self.test_project_name = "test_cli_project"
-            self.test_user_name = "test_cli_user"
-            self.test_user_pass = self.config["TEST_USER_PASS"]
-            self.admin_user_name = self.config["NC_ADMIN_USER"]
-            self.admin_user_pass = self.config["NC_ADMIN_PASS"]
-        else: # "TEST" or "HOME"
-            self.test_project_name = self.config["IDA_PROJECT"]
-            self.test_user_name = self.config.get("IDA_USERNAME", None)
-            self.test_user_pass = self.config.get("IDA_PASSWORD", None)
-            self.admin_user_name = self.config.get("NC_ADMIN_USER", "admin")
-            self.admin_user_pass = self.config.get("NC_ADMIN_PASS", None)
-
-        self.assertIsNotNone(self.ida_host)
-        self.assertIsNotNone(self.test_project_name)
+        self.test_project_name = "test_project_a"
+        self.test_user_name = "test_user_a"
+        self.test_user_pass = self.config["TEST_USER_PASS"]
+        self.admin_user_name = self.config["NC_ADMIN_USER"]
+        self.admin_user_pass = self.config["NC_ADMIN_PASS"]
 
         self.pso_user_name = "%s%s" % (self.config["PROJECT_USER_PREFIX"], self.test_project_name)
         self.test_user_auth = (self.test_user_name, self.test_user_pass)
         self.admin_user_auth = (self.admin_user_name, self.admin_user_pass)
 
-        self.ida_root = self.config.get("ROOT", None)
-        self.storage_root = self.config.get("STORAGE_OC_DATA_ROOT", None)
-        self.testdata = "%s/tests/testdata" % (self.config["IDA_CLI_ROOT"])
-
-        # Adjust authentication if netrc will be used, due to no username/password defined in configuration
-        self.netrc = False
-        if self.config_source == "HOME" and self.test_user_name == None and self.test_user_pass == None:
-            self.netrc = True
-            self.test_user_auth = None
+        self.storage_root = self.config["STORAGE_OC_DATA_ROOT"]
+        self.testdata = "%s/tests/testdata" % (self.ida_root)
 
         # Generate random test execution token, to make uploaded data directory unique
         self.token = "_%sZ_%s" % (datetime.datetime.now().replace(microsecond=0).isoformat(), secrets.token_hex(3))
@@ -118,11 +101,8 @@ class TestIdaCli(unittest.TestCase):
         # Prefix IDA CLI script pathname with environment variable allowing use of modified script
         self.cli_cmd = "ALLOW_MODIFIED_SCRIPT=\"true\" %s" % self.cli_cmd
 
-        # Prefix IDA CLI script pathname with user password from configuration if netrc not being used.
-        # This prevents a user's actual password taken from a home configuration from being included in
-        # any of the temporary configuration files generated as part of these tests
-        if not self.netrc:
-            self.cli_cmd = "IDA_PASSWORD=\"%s\" %s" % (self.test_user_pass, self.cli_cmd)
+        # Prefix IDA CLI script pathname with user password from configuration.
+        self.cli_cmd = "IDA_PASSWORD=\"%s\" %s" % (self.test_user_pass, self.cli_cmd)
 
         # Ensure test data root exists where specified and is directory
         path = Path(self.testdata)
@@ -134,26 +114,8 @@ class TestIdaCli(unittest.TestCase):
             shutil.rmtree(self.tempdir, ignore_errors=True)
         path.mkdir()
 
-        # If the loaded configuration was from a locally installed version of IDA, then the full scope of localized
-        # tests will be run; else, only a limited subset of tests will be run against a remote IDA instance
-        
-        self.run_localized_tests = self.config_source == "IDA"
-
-        # Determine whether trusted tests should be run, based on defined credentials
-        
-        self.run_trusted_tests = False
-
-        if self.config.get("NC_ADMIN_PASS", None) != None:
-            self.run_trusted_tests = True
-
-        # Allow manual override of local and trusted tests
-        if os.getenv('ONLY_SAFE_TESTS') == 'true':
-            self.run_localized_tests = False
-            self.run_trusted_tests = False
-
-        print("CONFIG SOURCE:           %s" % self.config_source)
-        print("CONFIG PATH:             %s" % self.config["CONFIG_PATH"])
-        print("IDA ENVIRONMENT:         %s" % self.config["IDA_ENVIRONMENT"])
+        print("IDA ENVIRONMENT:         %s" % self.ida_environment)
+        print("IDA ROOT:                %s" % self.ida_root)
         print("IDA CLI ROOT:            %s" % self.cli_root)
         print("IDA HOST:                %s" % self.ida_host)
         print("IDA API:                 %s" % self.ida_api)
@@ -161,37 +123,24 @@ class TestIdaCli(unittest.TestCase):
         print("TEST PROJECT NAME:       %s" % self.test_project_name)
         print("TEST USER AUTH:          %s" % json.dumps(self.test_user_auth))
         print("ADMIN USER AUTH:         %s" % json.dumps(self.admin_user_auth))
-        print("NETRC:                   %s" % self.netrc)
-        print("RUN LOCALIZED TESTS:     %s" % self.run_localized_tests)
-        print("RUN TRUSTED TESTS:       %s" % self.run_trusted_tests)
         print("CLI CMD:                 %s" % self.cli_cmd)
 
-        if (self.config.get("IDA_ENVIRONMENT", None) == "PRODUCTION") or ("ida.fairdata.fi" in self.ida_host) or ("ida.fairdata.fi" in self.ida_api):
-            if self.config.get("RUN_TESTS_IN_PRODUCTION", None) == "I SWEAR I KNOW WHAT I AM DOING AND ACCEPT ALL RESPONSIBILITY":
-                print("*** WARNING: Automated tests really shouldn't be run against production! You better know what you are doing!")
-                # We never want to run localized tests or trusted tests against production, only tests using user credentials!
-                self.run_localized_tests = False
-                self.run_trusted_tests = False
-                print("RUN LOCALIZED TESTS:     %s" % self.run_localized_tests)
-                print("RUN TRUSTED TESTS:       %s" % self.run_trusted_tests)
-            else:
-                sys.exit("Error: Automated tests should NOT be run against production! Aborting")
-
-        # Clear any residual accounts and test configurations, if they exist from a prior run
+        if (self.ida_environment == "PRODUCTION") or ("ida.fairdata.fi" in self.ida_host) or ("ida.fairdata.fi" in self.ida_api):
+            sys.exit("Error: Automated CLI tests should NOT be run against production! Run safe tests instead! Aborting")
 
         self.success = True
-        noflush = self.config["NO_FLUSH_AFTER_TESTS"]
-        self.config["NO_FLUSH_AFTER_TESTS"] = "false"
-        self.tearDown()
-        self.success = False
-        self.config["NO_FLUSH_AFTER_TESTS"] = noflush
 
-        # Initialize clean test accounts, if IDA is installed locally
+        #noflush = self.config["NO_FLUSH_AFTER_TESTS"]
+        #self.config["NO_FLUSH_AFTER_TESTS"] = "false"
+        #self.tearDown()
+        #self.success = False
+        #self.config["NO_FLUSH_AFTER_TESTS"] = noflush
 
-        if self.run_localized_tests:
-            cmd = "sudo -u %s %s/tests/utils/initialize-test-accounts" % (self.config["HTTPD_USER"], self.cli_root)
-            result = os.system(cmd)
-            self.assertEquals(result, 0)
+        # Initialize clean test accounts
+
+        cmd = "sudo -u apache DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.ida_root, self.ida_root)
+        result = os.system(cmd)
+        self.assertEquals(result, 0)
 
         # Build test ida-config files based on configuration definitions
 
@@ -201,8 +150,7 @@ class TestIdaCli(unittest.TestCase):
         f.write("IDA_HOST=\"%s\"\n" % self.ida_host)
         f.write("IDA_PROJECT=\"%s\"\n" % self.test_project_name)
         f.write("IDA_USERNAME=\"%s\"\n" % self.test_user_name)
-        if self.config_source != "HOME":
-            f.write("IDA_PASSWORD=\"%s\"\n" % self.test_user_pass)
+        f.write("IDA_PASSWORD=\"%s\"\n" % self.test_user_pass)
         f.close()
 
         f = open("%s/ida-config-invalid-username" % self.tempdir, "w")
@@ -224,30 +172,26 @@ class TestIdaCli(unittest.TestCase):
 
         print("(cleaning)")
 
-        if self.run_trusted_tests:
+        # Always unlock the service, even if a test failed
 
-            # Always unlock the service, even if a test failed
+        print("Unlock service")
+        response = requests.delete("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+        self.assertEqual(response.status_code, 200, "Failed to unlock service while cleaning up!")
 
-            print("Unlock service")
-            response = requests.delete("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
-            self.assertEqual(response.status_code, 200, "Failed to unlock service while cleaning up!")
+        print("Verify that service is unlocked")
+        response = requests.get("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+        self.assertEqual(response.status_code, 404, "Failed to unlock service while cleaning up!")
 
-            print("Verify that service is unlocked")
-            response = requests.get("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
-            self.assertEqual(response.status_code, 404, "Failed to unlock service while cleaning up!")
+        # Flush all test projects, user accounts, and data, but only if all tests passed,
+        # else leave projects and data as-is so test project state can be inspected
 
-        if self.run_localized_tests:
+        if self.success and self.config.get("NO_FLUSH_AFTER_TESTS", "false") == "false":
 
-            # Flush all test projects, user accounts, and data, but only if all tests passed,
-            # else leave projects and data as-is so test project state can be inspected
+            #shutil.rmtree(self.tempdir, ignore_errors=True)
 
-            if self.success and self.config.get("NO_FLUSH_AFTER_TESTS", "false") == "false":
-
-                #shutil.rmtree(self.tempdir, ignore_errors=True)
-
-                cmd = "sudo -u %s %s/tests/utils/initialize-test-accounts flush" % (self.config["HTTPD_USER"], self.cli_root)
-                result = os.system(cmd)
-                self.assertEquals(result, 0)
+            cmd = "sudo -u apache DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.ida_root, self.ida_root)
+            result = os.system(cmd)
+            self.assertEquals(result, 0)
 
         self.assertTrue(self.success)
 
@@ -278,12 +222,6 @@ class TestIdaCli(unittest.TestCase):
 
 
     def test_ida_cli(self):
-
-        if not self.run_trusted_tests:
-            print("*** WARNING: Trusted account credentials not defined or ignored. A subset of tests will be executed.")
-
-        if not self.run_localized_tests:
-            print("*** WARNING: No local IDA installation present. A subset of tests will be executed.")
 
         print("--- Parameters and Credentials")
 
@@ -820,9 +758,8 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target uploaded successfully", output)
         self.assertIn("* Uploading file %s/Contact.txt to /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Upload new file")
         cmd = "%s upload %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -832,13 +769,12 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
         self.assertIn("Uploading file %s/Contact.txt to /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEqual(2263, path.stat().st_size, output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEqual(2263, path.stat().st_size, output)
 
         print("Query IDA for last add data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=add" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=add" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -869,9 +805,8 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("WARNING: one or more files were skipped", output)
         self.assertIn("Skipping existing file %s/Contact.txt at /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Force upload of existing file")
         cmd = "%s upload %s -F /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -881,12 +816,11 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
         self.assertIn("Uploading file %s/Contact.txt to /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Query IDA for last add data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=add" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=add" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -918,11 +852,10 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
         self.assertIn("Uploading file %s/License.txt to /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEqual(446, path.stat().st_size, output)
-            self.assertNotEqual(2263, path.stat().st_size, output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEqual(446, path.stat().st_size, output)
+        self.assertNotEqual(2263, path.stat().st_size, output)
 
         print("Validate new file with different local file size than in IDA, which will be reported as invalid")
         cmd = "%s validate %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -948,10 +881,9 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
         self.assertIn("Uploading file %s/Contact.txt to /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEqual(2263, path.stat().st_size, output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEqual(2263, path.stat().st_size, output)
 
         print("Validate restored file")
         cmd = "%s validate %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -984,20 +916,18 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
         self.assertIn("Uploading file %s/Contact.txt to /%s+/test%s/f/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/f/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEqual(2263, path.stat().st_size, output)
+        path = Path("%s/test%s/f/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEqual(2263, path.stat().st_size, output)
 
         print("(freeze file)")
         data = {"project": self.test_project_name, "pathname": "/test%s/f/Contact.txt" % (self.token)}
         response = requests.post("%s/freeze" % self.ida_api, json=data, auth=self.test_user_auth, verify=False)
         self.assertEqual(response.status_code, 200)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/f/Contact.txt" % (self.frozen, self.token))
-            self.assertTrue(path.is_file(), output)
-            path = Path("%s/test%s/f/Contact.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/f/Contact.txt" % (self.frozen, self.token))
+        self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/f/Contact.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         self.waitForPendingActions(self.test_project_name, self.test_user_auth)
         self.checkForFailedActions(self.test_project_name, self.test_user_auth)
@@ -1027,10 +957,9 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
         self.assertIn("Uploading file %s/Contact.txt to /%s+/test%s/nc/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/nc/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEqual(2263, path.stat().st_size, output)
+        path = Path("%s/test%s/nc/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEqual(2263, path.stat().st_size, output)
 
         print("Validate file without checksum")
         cmd = "%s validate %s /test%s/nc/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -1049,9 +978,8 @@ class TestIdaCli(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
         self.assertIn("Uploading file %s/License.txt to /%s+/test%s/License.txt" % (self.testdata, self.test_project_name, self.token), output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/License.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/License.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Upload file with relative local pathname")
         cmd = "cd %s/2017-08; %s upload %s /test%s/License2.txt ../License.txt" % (self.testdata, self.cli_cmd, self.args, self.token)
@@ -1060,9 +988,8 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/License2.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/License2.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Upload zero size file")
         cmd = "%s upload %s /test%s/zero_size_file %s/2017-08/Experiment_1/zero_size_file" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -1071,13 +998,12 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/zero_size_file" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/zero_size_file" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
 
         print("Query IDA for last add data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=add" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=add" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1098,9 +1024,8 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target copied successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Copy file within staging")
         cmd = "%s copy %s /test%s/Contact.txt /test%s/a/b/c/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
@@ -1109,14 +1034,13 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Query IDA for last copy data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1134,11 +1058,10 @@ class TestIdaCli(unittest.TestCase):
         data = {"project": self.test_project_name, "pathname": "/test%s/a/b/c/Contact.txt" % (self.token)}
         response = requests.post("%s/freeze" % self.ida_api, json=data, auth=self.test_user_auth, verify=False)
         self.assertEqual(response.status_code, 200)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/a/b/c/Contact.txt" % (self.frozen, self.token))
-            self.assertTrue(path.is_file(), output)
-            path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/a/b/c/Contact.txt" % (self.frozen, self.token))
+        self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         self.waitForPendingActions(self.test_project_name, self.test_user_auth)
         self.checkForFailedActions(self.test_project_name, self.test_user_auth)
@@ -1150,11 +1073,10 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target copied successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/a/b/c/Contact.txt" % (self.frozen, self.token))
-            self.assertTrue(path.is_file(), output)
-            path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/a/b/c/Contact.txt" % (self.frozen, self.token))
+        self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Copy file from frozen area to staging area")
         cmd = "%s copy %s -f /test%s/a/b/c/Contact.txt /test%s/a/b/c/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
@@ -1163,14 +1085,13 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/a/b/c/Contact.txt" % (self.frozen, self.token))
-            self.assertTrue(path.is_file(), output)
-            path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/a/b/c/Contact.txt" % (self.frozen, self.token))
+        self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/a/b/c/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Query IDA for last copy data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1191,16 +1112,15 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/zero_size_file" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
-            path = Path("%s/test%s/a/b/c/zero_size_file" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/zero_size_file" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/a/b/c/zero_size_file" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
 
         print("Query IDA for last copy data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1221,11 +1141,10 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target moved successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            path = Path("%s/test%s/Contact2.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/Contact2.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Rename file")
         cmd = "%s move %s /test%s/Contact.txt /test%s/Contact2.txt" % (self.cli_cmd, self.args, self.token, self.token)
@@ -1234,14 +1153,13 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
-            path = Path("%s/test%s/Contact2.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/Contact.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/Contact2.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Query IDA for last rename data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=rename" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=rename" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1262,11 +1180,10 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact2.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            path = Path("%s/test%s/x/y/z/Contact.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/Contact2.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/x/y/z/Contact.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Move file")
         cmd = "%s move %s /test%s/Contact2.txt /test%s/x/y/z/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
@@ -1275,14 +1192,13 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Contact2.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
-            path = Path("%s/test%s/x/y/z/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/Contact2.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/x/y/z/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Query IDA for last move data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=move" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=move" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1402,9 +1318,8 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target deleted successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/x/y/z/Contact.txt" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
+        path = Path("%s/test%s/x/y/z/Contact.txt" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
 
         print("Delete file")
         cmd = "%s delete %s /test%s/x/y/z/Contact.txt" % (self.cli_cmd, self.args, self.token)
@@ -1413,12 +1328,11 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target deleted successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/x/y/z/Contact.txt" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/x/y/z/Contact.txt" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Query IDA for last delete data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=delete" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=delete" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1441,9 +1355,8 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Upload new folder")
         cmd = "%s upload %s /test%s/2017-08/Experiment_1 %s/2017-08/Experiment_1" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -1452,27 +1365,26 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline/test01.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline/test02.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(1531, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline/test03.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(2263, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline/test04.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(3329, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline/test05.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(3728, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline/test01.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline/test02.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(1531, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline/test03.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(2263, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline/test04.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(3329, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline/test05.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(3728, path.stat().st_size, output)
 
         print("Query IDA for last add data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=add" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=add" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1493,12 +1405,11 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline2" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline2/test01.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline2" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline2/test01.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
 
         print("Upload folder without initial slash in target pathname")
         cmd = "%s upload %s test%s/2017-08/Experiment_1/baseline3 %s/2017-08/Experiment_2/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -1507,12 +1418,11 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline3" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline3/test01.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline3" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline3/test01.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
 
         print("Upload folder with trailing slash in target pathname")
         cmd = "%s upload %s /test%s/2017-08/Experiment_1/baseline4/ %s/2017-08/Experiment_2/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -1521,12 +1431,11 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline4" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline4/test01.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline4" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline4/test01.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
 
         print("Upload folder with trailing slash in local pathname")
         cmd = "%s upload %s /test%s/2017-08/Experiment_1/baseline5 %s/2017-08/Experiment_2/baseline/" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -1535,12 +1444,11 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline5" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline5/test01.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline5" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline5/test01.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
 
         print("Upload folder with relative local pathname")
         cmd = "cd %s/2017-08/Experiment_2; %s upload %s /test%s/2017-08/Experiment_1/baseline6 ./baseline" % (self.testdata, self.cli_cmd, self.args, self.token)
@@ -1549,12 +1457,11 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline6" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-08/Experiment_1/baseline6/test01.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline6" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-08/Experiment_1/baseline6/test01.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
 
         print("Upload folder with ignore patterns")
         cmd = "%s upload %s %s /test%s/2017-10 %s/2017-10" % (self.cli_cmd, self.args, self.ignore_file, self.token, self.testdata)
@@ -1563,24 +1470,23 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline/test01.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-10/.DS_Store" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
-            path = Path("%s/test%s/2017-10/Experiment_3/test05.dat" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline/test05.dat" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
-            path = Path("%s/test%s/2017-10/.hidden_folder" % (self.staging, self.token))
-            self.assertTrue(path.exists(), output)
-            path = Path("%s/test%s/2017-10/.hidden_folder/test.dat" % (self.staging, self.token))
-            self.assertTrue(path.exists(), output)
-            path = Path("%s/test%s/2017-10/Experiment_3/.hidden_file" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline/test01.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-10/.DS_Store" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/test05.dat" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline/test05.dat" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-10/.hidden_folder" % (self.staging, self.token))
+        self.assertTrue(path.exists(), output)
+        path = Path("%s/test%s/2017-10/.hidden_folder/test.dat" % (self.staging, self.token))
+        self.assertTrue(path.exists(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/.hidden_file" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Upload folder with files containing special characters")
         cmd = "%s upload %s /test%s/Special\ Characters %s/Special\ Characters" % (self.cli_cmd, self.args, self.token, self.testdata)
@@ -1589,18 +1495,17 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/Special Characters" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/Special Characters/file_with_ä_and_ö_and_even_å_oh_my.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
-            path = Path("%s/test%s/Special Characters/file with spaces and (various) [brackets] {etc}" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
-            path = Path("%s/test%s/Special Characters/$file with special characters #~;@-+'&!%%^.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/Special Characters" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/Special Characters/file_with_ä_and_ö_and_even_å_oh_my.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/Special Characters/file with spaces and (various) [brackets] {etc}" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/Special Characters/$file with special characters #~;@-+'&!%%^.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
 
         print("Copy folder within staging area with dry-run parameter and verify no actual copy occurred")
         cmd = "%s copy %s -D /test%s/2017-10/Experiment_3/baseline /test%s/2017-11/Experiment_8/baseline" % (self.cli_cmd, self.args, self.token, self.token)
@@ -1609,9 +1514,8 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target copied successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Copy folder within staging area")
         cmd = "%s copy %s /test%s/2017-10/Experiment_3/baseline /test%s/2017-11/Experiment_8/baseline" % (self.cli_cmd, self.args, self.token, self.token)
@@ -1620,20 +1524,19 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline/zero_size_file" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline/zero_size_file" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
 
         print("Query IDA for last copy data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1651,11 +1554,10 @@ class TestIdaCli(unittest.TestCase):
         data = {"project": self.test_project_name, "pathname": "/test%s/2017-11/Experiment_8" % (self.token)}
         response = requests.post("%s/freeze" % self.ida_api, json=data, auth=self.test_user_auth, verify=False)
         self.assertEqual(response.status_code, 200)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-11/Experiment_8" % (self.frozen, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-11/Experiment_8" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-11/Experiment_8" % (self.frozen, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-11/Experiment_8" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         self.waitForPendingActions(self.test_project_name, self.test_user_auth)
         self.checkForFailedActions(self.test_project_name, self.test_user_auth)
@@ -1667,20 +1569,19 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.frozen, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.frozen, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.frozen, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.frozen, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
 
         print("Query IDA for last copy data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1701,11 +1602,10 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target moved successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline_old" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline_old" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Rename folder")
         cmd = "%s move %s /test%s/2017-10/Experiment_3/baseline /test%s/2017-10/Experiment_3/baseline_old" % (self.cli_cmd, self.args, self.token, self.token)
@@ -1714,14 +1614,13 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline_old" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline_old" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
 
         print("Query IDA for last rename data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=rename" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=rename" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1742,11 +1641,10 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline_old" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-11/Experiment_9/baseline_x" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline_old" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-11/Experiment_9/baseline_x" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Move folder")
         cmd = "%s move %s /test%s/2017-10/Experiment_3/baseline_old /test%s/2017-11/Experiment_9/baseline_x" % (self.cli_cmd, self.args, self.token, self.token)
@@ -1755,17 +1653,16 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-10/Experiment_3/baseline_old" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
-            path = Path("%s/test%s/2017-11/Experiment_9/baseline_x" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-11/Experiment_9/baseline_x/zero_size_file" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-10/Experiment_3/baseline_old" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-11/Experiment_9/baseline_x" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-11/Experiment_9/baseline_x/zero_size_file" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
 
         print("Query IDA for last move data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=move" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=move" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1786,10 +1683,9 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target downloaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/2017-10_Experiment_5.zip" % (self.tempdir))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(16868, path.stat().st_size, output)
+        path = Path("%s/2017-10_Experiment_5.zip" % (self.tempdir))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(16868, path.stat().st_size, output)
 
         print("Attempt to upload folder using invalid local pathname")
         cmd = "%s upload %s /test%s/no/such/folder /no/such/folder" % (self.cli_cmd, self.args, self.token)
@@ -1820,9 +1716,8 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target deleted successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-10/Experiment_4" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-10/Experiment_4" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
 
         print("Delete folder")
         cmd = "%s delete %s /test%s/2017-10/Experiment_4" % (self.cli_cmd, self.args, self.token)
@@ -1831,12 +1726,11 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target deleted successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-10/Experiment_4" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-10/Experiment_4" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         print("Query IDA for last delete data change details and verify change matches last action")
-        response = requests.get("%s/dataChanges/%s/last?change=delete" % (self.config["IDA_API_ROOT_URL"], self.test_project_name), auth=self.test_user_auth)
+        response = requests.get("%s/dataChanges/%s/last?change=delete" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
         self.assertEqual(response.status_code, 200)
         changeDetails = response.json()
         self.assertIsNotNone(changeDetails)
@@ -1859,27 +1753,26 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline" % (self.staging, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline/test01.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(446, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline/test02.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(1531, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline/test03.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(2263, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline/test04.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(3329, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline/test05.dat" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(3728, path.stat().st_size, output)
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline/zero_size_file" % (self.staging, self.token))
-            self.assertTrue(path.is_file(), output)
-            self.assertEquals(0, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline" % (self.staging, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline/test01.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(446, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline/test02.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(1531, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline/test03.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(2263, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline/test04.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(3329, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline/test05.dat" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(3728, path.stat().st_size, output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline/zero_size_file" % (self.staging, self.token))
+        self.assertTrue(path.is_file(), output)
+        self.assertEquals(0, path.stat().st_size, output)
 
         print("Retrieve file info from staging area as plain text")
         cmd = "%s info %s /test%s/2017-12/Experiment_1/baseline/test01.dat" % (self.cli_cmd, self.info_args, self.token)
@@ -1946,11 +1839,10 @@ class TestIdaCli(unittest.TestCase):
         data = {"project": self.test_project_name, "pathname": "/test%s/2017-12/Experiment_1/baseline" % (self.token)}
         response = requests.post("%s/freeze" % self.ida_api, json=data, auth=self.test_user_auth, verify=False)
         self.assertEqual(response.status_code, 200)
-        if self.run_localized_tests:
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline" % (self.frozen, self.token))
-            self.assertTrue(path.is_dir(), output)
-            path = Path("%s/test%s/2017-12/Experiment_1/baseline" % (self.staging, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline" % (self.frozen, self.token))
+        self.assertTrue(path.is_dir(), output)
+        path = Path("%s/test%s/2017-12/Experiment_1/baseline" % (self.staging, self.token))
+        self.assertFalse(path.exists(), output)
 
         self.waitForPendingActions(self.test_project_name, self.test_user_auth)
         self.checkForFailedActions(self.test_project_name, self.test_user_auth)
@@ -2037,101 +1929,99 @@ class TestIdaCli(unittest.TestCase):
             self.assertIn("Error: Specified target not found", output)
         self.assertTrue(failed, output)
 
-        if self.run_trusted_tests:
+        print("--- Locking and Scope Collisions")
 
-            print("--- Locking and Scope Collisions")
+        # NOTE: It is sufficient to simply use service locking for testing all CLI behavior
+        # related to lock and scope collision, without having to simulate any initiating
+        # actions and test actual pathname collisions. This is because the behavioral tests
+        # for the scope collision functionality already cover actual collision use cases,
+        # and all that must be checked here is that the CLI script queries the scopeOK API
+        # endpoint before each relevant operation and exits with an error if a 409 response
+        # is received. It doesn't matter whether the 409 response is due to the service being
+        # locked or an actual pathname collision.
 
-            # NOTE: It is sufficient to simply use service locking for testing all CLI behavior
-            # related to lock and scope collision, without having to simulate any initiating
-            # actions and test actual pathname collisions. This is because the behavioral tests
-            # for the scope collision functionality already cover actual collision use cases,
-            # and all that must be checked here is that the CLI script queries the scopeOK API
-            # endpoint before each relevant operation and exits with an error if a 409 response
-            # is received. It doesn't matter whether the 409 response is due to the service being
-            # locked or an actual pathname collision.
+        print("Lock service")
+        response = requests.post("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+        self.assertEqual(response.status_code, 200)
 
-            print("Lock service")
-            response = requests.post("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
-            self.assertEqual(response.status_code, 200)
+        print("Verify that service is locked")
+        response = requests.get("%s/lock/all" % (self.ida_api), auth=self.test_user_auth, verify=False)
+        self.assertEqual(response.status_code, 200)
 
-            print("Verify that service is locked")
-            response = requests.get("%s/lock/all" % (self.ida_api), auth=self.test_user_auth, verify=False)
-            self.assertEqual(response.status_code, 200)
+        print("Attempt to upload file while service is locked")
+        cmd = "%s upload %s /test%s/2017-08/Experiment_1/test01.dat %s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token, self.testdata)
+        failed = False
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            failed = True
+            output = error.output.decode(sys.stdout.encoding)
+            self.assertIn("Error: Specified target conflicts with an ongoing action", output)
+        self.assertTrue(failed, output)
 
-            print("Attempt to upload file while service is locked")
-            cmd = "%s upload %s /test%s/2017-08/Experiment_1/test01.dat %s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token, self.testdata)
-            failed = False
-            try:
-                output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-            except subprocess.CalledProcessError as error:
-                failed = True
-                output = error.output.decode(sys.stdout.encoding)
-                self.assertIn("Error: Specified target conflicts with an ongoing action", output)
-            self.assertTrue(failed, output)
+        print("Attempt to rename file while service is locked")
+        cmd = "%s move %s /test%s/2017-08/Experiment_1/test01b.dat /test%s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token, self.token)
+        failed = False
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            failed = True
+            output = error.output.decode(sys.stdout.encoding)
+            self.assertIn("Error: Specified target conflicts with an ongoing action", output)
+        self.assertTrue(failed, output)
+
+        print("Attempt to delete file while service is locked")
+        cmd = "%s delete %s /test%s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token)
+        failed = False
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            failed = True
+            output = error.output.decode(sys.stdout.encoding)
+            self.assertIn("Error: Specified target conflicts with an ongoing action", output)
+        self.assertTrue(failed, output)
+
+        print("Attempt to upload folder while service is locked")
+        cmd = "%s upload %s /test%s/2017-08/Experiment_1/baseline6 %s/2017-08/Experiment_2/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
+        failed = False
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            failed = True
+            output = error.output.decode(sys.stdout.encoding)
+            self.assertIn("Error: Specified target conflicts with an ongoing action", output)
+        self.assertTrue(failed, output)
+
+        print("Attempt to rename folder while service is locked")
+        cmd = "%s move %s /test%s/2017-08/Experiment_1 /test%s/2017-08/Experiment_9" % (self.cli_cmd, self.args, self.token, self.token)
+        failed = False
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            failed = True
+            output = error.output.decode(sys.stdout.encoding)
+            self.assertIn("Error: Specified target conflicts with an ongoing action", output)
+        self.assertTrue(failed, output)
+
+        print("Attempt to delete folder while service is locked")
+        cmd = "%s delete %s /test%s/2017-08/Experiment_1" % (self.cli_cmd, self.args, self.token)
+        failed = False
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            failed = True
+            output = error.output.decode(sys.stdout.encoding)
+            self.assertIn("Error: Specified target conflicts with an ongoing action", output)
+        self.assertTrue(failed, output)
+
+        print("Unlock service")
+        response = requests.delete("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+        self.assertEqual(response.status_code, 200)
+
+        print("Verify that service is unlocked")
+        response = requests.get("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
+        self.assertEqual(response.status_code, 404)
     
-            print("Attempt to rename file while service is locked")
-            cmd = "%s move %s /test%s/2017-08/Experiment_1/test01b.dat /test%s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token, self.token)
-            failed = False
-            try:
-                output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-            except subprocess.CalledProcessError as error:
-                failed = True
-                output = error.output.decode(sys.stdout.encoding)
-                self.assertIn("Error: Specified target conflicts with an ongoing action", output)
-            self.assertTrue(failed, output)
-    
-            print("Attempt to delete file while service is locked")
-            cmd = "%s delete %s /test%s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token)
-            failed = False
-            try:
-                output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-            except subprocess.CalledProcessError as error:
-                failed = True
-                output = error.output.decode(sys.stdout.encoding)
-                self.assertIn("Error: Specified target conflicts with an ongoing action", output)
-            self.assertTrue(failed, output)
-    
-            print("Attempt to upload folder while service is locked")
-            cmd = "%s upload %s /test%s/2017-08/Experiment_1/baseline6 %s/2017-08/Experiment_2/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
-            failed = False
-            try:
-                output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-            except subprocess.CalledProcessError as error:
-                failed = True
-                output = error.output.decode(sys.stdout.encoding)
-                self.assertIn("Error: Specified target conflicts with an ongoing action", output)
-            self.assertTrue(failed, output)
-    
-            print("Attempt to rename folder while service is locked")
-            cmd = "%s move %s /test%s/2017-08/Experiment_1 /test%s/2017-08/Experiment_9" % (self.cli_cmd, self.args, self.token, self.token)
-            failed = False
-            try:
-                output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-            except subprocess.CalledProcessError as error:
-                failed = True
-                output = error.output.decode(sys.stdout.encoding)
-                self.assertIn("Error: Specified target conflicts with an ongoing action", output)
-            self.assertTrue(failed, output)
-    
-            print("Attempt to delete folder while service is locked")
-            cmd = "%s delete %s /test%s/2017-08/Experiment_1" % (self.cli_cmd, self.args, self.token)
-            failed = False
-            try:
-                output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-            except subprocess.CalledProcessError as error:
-                failed = True
-                output = error.output.decode(sys.stdout.encoding)
-                self.assertIn("Error: Specified target conflicts with an ongoing action", output)
-            self.assertTrue(failed, output)
-    
-            print("Unlock service")
-            response = requests.delete("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
-            self.assertEqual(response.status_code, 200)
-    
-            print("Verify that service is unlocked")
-            response = requests.get("%s/lock/all" % (self.ida_api), auth=self.admin_user_auth, verify=False)
-            self.assertEqual(response.status_code, 404)
-        
         print("(delete test data folder from staging area)")
         cmd = "%s delete %s /test%s" % (self.cli_cmd, self.args, self.token)
         try:
@@ -2139,17 +2029,15 @@ class TestIdaCli(unittest.TestCase):
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target deleted successfully", output)
-        if self.run_localized_tests:
-            path = Path("%s/test%s" % (self.staging, self.token))
-            self.assertFalse(path.is_dir(), output)
+        path = Path("%s/test%s" % (self.staging, self.token))
+        self.assertFalse(path.is_dir(), output)
 
         print("(delete test data folder from frozen area)")
         data = {"project": self.test_project_name, "pathname": "/test%s" % (self.token)}
         response = requests.post("%s/delete" % self.ida_api, json=data, auth=self.test_user_auth, verify=False)
         self.assertEqual(response.status_code, 200)
-        if self.run_localized_tests:
-            path = Path("%s/test%s" % (self.frozen, self.token))
-            self.assertFalse(path.exists(), output)
+        path = Path("%s/test%s" % (self.frozen, self.token))
+        self.assertFalse(path.exists(), output)
     
         self.waitForPendingActions(self.test_project_name, self.test_user_auth)
         self.checkForFailedActions(self.test_project_name, self.test_user_auth)

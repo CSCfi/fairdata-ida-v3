@@ -90,8 +90,8 @@ and visible somewhere in your `$PATH`.
 Download the `ida` and `ida-checksum` scripts, ideally placing them in a location somewhere in your `$PATH`,
 and ensure that the scripts are executable. E.g.:
 
-    curl -LJO "https://raw.githubusercontent.com/CSCfi/ida2-command-line-tools/master/ida"
-    curl -LJO "https://raw.githubusercontent.com/CSCfi/ida2-command-line-tools/master/ida-checksum"
+    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/ida"
+    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/ida-checksum"
     chmod +x ida ida-checksum
 
 ## Authentication
@@ -125,7 +125,7 @@ The `ida` script will look for and load a file `$HOME/.ida-config` if it exists 
 You can copy the provided example `ida-config` file from the `templates` subdirectory to your home directory
 as `$HOME/.ida-config` and edit it accordingly. E.g.:
 
-    curl -LJ "https://raw.githubusercontent.com/CSCfi/ida2-command-line-tools/master/templates/ida-config" -o $HOME/.ida-config
+    curl -LJ "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/templates/ida-config" -o $HOME/.ida-config
 
 Be sure to set the permissions of your configuration file securely so its contents are not visible to others:
 

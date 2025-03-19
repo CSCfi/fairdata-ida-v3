@@ -148,6 +148,7 @@ def load_configuration():
     server_configuration = _load_module_from_file("server_configuration.variables", settings['server_configuration_path'])
     service_constants = _load_module_from_file("service_constants.variables", settings['service_constants_path'])
     config = {
+        'IDA_ENVIRONMENT':        server_configuration.IDA_ENVIRONMENT,
         'ROOT':                   server_configuration.ROOT,
         'OCC':                    server_configuration.OCC,
         'IDA_API':                server_configuration.IDA_API,

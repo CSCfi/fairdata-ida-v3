@@ -39,8 +39,13 @@
 # run-tests nextcloud    run Nextcloud behavioral tests
 # run-tests agents       run metadata agent behavioral tests
 # run-tests auditing     run auditing behavioral tests
+# run-tests cli          run command line tools behavioral tests
 #
 #--------------------------------------------------------------------------------
+
+# Only use the core os versions of commands
+PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH
 
 START_TIME=$(date +%s)
 
