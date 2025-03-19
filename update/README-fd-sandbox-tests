@@ -30,6 +30,8 @@ pathname can be redefined in init.sh in the FAIRDATA_TEST_ACCOUNTS environment v
 credentials which match the cloned database; which will then fully test the production update
 process with actual production data
 
+Execute /var/ida/update/create-dummy-user-directories so that the IDA admin scripts are happy
+
 5. Follow the update steps as defined in /var/ida/update/README
 
 NOTE: When following variant step 4a above, do not stop postprocessing agents or rabbitmq, as
