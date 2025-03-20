@@ -30,7 +30,10 @@ pathname can be redefined in init.sh in the FAIRDATA_TEST_ACCOUNTS environment v
 credentials which match the cloned database; which will then fully test the production update
 process with actual production data
 
+NOTE: Credentials in config.sh and config.php must match the production configuration for variant 4b!
+
 Execute /var/ida/update/create-dummy-user-directories so that the IDA admin scripts are happy
+by fooling them data exists when it doesn't, they only sniff for the directories.
 
 5. Follow the update steps as defined in /var/ida/update/README
 

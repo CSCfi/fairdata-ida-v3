@@ -104,6 +104,11 @@ for USER in $USERS; do
 
     echo "USER: $USER"
 
+    if [[ " $INTERNAL_USERS " =~ " $USER " ]]; then
+        echo "Skipping excluded internal user $USER ..."
+        continue
+    fi
+
     /var/ida/update/extract-user-data "$USER" "$OLDDATA" "$TMPDIR" 2>"$ERR"
 
     EXIT_CODE=$?

@@ -78,10 +78,18 @@ done
 echo "Checking all user data files ..."
 
 for USER in $USERS; do
+
     echo "USER: $USER"
+
+    if [[ " $INTERNAL_USERS " =~ " $USER " ]]; then
+        echo "Skipping excluded internal user $USER ..."
+        continue
+    fi
+
     if [ ! -s "${OLDDATA}/${USER}.status.txt" ]; then
         ERRORS="${ERRORS}ERROR: Missing or empty ${OLDDATA}/${USER}.status${NEWLINE}"
     fi
+
 done
 
 if [ "$ERRORS" ]; then

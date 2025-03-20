@@ -88,9 +88,12 @@ if [ "$IDA_ENVIRONMENT" = "DEV" ]; then
 
     LARGE_PROJECTS="fd_large_file_project"
     INTERNAL_PROJECTS="fd_user1_project"
+    INTERNAL_USERS="PSO_fd_user1_project fd_user1"
 else
     PROJECTS=$(/var/ida/update/list-projects)
     USERS=$(/var/ida/update/list-users)
+    INTERNAL_PROJECTS="$INTERNAL_PROJECTS 2011020"
+    INTERNAL_USERS="$INTERNAL_USERS PSO_2011020 ida-test-user"
 fi
 
 # Initialize migration specific variables
