@@ -291,13 +291,13 @@ function executeAction(action, node, datasetsChecked = false) {
                 return true;
             }
             // Try to parse the response JSON and extract and return the API error message
+            let errorMessage = null;
             try {
-                const responseJson = JSON.parse(xhr.responseText);
-                const errorMessage = responseJson.message;
-                if (errorMessage) {
-                    throw new Error(errorMessage);
-                }
+                errorMessage = JSON.parse(xhr.responseText).message;
             } catch (error) {} // ignore
+            if (errorMessage) {
+                throw new Error(errorMessage);
+            }
             throw new Error(`${xhr.status}: ${xhr.statusText}: ${xhr.responseText}`);
         } else {
             const affectedDatasets = checkDatasets(nodeId, project, pathname);
