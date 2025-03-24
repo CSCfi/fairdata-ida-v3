@@ -45,8 +45,10 @@ safe tests. Older version of the command line tools will not work with Nextcloud
 whereas the latest version of the command line tools are compatible with all versions of Nextcloud
 and IDA.
 
-IMPORTANT: The following environment variables must be defined in /var/ida/config/config.sh
-(recommended values are shown for the current update, but edit accordingly as needed):
+IMPORTANT: The following environment variables must be defined in /var/ida/config/config.sh, both
+before the update/migration, with the NC21 version of IDA, and after deploying the new NC30 version
+of IDA, so they need to be added to the end of the config.sh template for both versions of IDA
+(recommended values are shown for the current update, but edit accordingly if/as needed):
 
     IDA_UPDATE_ROOT="/mnt/ida_upload_cache/update"
     FAIRDATA_TEST_ACCOUNTS="/usr/local/fd/fairdata-test-accounts"
@@ -58,7 +60,7 @@ IMPORTANT: The following environment variables must be defined in /var/ida/confi
     # Internal projects, which will be excluded from the migration data extraction and validation processes
     INTERNAL_PROJECTS="2000136 2000142 2001036 2001231 2001247 2001394 2004105 2004285 2004843 2004866 2004868 2004869 2005041 2005042 2005043 2011020 erjantest123"
 
-Note that the volume on which IDA_UPDATE_ROOT is located should be performant and have at least
+NOTE: The volume on which IDA_UPDATE_ROOT is located should be performant and have at least
 50GB of free space (based on the volume of the database in 1Q2025).
 
 1. Preparation (for all IDA instances)

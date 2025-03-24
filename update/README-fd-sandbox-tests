@@ -3,7 +3,7 @@ In the fd-sandbox environment, the iterative test process should be as follows:
 
 1. Initialize fresh IDA instances comparable to current fd-stable configuration (with PHP 8.0)
 and deploying the latest master branch of fairdata-ida, so that it is as close as possible
-to the current production configuration
+to the current NC21 based production configuration
 
 2. Create the project and user accounts used by the safe tests, by executing the following commands:
 
@@ -17,7 +17,21 @@ sudo -u apache /var/ida/nextcloud/occ user:resetpassword ida-test-user
 
 3. Run all safe tests to ensure that everything is working 100%
 
-4. First test the update process with step variant 4a, then test the update process with variant 4b
+NOTE: The latest version of both fairdata-ida-safe-tests and ida2-command-line-tools must be
+installed; and the configuration for the safe tests must be edited so that when running the
+IDA safe tests with the NC21 version of IDA, the IDA_CLI configuration variable must define
+the path to ida2-command-line-tools/ida however if/when later running the IDA safe tests with
+the NC30 version of IDA, the IDA_CLI configuration variable must define the path to be
+/var/ida/cli/ida once the fairdata-ida-v3 repository has been deployed; i.e.
+
+NC21: fairdata-ida + ida2-command-line-tools
+NC30: fairdata-ida-v3, command line tools included in fairdata-ida-v3/cli
+
+4. First test the entire end-to-end update/migration process with step variant 4a, then test
+the update process with variant 4b, i.e. 
+
+clean sandbox -> 1 -> 2 -> 3 -> 4a -> 5
+clean sandbox -> 1 -> 2 -> 3 -> 4b -> 5
 
 4a. Define IDA_ENVIRONMENT="DEV" and use non-production credentials per normal non-production
 environment practices; which will result in /var/ida/update/extract-baseline-validation-data 
@@ -27,8 +41,8 @@ NOTE: The fairdata-test-accounts repository is assumed to be cloned in /usr/loca
 pathname can be redefined in init.sh in the FAIRDATA_TEST_ACCOUNTS environment variable
 
 4b. Define IDA_ENVIRONMENT="PRODUCTION", clone the production database, and use production
-credentials which match the cloned database; which will then fully test the production update
-process with actual production data
+configurations and credentials which match the cloned database; which will then fully test
+the production update process with actual production data
 
 NOTE: Credentials in config.sh and config.php must match the production configuration for variant 4b!
 
