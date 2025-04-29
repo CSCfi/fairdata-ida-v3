@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# This script will create dummy directories for all users defined in the old database, excluding admin,
+# if they do not already exist. IT SHOULD NOT BE RUN IN ACTUAL PRODUCTION. It is used when testing the
+# update using production data in a non-production environment, where the clone of the production
+# database defines all the current users but there is no actual data on disk for those users in the
+# non-production environment.
+
+. /var/ida/update/init.sh
+
+for USER in $USERS; do
+    echo "Creating dummy home directories for user ${USER} ..."
+    HOME_DIR="${STORAGE_OC_DATA_ROOT}/${USER}"
+    if [ ! -d "${HOME_DIR}" ]; then
+        sudo -u apache mkdir "${HOME_DIR}" 
+        echo "    ${HOME_DIR} created"
+    else
+        echo "    ${HOME_DIR} exists"
+    fi
+    if [ ! -d "${HOME_DIR}/files" ]; then
+        sudo -u apache mkdir "${HOME_DIR}/files" 
+        echo "    ${HOME_DIR}/files created"
+    else
+        echo "    ${HOME_DIR}/files exists"
+    fi
+    PSO_USER=$(echo "$USER" | grep 'PSO_')
+    if [ "$PSO_USER" ]; then
+        PROJECT=$(echo "$PSO_USER" | sed -e 's/^PSO_//')
+        if [ ! -d "${HOME_DIR}/files/${PROJECT}" ]; then
+            sudo -u apache mkdir "${HOME_DIR}/files/${PROJECT}" 
+            echo "    ${HOME_DIR}/files/${PROJECT} created"
+        else
+            echo "    ${HOME_DIR}/files/${PROJECT} exists"
+        fi
+        if [ ! -d "${HOME_DIR}/files/${PROJECT}+" ]; then
+            sudo -u apache mkdir "${HOME_DIR}/files/${PROJECT}+" 
+            echo "    ${HOME_DIR}/files/${PROJECT}+ created"
+        else
+            echo "    ${HOME_DIR}/files/${PROJECT}+ exists"
+        fi
+    fi
+done
+
+echo "Done."

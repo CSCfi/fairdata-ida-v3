@@ -1,0 +1,14 @@
+OC.L10N.register(
+    "federation",
+    {
+    "Added to the list of trusted servers" : "Toegevoegd aan de lijst met vertrouwde servers",
+    "Server is already in the list of trusted servers." : "Server bestaat reeds in de lijst van vertrouwde servers.",
+    "No server to federate with found" : "Geen server gevonden om mee te federeren",
+    "Could not add server" : "Kon server niet toevoegen",
+    "Trusted servers" : "Vertrouwde servers",
+    "Federation" : "Federatie",
+    "+ Add trusted server" : "+ Toevoegen vertrouwde server",
+    "Trusted server" : "Vertrouwde server",
+    "Add" : "Toevoegen"
+},
+"nplurals=2; plural=(n != 1);");

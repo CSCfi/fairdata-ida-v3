@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# This script backs up the DBNAME_NEW database to a subdirectory named 'backup' in the defined
+# IDA_UPDATE_ROOT folder.
+
+. /var/ida/update/init.sh
+
+echo "Backing up new database ..."
+
+if [[ -z "$IDA_UPDATE_ROOT" ]]; then
+    echo "Error: Environment variable IDA_UPDATE_ROOT must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBNAME_NEW" ]]; then
+    echo "Error: Environment variable DBNAME_NEW must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBHOST" ]]; then
+    echo "Error: Environment variable DBHOST must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBPORT" ]]; then
+    echo "Error: Environment variable DBPORT must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBADMUSER" ]]; then
+    echo "Error: Environment variable DBADMUSER must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBADMPASSWORD" ]]; then
+    echo "Error: Environment variable DBADMPASSWORD must be defined" >&2
+    exit 1
+fi
+
+if [ ! -d "$IDA_UPDATE_ROOT" ]; then
+    echo "Error: The directory defined in IDA_UPDATE_ROOT does not exist" >&2
+    exit 1
+fi
+
+if [ ! -d "$IDA_UPDATE_ROOT/backup" ]; then
+    mkdir "$IDA_UPDATE_ROOT/backup"
+fi
+
+export PGPASSWORD="$DBADMPASSWORD"
+
+BACKUP_FILE="$IDA_UPDATE_ROOT/backup/$DBNAME_NEW.sql"
+
+if [ -f "$BACKUP_FILE" ]; then
+    rm -f "$BACKUP_FILE"
+fi
+
+#------------------------------------------------------------------------------------------------------------------------
+
+echo "Backing up database $DBNAME_NEW to $BACKUP_FILE ..."
+
+pg_dump -h $DBHOST -p $DBPORT -U $DBADMUSER -d $DBNAME_NEW -F p -f "$BACKUP_FILE"
+
+echo "Backup of database $DBNAME_NEW completed."

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+TRANSLATIONS_FILE="/var/ida/nextcloud/apps/ida/src/l10n/translations.json"
+
+# Build full strings list
+cat /var/ida/nextcloud/apps/ida/src/l10n/utils/*_strings.txt | sort -u > /tmp/$$.strings.txt
+
+# Extract keys from the JSON file
+jq -r 'keys[]' "$TRANSLATIONS_FILE" > /tmp/$$.translations_keys.txt
+
+# Find strings in the first file that are not in the keys of the JSON dictionary
+grep -Fxvf /tmp/$$.translations_keys.txt /tmp/$$.strings.txt > /var/ida/nextcloud/apps/ida/src/l10n/utils/missing_translation_strings.txt
+
+# Output the result
+echo "Strings not found in '$TRANSLATIONS_FILE' saved in 'missing_translation_strings.txt'."
+
+# Cleanup
+rm /tmp/$$.strings.txt
+rm /tmp/$$.translations_keys.txt
+

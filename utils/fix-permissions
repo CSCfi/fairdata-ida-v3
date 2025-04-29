@@ -1,0 +1,89 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2018 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+#
+# Run this script every time the Nextcloud codebase is updated
+# when pulling from the GitHub repository, to ensure that all
+# ownership and permissions are correct (as they can sometime
+# change during update, even if rarely).
+#
+#--------------------------------------------------------------------------------
+# Ensure script is run as root
+
+ID=`id -u -n`
+if [ "$ID" != "root" ]; then
+    echo "You must execute this script as root"
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+# Load service constants and configuration settings
+
+SCRIPT_PATHNAME="$(realpath $0)"
+PARENT_FOLDER=`dirname "$SCRIPT_PATHNAME"`
+PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+
+while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
+    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
+    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+done
+
+CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+
+if [ -e $CONFIG_FILE ]
+then
+    . $CONFIG_FILE
+else
+    echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+# Determine the apache user
+
+if [ -d /etc/httpd ]; then
+    HTTPD_USER="apache"
+else
+    HTTPD_USER="www-data"
+fi
+
+#--------------------------------------------------------------------------------
+
+if [ "$IDA_ENVIRONMENT" = "DEV" ]; then
+    PERMS="go+rwX"
+else
+    PERMS="g+rwX,o-rwx"
+fi
+
+chown -R -P $HTTPD_USER:$HTTPD_USER $ROOT
+chown $HTTPD_USER:$HTTPD_USER $ROOT/config/config.sh
+chown $HTTPD_USER:$HTTPD_USER $ROOT/nextcloud/config/config.php
+
+chmod +x $ROOT/nextcloud/occ
+chmod +x $ROOT/agents/replication/dmfstatus
+chmod +x $ROOT/agents/replication/mock_dmfstatus
+chmod +x $ROOT/agents/replication/mock_dmfstatus_timeout
+
+chmod -R $PERMS $ROOT
+chmod $PERMS $ROOT/config/config.sh
+chmod $PERMS $ROOT/nextcloud/config/config.php

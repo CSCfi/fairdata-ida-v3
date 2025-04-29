@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# This script updates the essential sequence values in the new database to be 1 greater than the
+# maximum value in either the old or new database.
+#
+# Not all sequences are essential to the migration and need updating.
+
+. /var/ida/update/init.sh
+
+echo "--- Updating database sequence values ..."
+
+# Ensure DBNAME_NEW and DBNAME_OLD are defined in configuration and not the same
+if [[ -z "$DBNAME_NEW" ]]; then
+  echo "Error: Environment variable DBNAME_NEW must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBNAME_OLD" ]]; then
+  echo "Error: Environment variable DBNAME_OLD must be defined" >&2
+  exit 1
+fi
+if [[ "$DBNAME_NEW" = "$DBNAME_OLD" ]]; then
+  echo "Error: Environment variables DBNAME_NEW and DBNAME_OLD cannot be the same" >&2
+  exit 1
+fi
+
+# Ensure DBHOST, DBPORT, DBUSER, and DBPASSWORD are defined in configuration
+if [[ -z "$DBHOST" ]]; then
+  echo "Error: Environment variable DBHOST must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPORT" ]]; then
+  echo "Error: Environment variable DBPORT must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBUSER" ]]; then
+  echo "Error: Environment variable DBUSER must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPASSWORD" ]]; then
+  echo "Error: Environment variable DBPASSWORD must be defined" >&2
+  exit 1
+fi
+
+export PGPASSWORD="$DBPASSWORD"
+
+PSQL="psql -h $DBHOST -p $DBPORT -U $DBUSER"
+
+# The SEQUENCES list is defined in init.sh
+
+for SEQUENCE in "${SEQUENCES[@]}"; do
+
+    # sequence:table:column
+    SEQUENCE_NAME=$(echo "$SEQUENCE" | sed -E 's/:.*$//')
+    TABLE_NAME=$(echo "$SEQUENCE" | sed -E 's/^[^:]*://' | sed -E 's/:.*$//')
+    COLUMN_NAME=$(echo "$SEQUENCE" | sed -E 's/^.*://' | sed -E 's/:.*//')
+
+    if [[ -z "$SEQUENCE_NAME" ]]; then
+        echo "Error: Failed to extract sequence name from sequence $SEQUENCE" >&2
+        continue
+    fi
+
+    if [[ -z "$TABLE_NAME" ]]; then
+        echo "Error: Failed to extract table name from sequence $SEQUENCE" >&2
+        continue
+    fi
+
+    if [[ -z "$COLUMN_NAME" ]]; then
+        echo "Error: Failed to extract column name from sequence $SEQUENCE" >&2
+        continue
+    fi
+
+    echo "Updating sequence $SEQUENCE_NAME from column $COLUMN_NAME in table $TABLE_NAME"
+
+    # Retrieve the maximum value from the old database table's column
+    OLD_MAX_VALUE=$($PSQL -d $DBNAME_OLD -t -c "SELECT COALESCE(MAX($COLUMN_NAME), 1) FROM $TABLE_NAME" | xargs)
+    if [[ -z "$OLD_MAX_VALUE" ]]; then
+        echo "Error: Failed to retrieve maximum value in $DBNAME_NEW for table $TABLE_NAME and column $COLUMN_NAME" >&2
+        continue
+    fi
+ 
+    # Retrieve the maximum value from the old database table's column
+    NEW_MAX_VALUE=$($PSQL -d $DBNAME_NEW -t -c "SELECT COALESCE(MAX($COLUMN_NAME), 1) FROM $TABLE_NAME" | xargs)
+    if [[ -z "$NEW_MAX_VALUE" ]]; then
+        echo "Error: Failed to retrieve maximum value in $DBNAME_NEW for table $TABLE_NAME and column $COLUMN_NAME" >&2
+        continue
+    fi
+ 
+    # Determine the maximum value of the old and new database sequence values
+    MAX_VALUE=$((OLD_MAX_VALUE > NEW_MAX_VALUE ? OLD_MAX_VALUE : NEW_MAX_VALUE))
+
+    # Set the updated value in the new database 
+    $PSQL -d $DBNAME_NEW -t -A -c "SELECT setval('$SEQUENCE_NAME', $MAX_VALUE, true)"
+
+done
+
+echo "Sequence updating completed."

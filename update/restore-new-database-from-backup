@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# This script flushes and restores the DBNAME_NEW database from a dump file located in
+# the subdirectory named 'backup' in the defined IDA_UPDATE_ROOT folder.
+
+. /var/ida/update/init.sh
+
+if [[ -z "$IDA_UPDATE_ROOT" ]]; then
+    echo "Error: Environment variable IDA_UPDATE_ROOT must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBNAME_NEW" ]]; then
+    echo "Error: Environment variable DBNAME_NEW must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBHOST" ]]; then
+    echo "Error: Environment variable DBHOST must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBPORT" ]]; then
+    echo "Error: Environment variable DBPORT must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBADMUSER" ]]; then
+    echo "Error: Environment variable DBADMUSER must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBADMPASSWORD" ]]; then
+    echo "Error: Environment variable DBADMPASSWORD must be defined" >&2
+    exit 1
+fi
+
+BACKUP_FILE="$IDA_UPDATE_ROOT/backup/$DBNAME_NEW.sql"
+
+if [ ! -f "$BACKUP_FILE" ]; then
+    echo "Error: Database backup file $BACKUP_FILE does not exist" >&2
+    exit 1
+fi
+
+export PGPASSWORD="$DBADMPASSWORD"
+
+PSQL="psql -h $DBHOST -p $DBPORT -U $DBADMUSER"
+
+#------------------------------------------------------------------------------------------------------------------------
+
+echo "Flushing and recreating database $DBNAME_NEW ..."
+
+$PSQL -c "DROP DATABASE $DBNAME_NEW"
+$PSQL -c "CREATE DATABASE $DBNAME_NEW"
+
+echo "Reloading database backup into $DBNAME_NEW ..."
+
+$PSQL -d $DBNAME_NEW -f "$BACKUP_FILE"
+
+echo "Restoration of database $DBNAME_NEW completed."

@@ -1,0 +1,44 @@
+Failed to lock project when initiating requested action.
+Insufficient parameters specified.
+Invalid action specified.
+Invalid change specified.
+Invalid mode specified.
+Invalid status specified.
+No action specified.
+No checksums specified.
+No lock exists for the service.
+No lock exists for the specified project.
+Operation is only permitted in test environment
+Pathname must begin with staging or frozen root folder
+Project suspended. Action not permitted.
+Session user does not belong to any projects.
+Session user does not belong to the specified project
+Session user does not have permission to modify the specified action.
+Session user does not have permission to modify the specified file.
+Session user does not have permission to update the specified value.
+Specified action is neither failed nor pending.
+Specified action is not a failed action.
+Target must begin with staging or frozen root folder
+Target must be specified.
+The current user does not belong to any projects.
+The error parameter is required when recording a failed timestamp.
+The requested action conflicts with an existing file in the frozen area.
+The requested action conflicts with an existing file in the staging area.
+The requested action conflicts with an ongoing action in the specified project.
+The requested change conflicts with an ongoing action in the specified project.
+The specified action does not exist.
+The specified action was not found.
+The specified file was not found.
+The specified folder contains no files which can be frozen.
+The specified folder contains no files which can be unfrozen.
+The specified project was not found.
+The specified scope conflicts with an ongoing action in the specified project.
+The specified scope could not be found in the frozen area of the project.
+The specified scope could not be found in the staging area of the project.
+Unable to lock the service.
+Unable to lock the specified project.
+Unable to put the service into offline mode.
+Unable to put the service into online mode.
+Unable to unlock the service.
+Unable to unlock the specified project.
+Unknown project.

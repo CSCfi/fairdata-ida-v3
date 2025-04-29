@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# This script will reset all PSO passwords and reshare all PSO folders
+# so they are visible to all project users
+
+. /var/ida/update/init.sh
+
+echo "--- Resetting all PSO passwords ..."
+sudo -u apache /var/ida/utils/reset_PSO_passwords
+
+echo "--- Resharing all PSO folders ..."
+sudo -u apache /var/ida/utils/reshare_PSO_folders
+
+echo "Reset / Reshare completed."

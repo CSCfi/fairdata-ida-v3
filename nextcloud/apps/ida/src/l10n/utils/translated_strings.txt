@@ -1,0 +1,80 @@
+Action
+Action ID
+Action initiated successfully. Files deleted.
+Action initiated successfully. Show frozen data?
+Action initiated successfully. Show unfrozen data?
+Actions may not be performed on root project folders.
+An unknown error occurred.
+Be absolutely sure you want to delete all files within the selected folder before proceeding.
+Be absolutely sure you want to delete the file before proceeding.
+Be absolutely sure you want to freeze the file before proceeding.
+Be absolutely sure you want to freeze the folder before proceeding.
+Be absolutely sure you want to unfreeze all files within the selected folder before proceeding.
+Be absolutely sure you want to unfreeze the file before proceeding.
+Cancel
+Checksum
+Cleared
+Close
+Completed
+Delete
+Deleted files will no longer be accessible to other services, making all external references to them invalid. All replicated copies of deleted files will be removed.
+Deleting will entirely remove all files within the selected folder from the service.
+Deleting will entirely remove the selected file from the service.
+Depending on the amount of data, the background operations may still take several hours.
+Depending on the amount of data, the background operations may take several hours.
+Do you wish to proceed?
+Do you wish to view the data in its frozen location?
+Do you wish to view the data in its staging location?
+Error fetching file details
+Error fetching frozen file details
+Error fetching pending actions
+Error fetching project title
+Failed
+Failed Actions
+File Checksums Generated
+File Count
+File ID
+File IDs Generated
+File Metadata Stored
+Files Replicated
+File Storage Updated
+Freeze
+Freezing will move all files within the selected folder to the frozen area, making all files read-only and visible to other services.
+Freezing will move the selected file to the frozen area, making it read-only and visible to other services.
+Frozen
+Frozen files will be replicated to separate physical storage to guard against loss of data due to hardware failure.
+Initiated
+Modified
+No
+Node Type
+not shown
+OK
+Once initiated, the progress of the action can be checked from the Pending Actions view.
+One or more files included in the specified action belong to a dataset. Proceeding with the specified action will permanently deprecate the datasets listed below.
+Pathname
+Pending
+Pending Actions
+Project
+... remainder of files not shown ...
+Retried by
+RETRY
+Retry of
+Scope
+Size
+Staging
+The action cannot be terminated before it is complete.
+The action will initiate several background operations.
+The data has been successfully frozen and moved to the frozen project space.
+The data has been successfully unfrozen and moved back to the project staging space.
+The files have been successfully deleted.
+The frozen file will be replicated to separate physical storage to guard against loss of data due to hardware failure.
+The initiated action is
+THIS ACTION CANNOT BE UNDONE!
+Unfreeze
+Unfreezing will move all files within the selected folder back to the staging area, making them fully editable.
+Unfreezing will move the selected file back to the staging area, making it fully editable.
+Unfrozen files will no longer be accessible to other services, making all external references to them invalid. All replicated copies of unfrozen files will be removed.
+Uploaded
+User
+Warning: Datasets will be deprecated!
+Yes

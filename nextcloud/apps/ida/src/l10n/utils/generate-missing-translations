@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Input files
+STRING_LIST_FILE="/var/ida/nextcloud/apps/ida/src/l10n/utils/missing_translation_strings.txt"
+JSON_FILE="/var/ida/nextcloud/apps/ida/src/l10n/utils/translations_old.json"
+
+# Check if both files exist
+if [[ ! -f "$STRING_LIST_FILE" || ! -f "$JSON_FILE" ]]; then
+    echo "Error: One or both input files do not exist."
+    exit 1
+fi
+
+# Read the strings from the input file into a jq-compatible array
+keys=$(awk '{print "\""$0"\""}' "$STRING_LIST_FILE" | tr '\n' ',' | sed 's/,$//')
+
+jq --argjson keys "[$keys]" '
+    # Start with the original dictionary
+    . as $original |
+    # First, add all existing keys that are in both the original JSON and the key list
+    reduce $keys[] as $key (
+        {}; 
+        if $original[$key] then
+            . + {($key): $original[$key]}  # Keep the existing entry from the original JSON
+        else
+            .  # Do nothing if key doesnt exist in the JSON file
+        end
+    ) |
+    # Add new keys that are not present in the original JSON
+    reduce $keys[] as $key (
+        .;
+        if .[$key] then
+            .  # Dont add anything if key already exists
+        else
+            . + {($key): {"new": true, "fi": "TODO", "sv": "TODO"}}  # Add new entry
+        end
+    ) |
+    # Sort the output object by keys
+    to_entries | sort_by(.key) | from_entries
+' "$JSON_FILE" | jq . --indent 4 > /var/ida/nextcloud/apps/ida/src/l10n/utils/translations_missing.json
+

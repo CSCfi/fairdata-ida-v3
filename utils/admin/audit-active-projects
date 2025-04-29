@@ -1,0 +1,162 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2020 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+# --------------------------------------------------------------------------------
+# This script audits all projects in the IDA service which have had any activity
+# during the specified period or since the specified date(time), if given, or
+# during the past 24 hours if nothing is specified. If only a date is specified,
+# the time T00:00:00Z is used. Auditing is also limited to nodes which have been
+# created or modified since the beginning of the script execution time.
+# --------------------------------------------------------------------------------
+
+SCRIPT=`basename "$(realpath $0)"`
+
+USAGE="
+Usage: $SCRIPT [ ( after | days-after |  'week' | 'month' | 'year' ) [ before | days-before ]] [ [ ( --staging | --frozen ) ] [ --timestamps ] [ ( --report | --report-errors ) [ email ] ]
+       $SCRIPT -h
+
+       after            auditing will be limted to project data changes after the specified date[time] (defaults to 10 days)
+       before           auditing will be limted to project data changes before the specified date[time] (defaults to 3 days)
+       days-after       auditing will be limted to project data changes after the past number of days specified
+       days-before      auditing will be limted to project data changes before the past number of days specified
+       week             auditing will be limted to project data changes during the past week
+       month            auditing will be limted to project data changes during the past month
+       year             auditing will be limted to project data changes during the past year
+       --staging        auditing will be limited to files in the staging area
+       --frozen         auditing will be limited to files in the frozen area
+       --timestamps     comparisons will be made between disk timestamps and database values
+       --report         auditing results will be emailed
+       --report-errors  auditing results will be emailed, but only if errors are detected
+       email            the email address where audit reports should be sent (defaults to configured recipient list)
+
+Auditing will be limited to projects with data changes during the specified or default period of activity.
+
+It is expected that this script will be executed via a cron job once per week, using the defaults, which will result
+in regular auditing of all project data changes in 7 day increments, offset by 3 days from the time of execution.
+"
+
+PROJECT="null"
+
+# --------------------------------------------------------------------------------
+# Initialize script with common definitions
+
+INIT_FILE=`dirname "$(realpath $0)"`/lib/init_audit_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+# --------------------------------------------------------------------------------
+# Process command line options
+
+if [ "$1" ]; then
+    case "$1" in
+        "--staging" | "--frozen" | "--timestamps" | "--report" | "--report-errors" )
+            AUDIT_ARGS="$*"
+            ;;
+        *)
+            if [[ "$1" =~ ^(week|month|year)$ ]]; then
+                AFTER=`date -d "$START - 1 $1" +"%Y-%m-%dT%H:%M:%SZ"`
+            elif [[ "$1" =~ ^[[:digit:]][[:digit:]]*$ ]]; then
+                AFTER=`date -d "$START - $1 days" +"%Y-%m-%dT%H:%M:%SZ"`
+            elif [[ "$1" =~ ^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}Z$ ]]; then
+                AFTER="$1"
+            elif [[ "$1" =~ ^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}$ ]]; then
+                AFTER="$1""T00:00:00Z"
+            else
+                echo "Invalid after parameter: $1"
+                exit 1
+            fi
+            if [ "$2" ]; then
+                if [[ "$2" =~ ^[[:digit:]][[:digit:]]*$ ]]; then
+                    BEFORE=`date -d "$START - $2 days" +"%Y-%m-%dT%H:%M:%SZ"`
+                    shift
+                elif [[ "$2" =~ ^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}Z$ ]]; then
+                    BEFORE="$2"
+                    shift
+                elif [[ "$2" =~ ^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}$ ]]; then
+                    BEFORE="$2""T00:00:00Z"
+                    shift
+                else
+                    echo "Invalid before parameter: $2"
+                    exit 1
+                fi
+            fi
+            shift
+            AUDIT_ARGS="$*"
+            ;;
+    esac
+fi
+
+# Set defaults if not defined elsewhere, allowing the configuration or environment to override defaults
+
+if [ "$AFTER" = "" ]; then
+    if [ "AUDIT_ACTIVE_DAYS_AFTER" ]; then
+        AFTER=`date -d "$START - $AUDIT_ACTIVE_DAYS_AFTER days" +"%Y-%m-%dT%H:%M:%SZ"`
+    else
+        AFTER=`date -d "$START - 10 days" +"%Y-%m-%dT%H:%M:%SZ"`
+    fi
+fi
+
+if [ "$BEFORE" = "" ]; then
+    if [ "AUDIT_ACTIVE_DAYS_BEFORE" ]; then
+        BEFORE=`date -d "$START - $AUDIT_ACTIVE_DAYS_BEFORE days" +"%Y-%m-%dT%H:%M:%SZ"`
+    else
+        BEFORE=`date -d "$START - 3 days" +"%Y-%m-%dT%H:%M:%SZ"`
+    fi
+fi
+
+AUDIT_ARGS="--changed-after $AFTER --changed-before $BEFORE $AUDIT_ARGS"
+
+if [ "$DEBUG" = "true" ]; then
+    echo "AUDIT_ARGS: $AUDIT_ARGS"
+fi
+
+# --------------------------------------------------------------------------------
+
+PROJECTS=`DEBUG=false $ROOT/utils/admin/list-active-projects $AFTER $BEFORE 2>/dev/null`
+
+INTERNAL_PROJECTS=""
+
+if [ "$IDA_ENVIRONMENT" = "PRODUCTION" ]; then
+    INTERNAL_PROJECTS=`DEBUG=false $ROOT/utils/admin/list-internal-projects | tr '\n' ' ' 2>/dev/null`
+fi
+
+if [ "$DEBUG" = "true" ]; then
+    echo "INTERNAL: $INTERNAL_PROJECTS"
+fi
+
+for PROJECT in $PROJECTS; do
+    INTERNAL=`echo " $INTERNAL_PROJECTS " | grep " $PROJECT "`
+    if [ "$INTERNAL" = "" ]; then
+        if [ "$DEBUG" = "true" ]; then
+            echo "PROJECT: $PROJECT"
+        fi
+        DEBUG=false $ROOT/utils/admin/audit-project $PROJECT $AUDIT_ARGS 2>/dev/null
+    fi
+done
+
+addToLog "DONE"

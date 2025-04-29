@@ -1,0 +1,61 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2020 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+# --------------------------------------------------------------------------------
+# This script aggregates and reports key stats about the specified project.
+#
+# The script directly queries the database tables and filesystems, and it is
+# not necessary for Apache/Nextcloud/IDA to be running in order to execute this
+# script; only the database needs to be running.
+# --------------------------------------------------------------------------------
+
+SCRIPT=`basename $0`
+USAGE="Usage: $SCRIPT project [csv]"
+
+#--------------------------------------------------------------------------------
+# Initialize script with common definitions
+
+INIT_FILE=`dirname $0`/lib/init_audit_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+
+if [ ! -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files" ]; then
+    errorExit "The project '${PROJECT}' does not exist"
+fi
+
+source $ROOT/venv/bin/activate
+
+if [ "$2" = "csv" ]; then
+    python -u $ROOT/utils/admin/lib/fetch_project_stats.py $ROOT $PROJECT csv
+else
+    python -u $ROOT/utils/admin/lib/fetch_project_stats.py $ROOT $PROJECT | jq --indent 4
+fi
+
+addToLog "DONE"

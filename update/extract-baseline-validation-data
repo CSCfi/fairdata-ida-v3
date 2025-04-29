@@ -1,0 +1,122 @@
+#!/bin/bash
+#
+# In non-DEV environments this script will operate on all projects; otherwise, in DEV
+# environments this script will create fresh copies of select Fairdata test accounts and
+# initialize test data for them.
+#
+# It will then extract inventories, project summaries, completed actions, and data changes
+# for all projects, to be used for validating the database migration from the current to the
+# new version of Nextcloud in that environment.
+#
+# Strict assumptions are made about the location of necessary scripts; update if/as needed.
+
+. /var/ida/update/init.sh
+
+echo "--- Extracting baseline validation data ..."
+
+if [ -z "$PROJECTS" ]; then
+    errorExit "The environment variable PROJECTS must be defined. Aborting."
+fi
+
+if [ -z "$USERS" ]; then
+    errorExit "The environment variable USERS must be defined. Aborting."
+fi
+
+if [ -z "$OLDDATA" ]; then
+    errorExit "The environment variable OLDDATA must be defined. Aborting."
+fi
+
+if [ -d "$OLDDATA" ]; then
+    echo "Purging existing baseline validation data directory ..."
+    rm -fr "$OLDDATA"
+fi
+
+echo "Creating baseline validation data directory ..."
+mkdir -p "$OLDDATA"
+
+echo "Exporting hostname and environment details ..."
+hostname -f > "$OLDDATA/hostname"
+echo "$IDA_ENVIRONMENT" > "$OLDDATA/environment"
+
+if [ "$IDA_ENVIRONMENT" = "DEV" ] && [ "$1" != "--no-init" ]; then
+
+    echo "Cleaning and initializing test accounts ..."
+    
+    if [ -z "$FAIRDATA_TEST_ACCOUNTS" ]; then
+        errorExit "The environment variable FAIRDATA_TEST_ACCOUNTS must be defined. Aborting."
+    fi
+
+    if [ ! -x "$FAIRDATA_TEST_ACCOUNTS/initialize-test-accounts" ]; then
+        errorExit "The script $FAIRDATA_TEST_ACCOUNTS/initialize-test-accounts does not exist or is not executable. Aborting."
+    fi
+
+    if [ ! -x "$FAIRDATA_TEST_ACCOUNTS/initialize-test-data" ]; then
+        errorExit "The script $FAIRDATA_TEST_ACCOUNTS/initialize-test-data does not exist or is not executable. Aborting."
+    fi
+
+    for PROJECT in $PROJECTS; do
+        echo "Flushing project $PROJECT ..."
+        $FAIRDATA_TEST_ACCOUNTS/initialize-test-accounts $PROJECT --flush >/dev/null
+    done
+
+    for PROJECT in $PROJECTS; do
+        echo "Initializing project $PROJECT ..."
+        $FAIRDATA_TEST_ACCOUNTS/initialize-test-accounts $PROJECT >/dev/null
+    done
+
+    for PROJECT in $PROJECTS; do
+        echo "Initializing test data for project $PROJECT ..."
+        $FAIRDATA_TEST_ACCOUNTS/initialize-test-data $PROJECT >/dev/null
+    done
+fi
+
+echo "Extracting project baseline validation data ..."
+
+for PROJECT in $PROJECTS; do
+
+    echo "PROJECT: $PROJECT"
+
+    if [[ " $LARGE_PROJECTS " =~ " $PROJECT " ]]; then
+        echo "Skipping excluded large project $PROJECT ..."
+        continue
+    fi
+
+    if [[ " $INTERNAL_PROJECTS " =~ " $PROJECT " ]]; then
+        echo "Skipping excluded internal project $PROJECT ..."
+        continue
+    fi
+
+    /var/ida/update/extract-project-data "$PROJECT" "$OLDDATA" "$TMPDIR" 2>"$ERR"
+
+    EXIT_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to extract project data for project $PROJECT"
+    elif [ "$EXIT_CODE" -ne 0 ]; then
+        errorExit "Error: Failed to extract project data for project $PROJECT (exit code: $EXIT_CODE)"
+    fi
+done
+
+echo "Extracting user baseline validation data ..."
+
+for USER in $USERS; do
+
+    echo "USER: $USER"
+
+    if [[ " $INTERNAL_USERS " =~ " $USER " ]]; then
+        echo "Skipping excluded internal user $USER ..."
+        continue
+    fi
+
+    /var/ida/update/extract-user-data "$USER" "$OLDDATA" "$TMPDIR" 2>"$ERR"
+
+    EXIT_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to extract project data for user $USER"
+    elif [ "$EXIT_CODE" -ne 0 ]; then
+        errorExit "Error: Failed to extract project data for user $USER (exit code: $EXIT_CODE)"
+    fi
+done

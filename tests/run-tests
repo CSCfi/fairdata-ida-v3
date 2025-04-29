@@ -1,0 +1,232 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2018 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+#
+# See the file README for general information regarding tests.
+#
+# This is a helper script for executing tests, ensuring the python environment
+# is initialized and active, and default parameters are used.
+#
+# If no arguments are provided, then all behavioral tests are executed, in
+# logical order by component; else, the arguments provided are passed to python
+# unittests as-is. This allows the script to also be used to run either unit or
+# behavioral tests for a specific component conveniently.
+#
+# Examples:
+#
+# run-tests              run all tests
+# run-tests admin        run admin behavioral tests
+# run-tests nextcloud    run Nextcloud behavioral tests
+# run-tests agents       run metadata agent behavioral tests
+# run-tests auditing     run auditing behavioral tests
+# run-tests cli          run command line tools behavioral tests
+#
+#--------------------------------------------------------------------------------
+
+# Only use the core os versions of commands
+PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH
+
+START_TIME=$(date +%s)
+
+function report_success {
+    echo ""
+    echo "======================================"
+    echo "=== ALL EXECUTED TESTS SUCCESSFUL  ==="
+    echo "======================================"
+    echo ""
+    if [ -z "$START_TIME" ]; then
+        echo "The START_TIME variable is undefined. Aborting" >&2
+        exit 1
+    fi
+    local END_TIME=$(date +%s)
+    local TOTAL_TIME_SECONDS=$((END_TIME - START_TIME))
+    if [ "$TOTAL_TIME_SECONDS" -lt 60 ]; then
+        echo "Total execution time: $TOTAL_TIME_SECONDS seconds"
+    else
+        local TOTAL_TIME_MINUTES=$((TOTAL_TIME_SECONDS / 60))
+        if [ "$TOTAL_TIME_MINUTES" -eq 1 ]; then
+            echo "Total execution time: 1 minute"
+        else
+            echo "Total execution time: $TOTAL_TIME_MINUTES minutes"
+        fi
+    fi
+    echo ""
+}
+
+# Load service constants and configuration settings
+
+PARENT_FOLDER=$(dirname "$(realpath $0)")
+PARENT_BASENAME=$(basename "$PARENT_FOLDER")
+
+while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
+    PARENT_FOLDER=$(dirname "$PARENT_FOLDER")
+    PARENT_BASENAME=$(basename "$PARENT_FOLDER")
+done
+
+CONSTANTS_FILE="$PARENT_FOLDER/lib/constants.sh"
+
+if [ -e $CONSTANTS_FILE ]
+then
+    . $CONSTANTS_FILE
+else
+    echo "The service constants file $CONSTANTS_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+
+if [ -e $CONFIG_FILE ]
+then
+    . $CONFIG_FILE
+else
+    echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+if [ "$ROOT" = "" ]; then
+    echo "The configuration variable $ROOT has not been defined Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+# Verify that we are in a test environment
+
+if [ "$IDA_ENVIRONMENT" == "PRODUCTION" ]; then
+    echo "This script can not be run in a production environment. Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+# Flush replicated files, if so configured
+
+if [ "$FLUSH_REPLICATED_FILES_BEFORE_TESTS" = "true" ]; then
+    echo "Flushing all replicated files from ${DATA_REPLICATION_ROOT}/projects/..."
+    if [ -d "${DATA_REPLICATION_ROOT}/projects" ]; then
+        rm -fr "${DATA_REPLICATION_ROOT}/projects"
+    fi
+fi
+
+#--------------------------------------------------------------------------------
+# Ensure service is not locked or offline (if sentinel files remained due to
+# failed tests)
+
+rm -f $STORAGE_OC_DATA_ROOT/control/LOCK    2>/dev/null
+rm -f $STORAGE_OC_DATA_ROOT/control/OFFLINE 2>/dev/null
+
+#--------------------------------------------------------------------------------
+# Ensure test python environment is properly configured and active
+
+source $ROOT/venv/bin/activate
+
+#--------------------------------------------------------------------------------
+# Execute tests per the provided command line arguments
+
+cd $ROOT
+
+if [ $# -ge 1 ]; then
+
+    if [ "$1" = "agents" ]; then
+
+        echo "UNIT TESTS:"
+
+        python -W ignore -m unittest discover -f -q agents
+
+        if [ $? -ne 0 ]; then
+            exit 1
+        fi
+    fi
+
+    echo "BEHAVIORAL TESTS:"
+
+    python -W ignore -m unittest discover -f -q tests.$1
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    report_success
+
+else
+
+    echo "UNIT TESTS:"
+
+    python -W ignore -m unittest discover -f -q agents
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    echo "BEHAVIORAL TESTS:"
+
+    python -W ignore -m unittest discover -f -q tests.admin
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    python -W ignore -m unittest discover -f -q tests.nextcloud
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    python -W ignore -m unittest discover -f -q tests.agents
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    python -W ignore -m unittest discover -f -q tests.checksums
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    python -W ignore -m unittest discover -f -q tests.changes
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    python -W ignore -m unittest discover -f -q tests.datasets
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    python -W ignore -m unittest discover -f -q tests.olddata
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    python -W ignore -m unittest discover -f -q tests.auditing
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    report_success
+
+fi

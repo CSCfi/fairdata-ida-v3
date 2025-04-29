@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Base directory to search
+BASE_DIR="/var/ida/nextcloud"
+
+# Exclude directories
+EXCLUDE_DIRS=(
+    "/var/ida/nextcloud/3rdparty"
+    "/var/ida/nextcloud/apps/idaui-cleanup"
+)
+
+# Build the find exclude arguments
+EXCLUDE_ARGS=()
+for dir in "${EXCLUDE_DIRS[@]}"; do
+    EXCLUDE_ARGS+=(-path "$dir" -prune -o)
+done
+
+# Execute the find command with exclusions and extract translations
+find "$BASE_DIR" \
+    "${EXCLUDE_ARGS[@]}" \
+    \( -name "*.js" -o -name "*.php" \) -type f -exec \
+    grep -Eho "t\(['\"]ida['\"],\s*['\"][^'\"]+['\"]\)" {} + | \
+    sed -E "s/^t\(['\"]ida['\"],\s*['\"]([^'\"]+)['\"]\)/\1/" | \
+    sort -u > /var/ida/nextcloud/apps/ida/src/l10n/utils/translated_strings.txt
+
