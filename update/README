@@ -1,0 +1,208 @@
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2024 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+
+The scripts in this directory are used for migrating and validating the essential data from an
+old database to a new database when an updated version of Nextcloud is deployed to an existing
+IDA environment. The update process is detailed below.
+
+Note that the update development process, whereby IDA is updated for a new version of Nextcloud,
+is documented in modifications/README. This README only details deployment steps when development
+is completed and ready for deployment.
+
+Each new major Nextcloud version of IDA will be managed in a new gitlab repository, and mirrored
+to a same named github repository publically. The update process usually includes a final deployment
+(if needed) of the last version of IDA from the old repository before the update, and then
+a new clean deployment of the new version of IDA from the new repository as part of the update as
+detailed below. 
+
+The scripts used to extract and validate migrated data depend on a housekeeping directory being
+created and defined in the environment variable IDA_UPDATE_ROOT. It is recommended that the
+housekeeping directory be created in /mnt/ida_upload_cache/update which will have sufficient
+free space and reasonably sufficient performance (better than glusterfs).
+
+NOTE: It is necessary to use the latest version of the IDA command line tools when running the
+safe tests. Older version of the command line tools will not work with Nextcloud v31 and later;
+whereas the latest version of the command line tools are compatible with all versions of Nextcloud
+and IDA.
+
+IMPORTANT: The following environment variables must be defined in /var/ida/config/config.sh, both
+before the update/migration, with the NC21 version of IDA, and after deploying the new NC31 version
+of IDA, so they need to be added to the end of the config.sh template for both versions of IDA
+(recommended values are shown for the current update, but edit accordingly if/as needed):
+
+    IDA_UPDATE_ROOT="/mnt/ida_upload_cache/update"
+    FAIRDATA_TEST_ACCOUNTS="/usr/local/fd/fairdata-test-accounts"
+    DBNAME_OLD="nextcloud"
+    DBNAME_NEW="nextcloud31"
+    # The largest projects with the most files, which will be excluded from the migration data extraction
+    # and validation processes (but not the actual database migration, of course)
+    LARGE_PROJECTS="2000417 hy7103 tlp0063 oy5616 hy7238 hy3647 hy7004 2001920 tay6584"
+    # Internal projects, which will be excluded from the migration data extraction and validation processes
+    INTERNAL_PROJECTS="2000136 2000142 2001036 2001231 2001247 2001394 2004105 2004285 2004843 2004866 2004868 2004869 2005041 2005042 2005043 2011020 erjantest123"
+
+NOTE: The volume on which IDA_UPDATE_ROOT is located should be performant and have at least
+50GB of free space (based on the volume of the database in 1Q2025).
+
+1. Preparation (for all IDA instances)
+
+>> Stop ida-healthcheck on all services so that the load balancer redirects to offline but all
+   of the IDA instances remain fully operational internally (do not create the OFFLINE sentinel
+   file, rather actually stop the healthcheck services)
+>> Disable IdM push
+>> Disable all Nextcloud housekeeping and IDA related cronjobs (e.g. auditing, reporting, etc.)
+>> Stop all IDA postprocessing agents on all instances and stop RabbitMQ
+>> Stop apache on all instances EXCEPT ida241
+
+2. Extract baseline validation data on ida241 (ONLY DONE ON ONE IDA INSTANCE PER ENVIRONMENT)
+
+On ida241 ONLY:
+   ---
+   CRITICAL!!! 
+   The steps in this section must be done using the OLD version of IDA and BEFORE any software
+   or system updates are done. They cannot be done after PHP update, unless everything is fully
+   rolled back to the previous production configuration!!!
+   ---
+>> IMPORTANT: If necessary, update to the last pre-migration version of IDA from the previous gitlab
+   repository, per the appropriate repository tag
+>> IMPORTANT: Disable modsecurity entirely on ida241
+>> Restart apache
+>> Manually deploy ONLY the latest version of the directory /var/ida/update from the latest version of
+   the new repository fairdata-ida-v3 that is about to be deployed, so it can be executed against the
+   current running version of IDA
+>> Create the housekeeping directory IDA_UPDATE_ROOT as defined above
+>> Execute sudo -u apache php /var/ida/nextcloud/cron.php    
+>> Execute sudo -u apache /var/ida/utils/admin/generate-missing-checksums
+>> Execute /var/ida/update/rescan-cleanup
+   NOTE: Execution of the rescan-cleanup script will take approximately a full day to run!
+*****************************************************************************************************************
+*** ENSURE THAT NO ERRORS WERE REPORTED BY THE SCRIPT, RE-RUN THE SCRIPT UNTIL NO ERRORS ARE REPORTED!        ***
+*** ONLY WHEN NO ERRORS ARE DETECTED SHOULD YOU PROCEED FURTHER !!!                                           ***
+*****************************************************************************************************************
+>> Execute /var/ida/update/extract-baseline-validation-data
+   NOTE: Execution of the extract-baseline-validation-data script will take approximately a full day to run!
+>> Execute /var/ida/update/validate-baseline-data and ensure no errors are reported
+*****************************************************************************************************************
+*** ENSURE THAT NO ERRORS WERE REPORTED BY THE SCRIPT, MIGRATION VALIDATION CANNOT BE DONE WITHOUT THIS DATA! ***
+*** Logs for every script executed will be generated in $IDA_UPDATE_ROOT/log                                  ***
+*** There should be no zero-sized files in $IDA_UPDATE_ROOT/data/old                                          ***
+*** There should be no log entries in $IDA_UPDATE_ROOT/log with "Failed", "error", etc.                       ***
+*****************************************************************************************************************
+>> Execute chmod -R a-w $IDA_UPDATE_ROOT/data/old to protect the baseline validation data from later modification
+>> Stop apache
+
+3. Database backup, protection, upgrade PostgreSQL, and create new database
+
+>> Backup PostgreSQL database
+>> Set existing Nextcloud database read-only:
+       ALTER DATABASE nextcloud SET default_transaction_read_only=on;
+>> Upgrade PostgreSQL as required (NC31: PostgreSQL 16.4)
+>> Create new database corresponding to version of Nextcloud, e.g. 'nextcloud31'
+       CREATE DATABASE nextcloud31;
+       ALTER DATABASE nextcloud31 OWNER TO nextcloud;
+>> Grant read-write privileges for new database to nextcloud account
+       GRANT ALL PRIVILEGES ON DATABASE nextcloud31 TO nextcloud;
+
+4. Software updates (for all IDA instances)
+
+>> Upgrade PHP version as required, along with latest updated configurations (NC31: PHP 8.3)
+>> Deploy the latest version of IDA from the new gitlab repository to /var/ida
+>> Install updated IDA config.sh with new and old database names defined in DBNAME and DBNAME_OLD
+>> Install updated IDA config.php with new database name and Nextcloud version defined
+>> Reinitialize Python3 virtual environment by executing /var/ida/utils/initialize_venv
+
+5. Install new version of Nextcloud on ida241 (ONLY DONE ON ONE IDA INSTANCE PER ENVIRONMENT)
+
+On ida241 ONLY:
+>> Manually edit /var/ida/nextcloud/config/config.php and update it to define
+      'config_is_read_only' => false,
+>> Execute /var/ida/update/install-new-nextcloud
+>> Grant read-only privileges for new database and newly created tables to inspector account
+       GRANT CONNECT ON DATABASE nextcloud31 TO inspector;
+       GRANT USAGE ON SCHEMA public TO inspector;
+       GRANT SELECT ON ALL TABLES IN SCHEMA public TO inspector;
+       ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO inspector;
+       ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO inspector;
+>> Manually edit /var/ida/nextcloud/config/config.php and update it to define
+      'config_is_read_only' => true,
+>> Start apache on ida241 only
+   NOTE: The IDA specific tables will be automatically created in the new database when apache/Nextcloud
+   is restarted.
+>> Open IDA on ida241 in browser with ?local_login=true, log in as admin and check for any reported
+   errors or configuration issues
+   NOTE: It is expected and OK to see "Integrity checker has been disabled. Integrity cannot be verified."
+   No other errors should be reported by Nextcloud.
+
+6. Migrate and validate essential data on ida241 (ONLY DONE ON ONE IDA INSTANCE PER ENVIRONMENT)
+
+On ida241 ONLY (with one step on ida245):
+>> Execute /var/ida/update/migrate-data and ensure no errors reported
+   NOTE: Execution of the migrate-data script will take approximately a full day to run!
+>> Execute the following commands to ensure that there are no outstanding Nextcloud housekeeping tasks
+   and that all pending database transactions are completed and the service is "clean":
+       sudo -u apache php /var/ida/nextcloud/cron.php    
+       sudo systemctl restart apache
+   (on ida245):
+       sudo systemctl restart postgresql
+>> Execute /var/ida/update/reset-reshare and ensure no errors are reported
+   NOTE: Execution of the reset-reshare script can take several hours to run in production
+   NOTE: If errors are reported, it will be necessary to run it again, until no errors are reported for
+   any PSO users or projects
+>> Execute /var/ida/update/extract-migrated-validation-data
+>> Execute /var/ida/update/validate-migrated-data and ensure no errors reported
+*****************************************************************************************************************
+*** ENSURE THAT NO ERRORS WERE REPORTED BY THE SCRIPT, REPEAT ANY PRECEEDING STEPS AS NEEDED UNTIL NO ERRORS! ***
+*** ONLY WHEN NO ERRORS ARE DETECTED SHOULD YOU PROCEED FURTHER !!!                                           ***
+*****************************************************************************************************************
+>> Execute /var/ida/update/rescan-cleanup
+   NOTE: Execution of the rescan-cleanup script can take several hours to run in production
+*****************************************************************************************************************
+*** ENSURE THAT NO ERRORS WERE REPORTED BY THE SCRIPT, RE-RUN THE SCRIPT UNTIL NO ERRORS ARE REPORTED!        ***
+*** ONLY WHEN NO ERRORS ARE DETECTED SHOULD YOU PROCEED FURTHER !!!                                           ***
+*****************************************************************************************************************
+
+7. Final steps and testing (for all IDA instances)
+
+>> Re-enable modsecurity on ida241
+>> Restart apache
+>> Re-enable Nextcloud housekeeping cron job (not yet any other cron jobs)
+>> Restart IDA postprocessing agents
+>> In web browser, log in as user PSO_2011020 and
+   verify that both the frozen and staging folders are visible
+>> In web browser, log in as user ida-test-user and
+   verify that both the frozen and staging folders are visible
+>> Run safe tests against every instance as ida-test-user for project 2011020
+>> Browse and inspect all UI views and check for any display errors or functional issues
+>> Perform any other manual testing that seems appropriate and useful
+
+8. Re-open service to users
+
+>> Start healthcheck service on all servers to open service to all users via load balancer
+>> Run safe tests against ida.fairdata.fi
+>> Re-enable IdM push
+>> Re-enable all other IDA related cronjobs
+
+9. Run full audit on all projects
+
+NOTE: All existing application passwords will be invalid. Users will need to create new application
+passwords once the new version of IDA is open to users. Inform users they will need to re-create
+application passwords when they are informed the break is over.

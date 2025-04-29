@@ -1,0 +1,535 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2018 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+#
+# This script initializes a set of explicit test accounts (project groups, users,
+# group memberships, and files) which provide a baseline for both manual testing
+# and evaluation / demos, as well as for automated tests. If any of the accounts
+# alredy exist, they will first be purged, such that every time this script is
+# run, the same baseline configuration for these accounts will exist.
+#
+# An optional account configuration can be specified as an initial parameter.
+#
+# The following default project and user configuration will be created:
+#
+#               test_project_a  test_project_b  test_project_c  test_project_d  test_project_e
+# test_user_a         X
+# test_user_b                         X
+# test_user_c                                         X
+# test_user_d                                                         X
+# test_user_e                                                                         X
+# test_user_x         X               X               X               X               X
+#
+# All projects will be initialized with the same data in their staging area,
+# as defined in /ida/tests/testdata
+#
+# The test data folder 2017-11/Experiment_7 will contain an empty subfolder
+# but no files, allowing for testing restrictions against freezing folders with
+# no files.
+#
+# In addition to the above test projects and users, several special projects and
+# users will be created to test notification icon functionality in the UI.
+#
+# Project test_project_s with test_user_s will be suspended, causing the suspended
+# (lock) notification icon to appear in the UI when logged in as test_user_s.
+#
+# Project test_project_p with test_user_p will have a perpetually pending action,
+# causing the pending (gears) notification icon to appear in the UI when logged in
+# as test_user_p.
+#
+# Project test_project_f with test_user_f will be suspended, causing the failed
+# (alert) notification icon to appear in the UI when logged in as test_user_f.
+#
+#--------------------------------------------------------------------------------
+#
+# NOTE: 
+#
+# If the argument "--flush" is given to this script, then all existing
+# accounts and data are purged and no new accounts created.
+#
+#--------------------------------------------------------------------------------
+. `dirname $0`/../../lib/init_script.sh
+
+if [ "$ROOT" = "" ]; then
+    echo "Error: Failed to properly initialize script. Aborting." >&2
+    exit 1
+fi
+
+if [ "$IDA_MODE_HEADER" = "" ]; then
+    errorExit "The IDA_MODE_HEADER variable must be defined"
+fi
+
+if [ "$IDA_HEADERS" = "" ]; then
+    errorExit "The IDA_HEADERS variable must be defined"
+fi
+
+#--------------------------------------------------------------------------------
+# Verify that we are not in production
+
+if [ "$IDA_ENVIRONMENT" == "PRODUCTION" ]; then
+    errorExit "Error: This script can not be run in a production environment. Aborting."
+fi
+
+#--------------------------------------------------------------------------------
+
+if [ $METAX_API_VERSION -ge 3 ]; then
+    METAX_AUTH_HEADER="Authorization: Token ${METAX_PASS}"
+else
+    METAX_CREDENTIALS="-u ${METAX_USER}:${METAX_PASS}"
+fi
+
+IDA_CREDENTIALS="-u $NC_ADMIN_USER:$NC_ADMIN_PASS"
+
+CONFIG=""
+
+if [ "$1" = "--flush" ]; then
+    if [ "$2" != "" ]; then
+        CONFIG="$2"
+    fi
+else
+    if [ "$1" != "" ]; then
+        CONFIG="$1"
+    fi
+fi
+
+if [ "$CONFIG" != "" ]; then
+    if [ -s "$CONFIG" ]; then
+        . "$CONFIG"
+    else
+        errorExit "Error: The specified configuration file does not exist or is empty. Aborting"
+    fi
+else
+    PROJECTS="test_project_a test_project_b test_project_c test_project_d test_project_e test_project_s test_project_p test_project_f"
+    USERS="test_user_a test_user_b test_user_c test_user_d test_user_e test_user_x test_user_s test_user_p test_user_f"
+    BASIC_RELATIONS="test_user_a:test_project_a test_user_b:test_project_b test_user_c:test_project_c test_user_d:test_project_d test_user_e:test_project_e test_user_x:test_project_a test_user_s:test_project_s test_user_p:test_project_p test_user_f:test_project_f"
+    EXTRA_RELATIONS="test_user_x:test_project_b test_user_x:test_project_c test_user_x:test_project_d test_user_x:test_project_e"
+fi
+
+if [ "$STAGING_FOLDER_SUFFIX" = "" ]; then
+    errorExit "Error: The STAGING_FOLDER_SUFFIX must be defined"
+fi
+
+#--------------------------------------------------------------------------------
+
+PADDING="-55"
+
+function failure {
+    echo "FAILED: " "$@"
+}
+
+function success {
+    echo "OK"
+}
+
+#--------------------------------------------------------------------------------
+
+echo "Ensuring IDA control directory exists..."
+
+if [ ! -d "$STORAGE_OC_DATA_ROOT/control" ]; then
+    mkdir "$STORAGE_OC_DATA_ROOT/control"
+    chown $HTTPD_USER:$HTTPD_USER "$STORAGE_OC_DATA_ROOT/control"
+fi
+
+#--------------------------------------------------------------------------------
+
+echo "Flushing all action, change, and frozen file records from IDA service database..."
+
+for PROJECT in $PROJECTS; do
+    STEP="   Flushing $PROJECT"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`$CURL_POST $IDA_CREDENTIALS $IDA_HEADERS "$IDA_API/flush?project=$PROJECT" 2>&1`
+    if [ "$?" -ne 0 ]; then
+        OUT=`echo "$OUT" | head -1`
+        failure "$OUT (ignored)"
+    else
+        success
+    fi
+done
+
+if [ "$METAX_AVAILABLE" = "1" ]; then
+
+    echo "Flushing all frozen file records from METAX database..."
+
+    for PROJECT in $PROJECTS; do
+        STEP="   Flushing $PROJECT"
+        printf "%${PADDING}s" "$STEP"
+        if [ $METAX_API_VERSION -ge 3 ]; then
+            OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/files?csc_project=$PROJECT&storage_service=ida&flush=true" 2>&1`
+        else
+            OUT=`$CURL_POST $METAX_CREDENTIALS "$METAX_RPC/files/flush_project?project_identifier=$PROJECT" 2>&1`
+        fi
+        if [ "$?" -ne 0 ]; then
+            OUT=`echo "$OUT" | head -1`
+            NOT_FOUND=`echo "$OUT" | grep '404 Not Found'`
+            if [ "$NOT_FOUND" ]; then
+                failure "404 Not Found (ignored)"
+            else
+                failure "$OUT (ignored)"
+            fi
+        else
+            success
+        fi
+    done
+
+    echo "Flushing all dataset records from METAX database..."
+
+    for USER in $USERS; do
+        STEP="   Flushing $USER"
+        printf "%${PADDING}s" "$STEP"
+        if [ $METAX_API_VERSION -ge 3 ]; then
+            #echo "$CURL_DELETE -H \"$METAX_AUTH_HEADER\" \"$METAX_API/users/$USER/data?flush=true\""
+            OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/users/$USER/data?flush=true" 2>&1`
+        else
+            OUT=`$CURL_POST $METAX_CREDENTIALS "$METAX_RPC/datasets/flush_user_data?metadata_provider_user=$USER" 2>&1`
+        fi
+        if [ "$?" -ne 0 ]; then
+            OUT=`echo "$OUT" | head -1`
+            NOT_FOUND=`echo "$OUT" | grep '404 Not Found'`
+            if [ "$NOT_FOUND" ]; then
+                failure "404 Not Found (ignored)"
+            else
+                failure "$OUT (ignored)"
+            fi
+        else
+            success
+        fi
+    done
+
+fi
+
+echo "Purging all records from Nextcloud file cache..."
+
+for PROJECT in $PROJECTS; do
+    STEP="   Purging $PROJECT"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`$ROOT/tests/utils/purge-cache $PROJECT 2>&1`
+    if [ "$?" -ne 0 ]; then
+        OUT=`echo "$OUT" | head -1`
+        failure "$OUT (ignored)"
+    else
+        success
+    fi
+done
+
+echo "Flushing all replicated files..."
+
+for PROJECT in $PROJECTS; do
+    STEP="   Flushing $PROJECT"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`/bin/rm -fr $DATA_REPLICATION_ROOT/projects/$PROJECT 2>&1`
+    if [ "$?" -ne 0 ]; then
+        OUT=`echo "$OUT" | head -1`
+        failure "$OUT (ignored)"
+    else
+        success
+    fi
+done
+
+#--------------------------------------------------------------------------------
+
+echo "Cleaning up any existing test projects..."
+echo "Deleting any existing test users..."
+
+for USER in $USERS; do
+    STEP="   Deleting $USER"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`$ROOT/admin/ida_user DELETE $USER 2>&1`
+    if [ "$?" -ne 0 ]; then
+        OUT=`echo "$OUT" | head -1`
+        failure "$OUT (ignored)"
+    else
+        success
+    fi
+    STEP="   Ensuring no residual user folder"
+    printf "%${PADDING}s" "$STEP"
+    TARGET=`echo "$STORAGE_OC_DATA_ROOT/$USER" | sed -e 's/^[[:blank:]]*//;s/[[:blank:]]*$//'`
+    if [ "$TARGET" != "/" ]; then
+        if [ "$TARGET" != "/mnt/storage_vol01/ida/" ]; then
+            if [ -d "$TARGET" ]; then
+                OUT=`rm -fr "$TARGET"`
+                if [ "$?" -ne 0 ]; then
+                    OUT=`echo "$OUT" | head -1`
+                    failure "$OUT (ignored)"
+                else
+                    success
+                fi
+            else
+                success
+            fi
+        else
+            success
+        fi
+    else
+        success
+    fi
+done
+
+echo "Deleting any existing test projects..."
+
+for PROJECT in $PROJECTS; do
+    STEP="   Deleting $PROJECT"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`$ROOT/admin/ida_project DISABLE $PROJECT 2>&1`
+    if [ "$?" -ne 0 ]; then
+        OUT=`echo "$OUT" | head -1`
+        failure "$OUT (ignored)"
+    else
+        success
+    fi
+done
+
+echo "Deleting any existing project share owners..."
+
+for PROJECT in $PROJECTS; do
+    USER="$PROJECT_USER_PREFIX""$PROJECT"
+    STEP="   Deleting $USER"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`$ROOT/admin/ida_user DELETE $USER 2>&1`
+    if [ "$?" -ne 0 ]; then
+        OUT=`echo "$OUT" | head -1`
+        failure "$OUT (ignored)"
+    else
+        success
+    fi
+done
+
+echo "Deleting any residual test user directories..."
+
+for USER in $USERS; do
+    if [ -d "$STORAGE_OC_DATA_ROOT/$USER" ]; then
+        STEP="   Deleting $USER "
+        printf "%${PADDING}s" "$STEP"
+        OUT=`rm -fr "$STORAGE_OC_DATA_ROOT/$USER"`
+        if [ "$?" -ne 0 ]; then
+            OUT=`echo "$OUT" | head -1`
+            failure "$OUT (ignored)"
+        else
+            success
+        fi
+    fi
+done
+
+echo "Deleting any residual project share owner directories and links..."
+
+for PROJECT in $PROJECTS; do
+    for CANDIDATE_STORAGE_VOLUME in ${STORAGE_CANDIDATES[*]}; do
+        TARGET=`echo "${CANDIDATE_STORAGE_VOLUME}/${PROJECT_USER_PREFIX}${PROJECT}" | sed -e 's/^[[:blank:]]*//;s/[[:blank:]]*$//'`
+        if [ "$TARGET" != "/" ]; then
+            if [ "$TARGET" != "${CANDIDATE_STORAGE_VOLUME}/" ]; then
+                if [ -e "$TARGET" ]; then
+                    STEP="   Deleting $TARGET "
+                    printf "%${PADDING}s" "$STEP"
+                    OUT=`rm -fr "$TARGET"`
+                    if [ "$?" -ne 0 ]; then
+                        OUT=`echo "$OUT" | head -1`
+                        failure "$OUT (ignored)"
+                    else
+                        success
+                    fi
+                fi
+            fi
+        fi
+    done
+done
+
+#--------------------------------------------------------------------------------
+
+echo "Running Nextcloud housekeeping..."
+
+php $ROOT/nextcloud/cron.php
+sleep 5
+
+#--------------------------------------------------------------------------------
+
+if [ "$1" = "--flush" ]; then
+    exit
+fi
+
+#--------------------------------------------------------------------------------
+
+echo "Creating test accounts..."
+
+echo "Creating projects..."
+
+for PROJECT in $PROJECTS; do
+    STEP="   Creating $PROJECT"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`$ROOT/admin/ida_project ADD $PROJECT 1 2>&1`
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+    else
+        success
+    fi
+done
+
+#--------------------------------------------------------------------------------
+
+echo "Initializing test data for each project..."
+
+for PROJECT in $PROJECTS; do
+
+    STEP="   Initializing data for $PROJECT"
+    printf "%${PADDING}s" "$STEP"
+
+    USER="$PROJECT_USER_PREFIX""$PROJECT"
+    PROJECT_STAGING_FOLDER="$PROJECT$STAGING_FOLDER_SUFFIX"
+    PROJECT_FROZEN_FOLDER="$PROJECT"
+
+    OUT=`cp -rp $ROOT/tests/testdata $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_STAGING_FOLDER`
+
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+    fi
+
+    rm -fr `find $STORAGE_OC_DATA_ROOT/$USER/files -name .DS_Store`
+
+    OUT=`mkdir -p $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_STAGING_FOLDER/testdata/empty_folder_s/a/b/c`
+
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+    fi
+
+    OUT=`mkdir -p $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_FROZEN_FOLDER/testdata/empty_folder_f/x/y/z`
+
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+        continue
+    fi
+
+    chown -R $HTTPD_USER:$HTTPD_USER "$STORAGE_OC_DATA_ROOT/$USER"
+    chmod -R u+w,g+rwX,o-rwx "$STORAGE_OC_DATA_ROOT/$USER"
+
+    # Update Nextcloud filesystem records
+    OUT=`$OCC files:scan -q $USER`
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+    else
+        success
+    fi
+
+    # Update uploaded ('add' change) timestamps to current datetime
+
+    STEP="   Initializing upload timestamps for ${PROJECT}"
+    printf "%${PADDING}s" "$STEP"
+
+    OUT=`$ROOT/tests/utils/initialize-change-timestamps $PROJECT 2>&1`
+
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+    else
+        success
+    fi
+
+    # Generate cache checksums for all test files
+
+    STEP="   Generating cache checksums for ${PROJECT}"
+    printf "%${PADDING}s" "$STEP"
+
+    OUT=`$ROOT/utils/admin/generate-missing-checksums $PROJECT 2>&1`
+
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+    else
+        success
+        echo "$OUT" | grep 'Warning:'
+    fi
+
+done
+
+#--------------------------------------------------------------------------------
+
+echo "Creating users..."
+
+for RELATION in $BASIC_RELATIONS; do
+    USER=`echo $RELATION | sed -e 's/:.*$//'`
+    PROJECT=`echo $RELATION | sed -e 's/^.*://'`
+    STEP="   Creating $USER in $PROJECT"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`$ROOT/admin/ida_user ADD $USER $PROJECT 2>&1`
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+    else
+        success
+    fi
+done
+
+#--------------------------------------------------------------------------------
+
+echo "Creating additional project relations..."
+
+for RELATION in $EXTRA_RELATIONS; do
+    USER=`echo $RELATION | sed -e 's/:.*$//'`
+    PROJECT=`echo $RELATION | sed -e 's/^.*://'`
+    STEP="   Adding $USER to $PROJECT"
+    printf "%${PADDING}s" "$STEP"
+    OUT=`$ROOT/admin/ida_user JOIN $USER $PROJECT 2>&1`
+    if [ "$?" -ne 0 ]; then
+        failure "$OUT"
+        exit 1
+    else
+        success
+    fi
+done
+
+#--------------------------------------------------------------------------------
+
+FOUND=`echo "$PROJECTS" | grep "test_project_s"`
+
+if [ "$FOUND" ]; then
+    echo "Suspending project test_project_s..."
+    /var/ida/utils/admin/suspend-project test_project_s --silent >/dev/null
+fi
+
+#--------------------------------------------------------------------------------
+
+FOUND=`echo "$PROJECTS" | grep "test_project_p"`
+
+if [ "$FOUND" ]; then
+    echo "Creating pending action in test_project_p..."
+    $CURL_POST $IDA_CREDENTIALS -H "$IDA_MODE_HEADER" "${IDA_API}/actions?project=test_project_p&pathname=/&action=freeze" >/dev/null
+fi
+
+#--------------------------------------------------------------------------------
+
+FOUND=`echo "$PROJECTS" | grep "test_project_f"`
+
+if [ "$FOUND" ]; then
+    echo "Creating failed action in test_project_f..."
+    $CURL_POST $IDA_CREDENTIALS -H "$IDA_MODE_HEADER" "${IDA_API}/actions?project=test_project_f&pathname=/&action=freeze&error=Boom%21&failed=${START}" >/dev/null
+fi
+
+#--------------------------------------------------------------------------------
+
+echo "Running Nextcloud housekeeping..."
+
+php $ROOT/nextcloud/cron.php
+sleep 5
+

@@ -1,0 +1,157 @@
+#!/bin/bash
+#
+# This script resets the new database to a baseline state with only the admin account. It is
+# used during testing of the migration process to ensure that the migration can be repeated
+# consistently and that the new database is in a known state before each migration. It should
+# not be used in production unless something goes terribly wrong during the actual migration.
+#
+# The script ONLY operates on the new database, as defined by the DBNAME_NEW environment variable.
+# The old database should in any case have been set to be read-only before any migration is attempted.
+#
+# The script clears all relevant tables of records other than those belonging to the admin account
+# or corresponding to the data root mount point, as would exist immediately following installation
+# of the new IDA service.
+#
+# It then updates the essential sequence values in the new database to be 1 greater than the
+# maximum value remaining in each relevant table in the new database.
+
+. /var/ida/update/init.sh
+
+echo "--- Resetting new database ..."
+
+# Ensure DBNAME_NEW and DBNAME_OLD are defined in configuration and not the same
+if [[ -z "$DBNAME_NEW" ]]; then
+    echo "Error: Environment variable DBNAME_NEW must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBNAME_OLD" ]]; then
+    echo "Error: Environment variable DBNAME_OLD must be defined" >&2
+    exit 1
+fi
+if [[ "$DBNAME_NEW" = "$DBNAME_OLD" ]]; then
+    echo "Error: Environment variables DBNAME_NEW and DBNAME_OLD cannot be the same" >&2
+    exit 1
+fi
+
+# Ensure DBHOST, DBPORT, DBUSER, and DBPASSWORD are defined in configuration
+if [[ -z "$DBHOST" ]]; then
+    echo "Error: Environment variable DBHOST must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBPORT" ]]; then
+    echo "Error: Environment variable DBPORT must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBUSER" ]]; then
+    echo "Error: Environment variable DBUSER must be defined" >&2
+    exit 1
+fi
+if [[ -z "$DBPASSWORD" ]]; then
+    echo "Error: Environment variable DBPASSWORD must be defined" >&2
+    exit 1
+fi
+
+export PGPASSWORD="$DBPASSWORD"
+
+PSQL="psql -h $DBHOST -p $DBPORT -U $DBUSER -d $DBNAME_NEW"
+
+#------------------------------------------------------------------------------------------------------------------------
+
+echo "Purging migrated data from $DBNAME_NEW ..."
+
+echo "Deleting data from oc_accounts ..."
+$PSQL -c "DELETE FROM oc_accounts WHERE uid <> 'admin'"
+
+echo "Deleting data from oc_storages ..."
+$PSQL -c "DELETE FROM oc_storages WHERE id LIKE 'home::%' AND id <> 'home::admin'"
+
+echo "Deleting data from oc_accounts_data ..."
+$PSQL -c "DELETE FROM oc_accounts_data WHERE uid <> 'admin'"
+
+echo "Deleting data from oc_groups ..."
+$PSQL -c "DELETE FROM oc_groups WHERE gid <> 'admin'"
+
+echo "Deleting data from oc_group_user ..."
+$PSQL -c "DELETE FROM oc_group_user WHERE gid <> 'admin'"
+
+echo "Deleting data from oc_users ..."
+$PSQL -c "DELETE FROM oc_users WHERE uid <> 'admin'"
+
+echo "Deleting data from oc_preferences ..."
+$PSQL -c "DELETE FROM oc_preferences WHERE userid <> 'admin'"
+
+echo "Deleting data from oc_share ..."
+# Only delete group shares (type 2) and exclude shares owned by admin
+$PSQL -c "DELETE FROM oc_share WHERE share_type = 2 AND uid_owner <> 'admin'"
+
+echo "Deleting data from oc_filecache ..."
+$PSQL -c "DELETE FROM oc_filecache WHERE storage > 2"
+
+echo "Deleting data from oc_filecache_extended ..."
+# Get list of fileids for all files belonging to admin (storage 1), and exclude them from the oc_filecache_extended deletion query
+EXCLUDED_FILEIDS=$($PSQL -t -A -c "SELECT fileid FROM oc_filecache WHERE storage = 1" | tr '\n' ',' | sed 's/,$//')
+echo "Excluded fileid values: $EXCLUDED_FILEIDS"
+if [[ -z "$EXCLUDED_FILEIDS" ]]; then
+    $PSQL -c "DELETE FROM oc_filecache_extended"
+else
+    $PSQL -c "DELETE FROM oc_filecache_extended WHERE fileid NOT IN ($EXCLUDED_FILEIDS)"
+fi
+
+echo "Deleting data from oc_ida_action ..."
+$PSQL -c "TRUNCATE TABLE oc_ida_action"
+
+echo "Deleting data from oc_ida_data_change ..."
+$PSQL -c "TRUNCATE TABLE oc_ida_data_change"
+
+echo "Deleting data from oc_ida_frozen_file ..."
+$PSQL -c "TRUNCATE TABLE oc_ida_frozen_file"
+
+echo "Deleting data from oc_mounts ..."
+$PSQL -c "DELETE FROM oc_mounts WHERE storage_id > 2"
+
+echo "Deleting test mimetypes from oc_mimetype ..."
+$PSQL -c "DELETE FROM oc_mimetypes WHERE mimetype IN ($(echo $TEST_MIMETYPES | sed "s/ /','/g" | sed "s/^/\'/;s/$/\'/"))"
+
+#------------------------------------------------------------------------------------------------------------------------
+
+echo "Updating sequence values in $DBNAME_NEW ..."
+
+# The SEQUENCES list is defined in init.sh
+
+for SEQUENCE in "${SEQUENCES[@]}"; do
+
+    # sequence:table:column
+    SEQUENCE_NAME=$(echo "$SEQUENCE" | sed -E 's/:.*$//')
+    TABLE_NAME=$(echo "$SEQUENCE" | sed -E 's/^[^:]*://' | sed -E 's/:.*$//')
+    COLUMN_NAME=$(echo "$SEQUENCE" | sed -E 's/^.*://' | sed -E 's/:.*//')
+
+    if [[ -z "$SEQUENCE_NAME" ]]; then
+        echo "Error: Failed to extract sequence name from sequence $SEQUENCE" >&2
+        continue
+    fi
+
+    if [[ -z "$TABLE_NAME" ]]; then
+        echo "Error: Failed to extract table name from sequence $SEQUENCE" >&2
+        continue
+    fi
+
+    if [[ -z "$COLUMN_NAME" ]]; then
+        echo "Error: Failed to extract column name from sequence $SEQUENCE" >&2
+        continue
+    fi
+
+    echo "Updating sequence $SEQUENCE_NAME from column $COLUMN_NAME in table $TABLE_NAME"
+
+    # Retrieve the maximum value from the table's column
+    MAX_VALUE=$($PSQL -t -c "SELECT COALESCE(MAX($COLUMN_NAME), 1) FROM $TABLE_NAME" | xargs)
+    if [[ -z "$MAX_VALUE" ]]; then
+        echo "Error: Failed to retrieve maximum value for table $TABLE_NAME and column $COLUMN_NAME" >&2
+        continue
+    fi
+
+    # Set the updated value in the new database 
+    $PSQL -t -A -c "SELECT setval('$SEQUENCE_NAME', $MAX_VALUE, true)"
+
+done
+
+echo "Reset of database $DBNAME_NEW completed."

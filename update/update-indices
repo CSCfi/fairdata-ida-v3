@@ -1,0 +1,139 @@
+#!/bin/bash
+#
+# This script will update all indices for the updated tables in the new database and
+# run a full vacuum in the database to clean everything up.
+#
+# All configuration variables will be taken from the IDA configuration.
+#
+# Strict assumptions are made about the location of git repositories; update as needed.
+
+. /var/ida/update/init.sh
+
+echo "--- Updating indices in new database and cleaning up ..."
+
+if [[ -z "$DBNAME_NEW" ]]; then
+  echo "Error: Environment variable DBNAME_NEW must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBHOST" ]]; then
+  echo "Error: Environment variable DBHOST must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPORT" ]]; then
+  echo "Error: Environment variable DBPORT must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBUSER" ]]; then
+  echo "Error: Environment variable DBUSER must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPASSWORD" ]]; then
+  echo "Error: Environment variable DBPASSWORD must be defined" >&2
+  exit 1
+fi
+if [[ -z "$TABLES" ]]; then
+  echo "Error: Environment variable TABLES must be defined" >&2
+  exit 1
+fi
+
+export PGPASSWORD="$DBPASSWORD"
+
+#------------------------------------------------------------------------------------------------------------------------
+
+PSQL="psql -h $DBHOST -p $DBPORT -d $DBNAME_NEW -U $DBUSER -v VERBOSITY=verbose -E"
+
+echo "Clearing any active queries ..."
+
+$PSQL -c "SELECT pg_terminate_backend(pid) \
+          FROM pg_stat_activity \
+          WHERE pid IN ( \
+              SELECT blockingl.pid \
+              FROM pg_locks blockingl \
+              JOIN pg_stat_activity blockinga ON blockingl.pid = blockinga.pid \
+              JOIN pg_locks waitingl ON blockingl.relation = waitingl.relation \
+              JOIN pg_stat_activity waitinga ON waitingl.pid = waitinga.pid \
+              WHERE blockingl.granted AND NOT waitingl.granted \
+          )" 2>"$ERR"
+
+echo "Done."
+
+ERROR_CODE=$?
+
+if [ -s "$ERR" ]; then
+    cat "$ERR" >&2
+    errorExit "Error: Failed to clear active queries (error output detected)"
+elif [ "$ERROR_CODE" -ne 0 ]; then
+    errorExit "Error: Failed to clear active queries (exit code: $ERROR_CODE)"
+fi
+
+for TABLE in $TABLES; do
+
+    echo "Disabling autovacuum for $TABLE ..."
+
+    $PSQL -c "ALTER TABLE $TABLE SET (autovacuum_enabled = false)" 2>"$ERR"
+
+    ERROR_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to disable autovacuum for table $TABLE (error output detected)"
+    elif [ "$ERROR_CODE" -ne 0 ]; then
+        errorExit "Error: Failed to disable autovacuum for table $TABLE (exit code: $ERROR_CODE)"
+    fi
+
+    echo "Reindexing table $TABLE ..."
+
+    $PSQL -c "REINDEX TABLE $TABLE" 2>"$ERR"
+
+    ERROR_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to reindex $TABLE (error output detected)"
+    elif [ "$ERROR_CODE" -ne 0 ]; then
+        errorExit "Error: Failed to reindex $TABLE (exit code: $ERROR_CODE)"
+    fi
+
+    echo "Vacuuming table $TABLE ..."
+
+    $PSQL -c "VACUUM FULL ANALYZE $TABLE" 2> "$ERR"
+
+    ERROR_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to vacuum table $TABLE (error output detected)"
+    elif [ "$ERROR_CODE" -ne 0 ]; then
+        errorExit "Error: Failed to vacuum table $TABLE (exit code: $ERROR_CODE)"
+    fi
+
+    echo "Re-enabling autovacuum for $TABLE ..."
+
+    $PSQL -c "ALTER TABLE $TABLE SET (autovacuum_enabled = true)" 2>"$ERR"
+
+    ERROR_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to re-enable autovacuum for table $TABLE (error output detected)"
+    elif [ "$ERROR_CODE" -ne 0 ]; then
+        errorExit "Error: Failed to re-enable autovacuum for table $TABLE (exit code: $ERROR_CODE)"
+    fi
+
+done
+
+echo "Waiting for VACUUM to complete ..."
+
+PSQL="psql -h $DBHOST -p $DBPORT -d $DBNAME_NEW -U $DBUSER -t"
+
+SLEEP_TIME=1
+ATTEMPT=1
+
+while [ "$($PSQL -c "SELECT COUNT(*) FROM pg_stat_progress_vacuum")" -gt 0 ]; do
+    DURATION=$((SLEEP_TIME * ATTEMPT))
+    echo "Retrying after sleeping for $DURATION seconds ..."
+    sleep $DURATION
+    ((ATTEMPT++))
+done
+
+echo "Reindexing and cleanup completed."

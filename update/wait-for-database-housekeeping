@@ -1,0 +1,119 @@
+#!/bin/bash
+#
+# This script will check for ongoing database housekeeping tasks and wait for them to finish, up to
+# a specified timeout. If the tasks are not finished within the timeout, the script will exit with an error.
+
+. /var/ida/update/init.sh
+
+echo "--- Waiting for database housekeeping operations to complete ..."
+
+# Retry settings
+MAX_DURATION_SECONDS=300  # 5 minutes (adjust as needed)
+WAIT_BETWEEN_CHECKS_SECONDS=10
+
+export PGPASSWORD="$DBPASSWORD"
+
+check_postgres_queries() {
+
+    # Query active transactions (non-idle), EXCLUDING THIS SCRIPT'S QUERY
+    ACTIVE_TRANSACTIONS=$(psql -h "$DBHOST" -p "$DBPORT" -U "$DBUSER" -d "$DBNAME" -t -c \
+        "SELECT count(*) FROM pg_stat_activity 
+         WHERE state != 'idle' 
+         AND backend_type = 'client backend'
+         AND pid != pg_backend_pid();" 2>/dev/null)
+
+    # Query long-running queries (>5 min), EXCLUDING THIS SCRIPT'S QUERY
+    LONG_RUNNING_QUERIES=$(psql -h "$DBHOST" -p "$DBPORT" -U "$DBUSER" -d "$DBNAME" -t -c \
+        "SELECT count(*) FROM pg_stat_activity 
+         WHERE state != 'idle' 
+         AND now() - query_start > interval '5 minutes'
+         AND pid != pg_backend_pid();" 2>/dev/null)
+
+    # If psql fails (e.g., bad credentials), exit with error
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to connect to PostgreSQL. Check credentials/access."
+        exit 1
+    fi
+
+    # Output current status
+    echo "Active transactions: $ACTIVE_TRANSACTIONS, Long-running queries: $LONG_RUNNING_QUERIES"
+
+    # Return 0 if no operations, 1 if operations exist
+    if [ "$ACTIVE_TRANSACTIONS" -eq 0 ] && [ "$LONG_RUNNING_QUERIES" -eq 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_postgres_housekeeping() {
+    echo "Checking for PostgreSQL housekeeping tasks..."
+
+    # Query active background processes (excluding client backends)
+    HOUSEKEEPING_TASKS=$(psql -h "$DBHOST" -p "$DBPORT" -U "$DBUSER" -d "$DBNAME" -t -c \
+        "SELECT 
+            COUNT(*) 
+         FROM pg_stat_activity 
+         WHERE 
+            backend_type != 'client backend' 
+            AND backend_type != 'unknown' 
+            AND state != 'idle';" 2>/dev/null)
+
+    # Query autovacuum workers (if any are running)
+    AUTOVACUUM_WORKERS=$(psql -h "$DBHOST" -p "$DBPORT" -U "$DBUSER" -d "$DBNAME" -t -c \
+        "SELECT COUNT(*) FROM pg_stat_activity WHERE backend_type = 'autovacuum worker';" 2>/dev/null)
+
+    # Query WAL writer, checkpoint, and bgwriter activity
+    BACKGROUND_WRITERS=$(psql -h "$DBHOST" -p "$DBPORT" -U "$DBUSER" -d "$DBNAME" -t -c \
+        "SELECT COUNT(*) FROM pg_stat_activity WHERE backend_type IN ('walwriter', 'checkpointer', 'background writer');" 2>/dev/null)
+
+    # Output results
+    echo "Active housekeeping tasks (non-client): $HOUSEKEEPING_TASKS"
+    echo "Autovacuum workers running: $AUTOVACUUM_WORKERS"
+    echo "WAL/Checkpoint/BgWriter processes: $BACKGROUND_WRITERS"
+
+    # Exit with status 1 if housekeeping tasks are active
+    if [ "$HOUSEKEEPING_TASKS" -gt 0 ] || [ "$AUTOVACUUM_WORKERS" -gt 0 ] || [ "$BACKGROUND_WRITERS" -gt 0 ]; then
+        echo "WARNING: PostgreSQL housekeeping tasks are in progress."
+        exit 1
+    else
+        echo "No significant housekeeping tasks running."
+        exit 0
+    fi
+}
+
+# ===== Phase 1: Check for ongoing queries =====
+START_TIME=$(date +%s)
+END_TIME=$((START_TIME + MAX_DURATION_SECONDS))
+
+echo "Phase 1: Checking for ongoing queries (timeout: $MAX_DURATION_SECONDS seconds)..."
+while [ $(date +%s) -lt $END_TIME ]; do
+    if check_postgres_queries; then
+        echo "No queries detected. Proceeding to housekeeping check."
+        break  # Exit loop and proceed to Phase 2
+    fi
+    sleep $WAIT_BETWEEN_CHECKS_SECONDS
+done
+
+# If Phase 1 timed out
+if [ $(date +%s) -ge $END_TIME ]; then
+    echo "ERROR: Timeout reached. Queries still running."
+    exit 1
+fi
+
+# ===== Phase 2: Check for housekeeping tasks =====
+START_TIME=$(date +%s)
+END_TIME=$((START_TIME + MAX_DURATION_SECONDS))  # Reset timeout
+
+echo "Phase 2: Checking for housekeeping tasks (timeout: $MAX_DURATION_SECONDS seconds)..."
+while [ $(date +%s) -lt $END_TIME ]; do
+    if check_postgres_housekeeping; then
+        echo "No housekeeping tasks running."
+        exit 0  # Full success
+    fi
+    sleep $WAIT_BETWEEN_CHECKS_SECONDS
+done
+
+# If Phase 2 timed out
+echo "ERROR: Timeout reached. Housekeeping tasks still running."
+exit 1

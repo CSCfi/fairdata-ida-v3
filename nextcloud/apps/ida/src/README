@@ -1,0 +1,48 @@
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+
+Steps for setting up node.js for Vue UI development:
+
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+    source ~/.bashrc  (or copy appended NVM config from .bashrc to .zshrc and source .zshrc)
+    nvm --version  (just to verify it's working)
+    nvm install 20 --lts
+    nvm alias default 20
+    node --version  (should be 20.x.y)
+    npm --version  (should be 10.x.y)
+
+From within /var/ida/nextcloud/apps/ida:
+
+    npm install
+    npm install -S @nextcloud/dialogs
+    npm install -S @nextcloud/files
+    npm install -S vue-router@3
+    npm install fs-extra path --save-dev
+
+After every modification to Vue UI or changes/additions to translations:
+
+    npm run dev  
+
+Before MR:
+
+    npm run build

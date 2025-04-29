@@ -1,0 +1,70 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2023 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+#
+# This script configures Nextcloud with essential settings. It is safe to execute
+# in any environment, including production. 
+
+SCRIPT="$(realpath $0)"
+UTILS=`dirname "$SCRIPT"`
+ROOT=`dirname "$UTILS"`
+
+if [ -f $ROOT/config/config.sh ]; then
+    . $ROOT/config/config.sh
+fi
+
+if [ -z "$EMAIL_USER" ]; then
+    EMAIL_USER="ida-dev@listat.csc.fi"
+fi
+
+#--------------------------------------------------------------------------------
+# Determine the apache user
+
+if [ -d /etc/httpd ]; then
+    HTTPD_USER="apache"
+else
+    HTTPD_USER="www-data"
+fi
+
+#--------------------------------------------------------------------------------
+
+OCC="sudo -u $HTTPD_USER php $ROOT/nextcloud/occ"
+
+$OCC user:setting   admin         settings email                                "$EMAIL_SENDER"
+$OCC config:app:set settings      profile_enabled_by_default                    --value="0"
+$OCC config:app:set files_sharing outgoing_server2server_share_enabled          --value="no"
+$OCC config:app:set files_sharing incoming_server2server_share_enabled          --value="no"
+$OCC config:app:set files_sharing lookup_server_enabled                         --value="false"
+$OCC config:app:set files_sharing lookupServerUploadEnabled                     --value="no"
+$OCC config:app:set files_sharing auto_accept_share_trusted                     --value="no"
+$OCC config:app:set files         show_hidden                                   --value="true" --type=boolean
+$OCC config:app:set dav           system_addressbook_exposed                    --value="no"
+$OCC config:app:set dav           maximumAdressbooks                            --value=0 --type=integer 
+$OCC config:app:set core          backgroundjobs_mode                           --value="cron"
+$OCC config:app:set core          shareapi_default_expire_date                  --value="yes"
+$OCC config:app:set core          shareapi_enforce_expire_date                  --value="yes"
+$OCC config:app:set core          shareapi_expire_after_n_days                  --value="90"
+$OCC config:app:set core          shareapi_allow_public_upload                  --value="no"
+$OCC config:app:set core          shareapi_allow_links                          --value="yes"
+$OCC config:app:set core          shareapi_allow_share_dialog_user_enumeration  --value="no"
+$OCC config:app:set core          shareapi_allow_group_sharing                  --value="yes"

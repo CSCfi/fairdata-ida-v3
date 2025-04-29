@@ -1,0 +1,139 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2019 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+# --------------------------------------------------------------------------------
+
+SCRIPT=`basename $0`
+
+USAGE="
+Usage: $SCRIPT project [--silent]
+       $SCRIPT -h
+
+       project  = the project name
+       --silent = no email will be sent to project users
+"
+
+# Initialize script with common definitions
+
+INIT_FILE=`dirname $0`/lib/init_admin_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+echo "Verifying project ${PROJECT} exists..."
+
+if [ ! -d $PROJECT_STORAGE_OC_DATA_ROOT ]; then
+    errorExit "The specified project ${PROJECT} does not exist"
+fi
+
+#--------------------------------------------------------------------------------
+echo "Checking if project ${PROJECT} is suspended..."
+
+PIDS=`$CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" "$IDA_API/actions?status=suspend" 2>$ERR | \
+      tr "\n" " " | tr "{" "\n" | grep "\"action\": *\"suspend\"" | grep "\"project\": *\"$PROJECT\"" | \
+      sed -e 's/^.*"pid": *"//' | sed -e 's/".*$//'`
+
+if [ -s $ERR ]; then
+    MSG=`cat $ERR`
+    addToLog "$MSG"
+    errorExit "Failed to retrieve pending actions for project ${PROJECT}"
+fi
+
+if [ "$PIDS" = "" ]; then
+    echoAndLog "The specified project ${PROJECT} is not suspended"
+    addToLog "DONE"
+    exit 0
+fi
+
+#--------------------------------------------------------------------------------
+echo "Clearing suspend action for project ${PROJECT}..."
+
+# In the rare case there are more than one suspend action (though there shouldn't be)
+# clear them all...
+
+for PID in $PIDS; do
+
+    if [ "$DEBUG" = "true" ]; then
+         echo "$CURL_POST $ADMIN_CREDENTIALS -H \"$IDA_MODE_HEADER\" \"$IDA_API/actions/$PID?cleared=$START\""
+    fi
+
+    OUT=`$CURL_POST $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" "$IDA_API/actions/$PID?cleared=$START"`
+
+    SUCCESS=`echo "$OUT" | grep '"cleared":'`
+
+    if [ "$SUCCESS" = "" ]; then
+        errorExit "Failed to clear suspend action ${PID} for project ${PROJECT}"
+    fi
+
+done
+
+#--------------------------------------------------------------------------------
+echo "Unlocking project ${PROJECT}..."
+
+rm -f $PROJECT_LOCK 2>/dev/null
+
+if [ -e $PROJECT_LOCK ]; then
+    errorExit "Failed to unlock project ${PROJECT}"
+fi
+
+#--------------------------------------------------------------------------------
+echo "Removing suspend sentinel file for project ${PROJECT}..."
+
+rm -f $PROJECT_SUSPENDED
+
+if [ -e $PROJECT_SUSPENDED ]; then
+    errorExit "Failed to remove suspend sentinel file for project ${PROJECT}"
+fi
+
+#--------------------------------------------------------------------------------
+
+echoAndLog "Project ${PROJECT} unsuspended."
+
+#--------------------------------------------------------------------------------
+
+if [ "$2" = "--silent" ]; then
+    addToLog "DONE"
+    exit
+fi
+
+SUBJECT="Project ${PROJECT} unsuspended" 
+MESSAGE="The project ${PROJECT} has been UNSUSPENDED in the IDA service. Full access to project data is restored. If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi)."
+
+export ROOT
+export EMAIL_SENDER
+export EMAIL_RECIPIENTS
+
+$ROOT/utils/admin/email-project-users "$PROJECT" "$SUBJECT" "$MESSAGE" 2>$ERR
+
+if [ -s $ERR ]; then
+    MSG=`cat $ERR | tr "\n" " " `
+    addToLog "$MSG"
+    errorExit "Error: Failed to email project ${PROJECT} users!"
+fi
+
+addToLog "DONE"

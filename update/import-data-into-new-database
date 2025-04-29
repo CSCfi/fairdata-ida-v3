@@ -1,0 +1,227 @@
+#!/bin/bash
+#
+# This script will import all essential data into the new database.
+# All configuration variables will be taken from the IDA configuration.
+#
+# Strict assumptions are made about the location of git repositories; update as needed.
+
+. /var/ida/update/init.sh
+
+echo "--- Importing data into new database ..."
+
+# Ensure DBNAME_NEW and DBNAME_OLD are defined in configuration and not the same
+if [[ -z "$DBNAME_NEW" ]]; then
+  echo "Error: Environment variable DBNAME_NEW must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBNAME_OLD" ]]; then
+  echo "Error: Environment variable DBNAME_OLD must be defined" >&2
+  exit 1
+fi
+if [[ "$DBNAME_NEW" = "$DBNAME_OLD" ]]; then
+  echo "Error: Environment variables DBNAME_NEW and DBNAME_OLD cannot be the same" >&2
+  exit 1
+fi
+
+# Ensure DBHOST, DBPORT, DBUSER, and DBPASSWORD are defined in configuration
+if [[ -z "$DBHOST" ]]; then
+  echo "Error: Environment variable DBHOST must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPORT" ]]; then
+  echo "Error: Environment variable DBPORT must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBUSER" ]]; then
+  echo "Error: Environment variable DBUSER must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPASSWORD" ]]; then
+  echo "Error: Environment variable DBPASSWORD must be defined" >&2
+  exit 1
+fi
+
+# Ensure DBDATA is defined in configuration, and that the subdirectory exists
+if [[ -z "$DBDATA" ]]; then
+  echo "Error: Environment variable DBDATA must be defined" >&2
+  exit 1
+fi
+if [[ ! -d "$DBDATA" ]]; then
+  echo "Error: The directory $DBDATA does not exist" >&2
+  exit 1
+fi
+
+if [ "$1" = "--test" ]; then
+    echo "TEST MODE: Data will be re-imported into new database!"
+    OC_IDA_ACTION_FIELDS="$OC_IDA_ACTION_FIELDS_TEST"
+fi
+
+export PGPASSWORD="$DBPASSWORD"
+
+PSQL="psql -h $DBHOST -p $DBPORT -d $DBNAME_NEW -U $DBUSER -v ON_ERROR_STOP=off"
+
+#------------------------------------------------------------------------------------------------------------------------
+
+echo "Importing essential data into $DBNAME_NEW ..."
+
+# Mimetype id's need to match what is in the old database, but we also need to add the new mimetypes supported
+# by the new version of Nextcloud. To do so, we derive a list of all mimetypes from the new database, then clear
+# the mimetypes table, import the mimetypes with ids as defined in the old database, and then add any missing
+# mimetypes. 
+
+echo "Extacting all mimetypes from oc_mimetypes ..."
+OC_MIMETYPES=$($PSQL -t -A -c "SELECT mimetype FROM oc_mimetypes")
+if [ "$1" = "--test" ]; then
+    OC_MIMETYPES=$(echo "$OC_MIMETYPES $TEST_MIMETYPES" | tr -s ' ' '\n' | grep -v '^ *$' | sort -u)
+fi
+IFS=$'\n' read -rd '' -a OC_MIMETYPES_ARRAY <<< "$OC_MIMETYPES"
+
+echo "Deleting data from oc_mimetypes ..."
+$PSQL -c "TRUNCATE TABLE oc_mimetypes RESTART IDENTITY" 2> "$DBDATA/oc_mimetypes.err"
+
+echo "Importing data into oc_mimetypes ..."
+$PSQL -c "\COPY oc_mimetypes ($OC_MIMETYPES_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_mimetypes.csv" 2>> "$DBDATA/oc_mimetypes.err"
+
+echo "Updating sequence oc_mimetypes_id_seq ..."
+$PSQL -d $DBNAME_NEW -t -A -c "SELECT setval('oc_mimetypes_id_seq', COALESCE((SELECT MAX(id) FROM oc_mimetypes), 1), true)" 2>> "$DBDATA/oc_mimetypes.err"
+
+echo "Adding any missing mimetypes into oc_mimetypes ..."
+for MIMETYPE in "${OC_MIMETYPES_ARRAY[@]}"; do
+    echo "Checking mimetype $MIMETYPE ..."
+    $PSQL -c "MERGE INTO oc_mimetypes t USING (SELECT '$MIMETYPE' AS mimetype) s ON t.mimetype = s.mimetype WHEN NOT MATCHED THEN INSERT (mimetype) VALUES (s.mimetype)" 2>> "$DBDATA/oc_mimetypes.err" | \
+        grep -v '^$' | grep -v "MERGE 0"
+done
+
+if [[ -s "$DBDATA/oc_mimetypes.err" ]]; then
+  echo "Error: Failed to import and update data into oc_mimetypes" >&2
+  cat "$DBDATA/oc_mimetypes.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_storages ..."
+$PSQL -c "\COPY oc_storages ($OC_STORAGES_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_storages.csv" 2> "$DBDATA/oc_storages.err"
+
+if [[ -s "$DBDATA/oc_storages.err" ]]; then
+  echo "Error: Failed to import data into oc_storages" >&2
+  cat "$DBDATA/oc_storages.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_accounts ..."
+$PSQL -c "\COPY oc_accounts ($OC_ACCOUNTS_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_accounts.csv" 2> "$DBDATA/oc_accounts.err"
+
+if [[ -s "$DBDATA/oc_accounts.err" ]]; then
+  echo "Error: Failed to import data into oc_accounts" >&2
+  cat "$DBDATA/oc_accounts.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_accounts_data ..."
+$PSQL -c "\COPY oc_accounts_data ($OC_ACCOUNTS_DATA_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_accounts_data.csv" 2> "$DBDATA/oc_accounts_data.err"
+
+if [[ -s "$DBDATA/oc_accounts_data.err" ]]; then
+  echo "Error: Failed to import data into oc_accounts_data" >&2
+  cat "$DBDATA/oc_accounts_data.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_groups ..."
+$PSQL -c "\COPY oc_groups ($OC_GROUPS_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_groups.csv" 2> "$DBDATA/oc_groups.err"
+
+if [[ -s "$DBDATA/oc_groups.err" ]]; then
+  echo "Error: Failed to import data into oc_groups" >&2
+  cat "$DBDATA/oc_groups.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_group_user ..."
+$PSQL -c "\COPY oc_group_user ($OC_GROUP_USER_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_group_user.csv" 2> "$DBDATA/oc_group_user.err"
+
+if [[ -s "$DBDATA/oc_group_user.err" ]]; then
+  echo "Error: Failed to import data into oc_group_user" >&2
+  cat "$DBDATA/oc_group_user.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_users ..."
+$PSQL -c "\COPY oc_users ($OC_USERS_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_users.csv" 2> "$DBDATA/oc_users.err"
+
+if [[ -s "$DBDATA/oc_users.err" ]]; then
+  echo "Error: Failed to import data into oc_users" >&2
+  cat "$DBDATA/oc_users.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_preferences ..."
+$PSQL -c "\COPY oc_preferences ($OC_PREFERENCES_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_preferences.csv" 2> "$DBDATA/oc_preferences.err"
+
+if [[ -s "$DBDATA/oc_preferences.err" ]]; then
+  echo "Error: Failed to import data into oc_preferences" >&2
+  cat "$DBDATA/oc_preferences.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_share ..."
+$PSQL -c "\COPY oc_share ($OC_SHARE_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_share.csv" 2> "$DBDATA/oc_share.err"
+
+if [[ -s "$DBDATA/oc_share.err" ]]; then
+  echo "Error: Failed to import data into oc_share" >&2
+  cat "$DBDATA/oc_share.err" >&2
+  exit 1
+fi  
+
+echo "Importing data into oc_filecache ..."
+$PSQL -c "\COPY oc_filecache ($OC_FILECACHE_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_filecache.csv" 2> "$DBDATA/oc_filecache.err"
+
+if [[ -s "$DBDATA/oc_filecache.err" ]]; then
+  echo "Error: Failed to import data into oc_filecache" >&2
+  cat "$DBDATA/oc_filecache.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_filecache_extended ..."
+$PSQL -c "\COPY oc_filecache_extended ($OC_FILECACHE_EXTENDED_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_filecache_extended.csv" 2> "$DBDATA/oc_filecache_extended.err"
+
+if [[ -s "$DBDATA/oc_filecache_extended.err" ]]; then
+  echo "Error: Failed to import data into oc_filecache_extended" >&2
+  cat "$DBDATA/oc_filecache_extended.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_ida_action ..."
+$PSQL -c "\COPY oc_ida_action (${OC_IDA_ACTION_FIELDS//user/\"user\"}) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_ida_action.csv" 2> "$DBDATA/oc_ida_action.err"
+
+if [[ -s "$DBDATA/oc_ida_action.err" ]]; then
+  echo "Error: Failed to import data into oc_ida_action" >&2
+  cat "$DBDATA/oc_ida_action.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_ida_data_change ..."
+$PSQL -c "\COPY oc_ida_data_change (${OC_IDA_DATA_CHANGE_FIELDS//user/\"user\"}) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_ida_data_change.csv" 2> "$DBDATA/oc_ida_data_change.err"
+
+if [[ -s "$DBDATA/oc_ida_data_change.err" ]]; then
+  echo "Error: Failed to import data into oc_ida_data_change" >&2
+  cat "$DBDATA/oc_ida_data_change.err" >&2
+  exit 1
+fi
+
+echo "Importing data into oc_ida_frozen_file ..."
+$PSQL -c "\COPY oc_ida_frozen_file ($OC_IDA_FROZEN_FILE_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_ida_frozen_file.csv" 2> "$DBDATA/oc_ida_frozen_file.err"
+
+if [[ -s "$DBDATA/oc_ida_frozen_file.err" ]]; then
+  echo "Error: Failed to import data into oc_ida_frozen_file" >&2
+  cat "$DBDATA/oc_ida_frozen_file.err" >&2
+  exit 1
+fi  
+
+echo "Importing data into oc_mounts ..."
+$PSQL -c "\COPY oc_mounts ($OC_MOUNTS_FIELDS) FROM STDIN WITH CSV HEADER" < "$DBDATA/oc_mounts.csv" 2> "$DBDATA/oc_mounts.err"
+
+if [[ -s "$DBDATA/oc_mounts.err" ]]; then
+  echo "Error: Failed to import data into oc_mounts" >&2
+  cat "$DBDATA/oc_mounts.err" >&2
+  exit 1
+fi  
+
+echo "Importing completed."

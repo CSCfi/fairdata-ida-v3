@@ -1,0 +1,70 @@
+{
+    "packages": [
+        {
+            "name": "hexogen/kdtree",
+            "version": "v0.2.6",
+            "version_normalized": "0.2.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/hexogen/kdtree.git",
+                "reference": "fbcd2b472c1bb3401929b38144ddd66f8fd14c65"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/hexogen/kdtree/zipball/fbcd2b472c1bb3401929b38144ddd66f8fd14c65",
+                "reference": "fbcd2b472c1bb3401929b38144ddd66f8fd14c65",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.1|^8.0"
+            },
+            "require-dev": {
+                "league/csv": "^9.7.0",
+                "mockery/mockery": "dev-main",
+                "phpunit/phpunit": "^9.0",
+                "squizlabs/php_codesniffer": "^3.5.0"
+            },
+            "time": "2024-09-15T21:06:32+00:00",
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0-dev"
+                }
+            },
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Hexogen\\KDTree\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Volodymyr Basarab",
+                    "email": "volodymyrbas@gmail.com",
+                    "homepage": "https://github.com/hexogen",
+                    "role": "Developer"
+                }
+            ],
+            "description": "file system KDTree index",
+            "homepage": "https://github.com/hexogen/kdtree",
+            "keywords": [
+                "algorithms",
+                "data structures",
+                "hexogen",
+                "kdtree",
+                "search"
+            ],
+            "support": {
+                "issues": "https://github.com/hexogen/kdtree/issues",
+                "source": "https://github.com/hexogen/kdtree/tree/v0.2.6"
+            },
+            "install-path": "../hexogen/kdtree"
+        }
+    ],
+    "dev": false,
+    "dev-package-names": []
+}

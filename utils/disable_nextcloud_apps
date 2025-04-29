@@ -1,0 +1,94 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2022 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+
+# The following apps are not used for IDA and are disabled in Nextcloud:
+
+APPS="activity \
+      bruteforcesettings \
+      circles \
+      comments \
+      contactsinteraction \
+      dashboard \
+      encryption \
+      federation \
+      files_downloadlimit \
+      files_external \
+      files_pdfviewer \
+      files_reminders \
+      files_trashbin \
+      files_versions \
+      firstrunwizard \
+      logreader \
+      nextcloud_announcements \
+      notifications \
+      password_policy \
+      photos \
+      privacy \
+      recommendations \
+      related_resources \
+      serverinfo \
+      sharebymail \
+      support \
+      survey_client \
+      systemtags \
+      text \
+      updatenotification \
+      user_ldap \
+      user_status \
+      webhook_listeners \
+      weather_status"
+
+SCRIPT_FOLDER=`dirname "$(realpath $0)"`
+CONFIG_FILE="$SCRIPT_FOLDER/../config/config.sh"
+
+if [ -e $CONFIG_FILE ]; then
+    . $CONFIG_FILE
+else
+    echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+# Determine the apache user
+
+if [ -d /etc/httpd ]; then
+    HTTPD_USER="apache"
+else
+    HTTPD_USER="www-data"
+fi
+
+#--------------------------------------------------------------------------------
+# Ensure script is run as apache
+
+ID=`id -u -n`
+if [ "$ID" != "$HTTPD_USER" ]; then
+    echo "You must execute this script as $HTTPD_USER"
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+
+for APP in $APPS; do
+    php /var/ida/nextcloud/occ app:disable $APP
+done

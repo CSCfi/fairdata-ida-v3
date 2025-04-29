@@ -1,0 +1,105 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2019 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+# --------------------------------------------------------------------------------
+# Initialize script with common definitions
+
+SCRIPT=`basename $0`
+USAGE="Usage: $SCRIPT username [ --json ]"
+PROJECT="null"
+
+INIT_FILE=`dirname $0`/lib/init_admin_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+
+USER="$1"
+JSON=$(echo "$*" | grep -- "--json" || true)
+
+if [ "$USER" = "" ]; then
+    echo "$USAGE" >&2
+    errorExit "Required username is missing"
+fi
+
+#--------------------------------------------------------------------------------
+
+EXISTS=`$CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" -H "OCS-APIRequest: true" "${USER_API}/${USER}" | grep "<statuscode>100<"`
+
+if [ "$EXISTS" = "" ]; then
+    errorExit "The user '${USER}' does not exist"
+fi
+
+LASTLOGIN=$($OCC user:setting $USER 2>&1 | grep "lastLogin:" | sed -e 's/.*: *//')
+
+if [ "$LASTLOGIN" != "" ]; then
+    LASTLOGIN=$(date -u --date "@${LASTLOGIN}" +"%Y-%m-%dT%H:%M:%SZ")
+else
+    LASTLOGIN="(never)"
+fi
+
+if [ "$USER" = "admin" ]; then
+    PROJECTS=""
+else
+    PROJECTS=$($CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" -H "OCS-APIRequest: true" "${USER_API}/${USER}/groups" | \
+               grep "<element>" | sed -e 's/^.*<element>/    /' | sed -e 's/<.*$//')
+fi
+
+ENABLED=$($CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" -H "OCS-APIRequest: true" "${USER_API}/${USER}" |
+           grep "<enabled>" | sed -e 's/^.*<enabled>//' | sed -e 's/<.*$//')
+
+if [ "$ENABLED" = "1" ]; then
+    ENABLED="true"
+else
+    ENABLED="false"
+fi
+
+if [ "$JSON" ]; then
+    PROJECTS=$(format_token_list_as_json "$PROJECTS" 8)
+    echo "{"
+    echo "    \"user\": \"$USER\","
+    if [ "$LASTLOGIN" = "(never)" ]; then
+        echo "    \"lastLogin\": null,"
+    else
+        echo "    \"lastLogin\": \"$LASTLOGIN\","
+    fi
+    echo "    \"projects\": ["
+    printf "%s\n" "$PROJECTS"
+    echo "    ],"
+    echo "    \"enabled\": $ENABLED"
+    echo "}"
+else
+    echo "Last login:"
+    echo "    $LASTLOGIN"
+    echo "Projects:"
+    echo "$PROJECTS" | sed -e 's/^ */    /'
+    echo "Enabled:"
+    echo "    $ENABLED"
+fi
+
+addToLog "DONE"

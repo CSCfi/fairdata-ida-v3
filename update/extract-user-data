@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+# This script will generate inventories and project summaries for all Fairdata test projects
+# based on the migrated data.
+#
+# Strict assumptions are made about the location of git repositories; update as needed.
+
+SCRIPT=$(basename $0)
+
+USER="$1"
+TARGETDIR="$2"
+TMPDIR="$3"
+
+ERR="${TMPDIR}/${SCRIPT}.err"
+cleanup() {
+    rm -f "$ERR" 2>/dev/null
+}
+trap cleanup EXIT
+
+function errorExit {
+    MSG=`echo "$@" | tr '\n' ' '`
+    echo "$MSG" >&2
+    sync
+    sleep 0.1
+    exit 1
+}
+
+if [ -z "$USER" ]; then
+    errorExit "No user specified. Aborting."
+fi
+
+if [ -z "$TARGETDIR" ]; then
+    errorExit "No target directory specified. Aborting."
+fi
+
+if [ ! -d "$TARGETDIR" ]; then
+    errorExit "The target directory $TARGETDIR does not exist. Aborting."
+fi
+
+if [ ! -d "$TMPDIR" ]; then
+    errorExit "The temp directory $TMPDIR does not exist. Aborting."
+fi
+
+echo "Extracting status ..."
+
+# If user is PSO user, strip first two lines corresponding to last login date, since it won't
+# match the original migrated data due to the PSO account being used to extract the data
+IS_PSO_USER=$(echo "$USER" | grep "PSO_")
+
+if [ "$IS_PSO_USER" ]; then
+    sudo -u apache /var/ida/utils/admin/user-status $USER 2>"$ERR" | tail -n +3 > "$TARGETDIR/$USER.status.txt"
+else
+    sudo -u apache /var/ida/utils/admin/user-status $USER 2>"$ERR" > "$TARGETDIR/$USER.status.txt"
+fi
+
+EXIT_CODE=$?
+
+if [ -s "$ERR" ]; then
+    cat "$ERR" >&2
+    errorExit "Error: Failed to extract user data for user $USER"
+elif [ "$EXIT_CODE" -ne 0 ]; then
+    errorExit "Error: Failed to extract user data for user $USER (exit code: $EXIT_CODE)"
+fi
+
+if [ ! -s "$TARGETDIR/$USER.status.txt" ]; then
+    errorExit "Error: Failed to extract user data for user $USER (empty output)"
+fi

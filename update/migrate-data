@@ -1,0 +1,15 @@
+#!/bin/bash
+#
+# This script will perform the core of the data migration from the old to the new database. 
+
+. /var/ida/update/init.sh
+
+echo "--- Migrating all data from $DBNAME_OLD to $DBNAME ..."
+
+/var/ida/update/export-data-from-old-database
+/var/ida/update/import-data-into-new-database
+/var/ida/update/update-sequences
+/var/ida/update/update-indices
+/var/ida/update/wait-for-database-housekeeping
+
+echo "Migration completed."

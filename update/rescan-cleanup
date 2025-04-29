@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# This script will rescan files to update the file cache (as an extra safety step), and
+# clean up the file cache, removing any orphan entries, etc. 
+#
+# If running in the sandbox with a configured environment other than DEV, such that the
+# database is populated with data from either PRODUCTION or DEMO, this script should not
+# be run as it will corrupt the file cache since the project data does not actually exist on
+# disk even though the original production file cache records have been copied to the new
+# database.
+
+. /var/ida/update/init.sh
+
+if [ "$IDA_ENVIRONMENT" != "DEV" ]; then
+    HOST_DOMAIN=$(hostname -f)
+    if [[ "$HOST_DOMAIN" == *.fd-sandbox.csc.fi ]]; then
+        echo "Error: This script should only be run in a DEV environment in the sandbox ($HOST_DOMAIN). Exiting."
+        exit 1
+    fi
+fi
+
+echo "--- Cleaning file cache ..."
+sudo -u apache /var/ida/nextcloud/occ files:cleanup
+
+echo "--- Rescanning all data for all projects and users ..."
+sudo -u apache /var/ida/nextcloud/occ files:scan --all #-v
+
+echo "--- Cleaning file cache again ..."
+sudo -u apache /var/ida/nextcloud/occ files:cleanup
+
+echo "Rescan / Cleanup completed."

@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# This script will test the full migration process in a local DEV environment but creating
+# the test accounts in the new database and exporting the baseline validation data from the
+# new database, rather than from the old database.
+#
+# If the parameter --full is given, the baseline validation data will be re-initialized and
+# re-extracted, else only the post-update migration steps will be executed
+
+mkdir "/var/ida/update/tests" 2>/dev/null
+
+. /var/ida/update/init.sh
+
+if [ "$IDA_ENVIRONMENT" != "DEV" ]; then
+    echo "Error: This script must only be run in a DEV environment" >&2
+    exit 1
+fi
+
+NEW_ONLY=$(echo "$*" | grep -- "--new-only" || true)
+FULL=$(echo "$*" | grep -- "--full" || true) # legacy
+
+if [ "$FULL" ]; then
+    NEW_ONLY=""
+fi
+
+set -e 
+
+if [ -z "$NEW_ONLY" ]; then
+    /var/ida/update/reset-new-database
+    /var/ida/update/extract-baseline-validation-data
+    /var/ida/update/validate-baseline-data
+fi
+
+# Derived from migrate-data script, but with database reset and test options
+/var/ida/update/export-data-from-old-database --test
+/var/ida/update/reset-new-database
+/var/ida/update/import-data-into-new-database --test
+/var/ida/update/update-sequences
+/var/ida/update/update-indices
+/var/ida/update/wait-for-database-housekeeping
+/var/ida/update/reset-reshare
+/var/ida/update/extract-migrated-validation-data
+/var/ida/update/validate-migrated-data
+/var/ida/update/rescan-cleanup
+/var/ida/update/reset-test-user-password fd_test_ida_user # for safe tests

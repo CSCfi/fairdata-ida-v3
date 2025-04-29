@@ -1,0 +1,106 @@
+#!/bin/bash
+#
+# This script will validate the baseline data extracted from an old database, prior
+# to migration to the new database, to ensure there are no missing or empty files.
+#
+# The script does not validate the contents of the files, only that they exist and
+# are not empty, and for JSON files, that they are syntactically valid.
+#
+# Strict assumptions are made about the location of git repositories; update as needed.
+
+. /var/ida/update/init.sh
+
+echo "--- Validating baseline data ..."
+
+ERRORS=""
+NEWLINE=$'\n'
+
+if [ -z "$PROJECTS" ]; then
+    echo "The environment variable PROJECTS must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$USERS" ]; then
+    echo "The environment variable USERS must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$FILE_ENDINGS" ]; then
+    echo "The environment variable FILE_ENDINGS must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ -z "$OLDDATA" ]; then
+    echo "The environment variable OLDDATA must be defined. Aborting." >&2
+    exit 1
+fi
+
+if [ ! -d $OLDDATA ]; then
+    ERRORS="${ERRORS}ERROR: Missing $OLDDATA data directory.${NEWLINE}"
+    exit 1
+fi
+
+echo "Checking all project data files ..."
+
+
+for PROJECT in $PROJECTS; do
+
+    echo "PROJECT: $PROJECT"
+
+    if [[ " $LARGE_PROJECTS " =~ " $PROJECT " ]]; then
+        echo "Skipping excluded large project $PROJECT ..."
+        continue
+    fi
+
+    if [[ " $INTERNAL_PROJECTS " =~ " $PROJECT " ]]; then
+        echo "Skipping excluded internal project $PROJECT ..."
+        continue
+    fi
+
+    for ENDING in $FILE_ENDINGS; do
+
+        FILE="${PROJECT}${ENDING}"
+
+        if [ ! -s "${OLDDATA}/${FILE}" ]; then
+            ERRORS="${ERRORS}ERROR: Missing or empty file: ${OLDDATA}/${FILE}${NEWLINE}"
+        else
+            if [[ "${FILE}" == *.json ]]; then
+                if ! jq empty "${OLDDATA}/${FILE}" >/dev/null 2>&1; then
+                    ERRORS="${ERRORS}ERROR: Invalid JSON file: ${OLDDATA}/${FILE}${NEWLINE}"
+                fi
+            fi
+        fi
+
+    done
+
+done
+
+echo "Checking all user data files ..."
+
+for USER in $USERS; do
+
+    echo "USER: $USER"
+
+    if [[ " $INTERNAL_USERS " =~ " $USER " ]]; then
+        echo "Skipping excluded internal user $USER ..."
+        continue
+    fi
+
+    if [ ! -s "${OLDDATA}/${USER}.status.txt" ]; then
+        ERRORS="${ERRORS}ERROR: Missing or empty ${OLDDATA}/${USER}.status${NEWLINE}"
+    fi
+
+done
+
+if [ "$ERRORS" ]; then
+    echo "$NEWLINE"
+    echo "$ERRORS"
+    echo "*** Validation completed with errors! ***"
+else
+    echo "========================================"
+    echo "=== WOOHOO! SUCCESS! No issues found ==="
+    echo "========================================"
+    echo "Validation completed."
+fi
+
+echo "$NEWLINE"

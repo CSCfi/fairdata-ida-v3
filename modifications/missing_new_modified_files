@@ -1,0 +1,16 @@
+/var/ida/nextcloud/apps/files/js/dist/templates.js
+/var/ida/nextcloud/apps/files_sharing/js/dist/additionalScripts.js
+/var/ida/nextcloud/apps/files_sharing/js/dist/files_sharing_tab.js
+/var/ida/nextcloud/apps/files/templates/appnavigation.php
+/var/ida/nextcloud/apps/settings/js/vue-settings-personal-security.js
+/var/ida/nextcloud/core/css/fonts.scss
+/var/ida/nextcloud/core/js/dist/files_client.js
+/var/ida/nextcloud/core/js/dist/login.js
+/var/ida/nextcloud/core/js/dist/login.js.map
+/var/ida/nextcloud/core/js/dist/main.js
+/var/ida/nextcloud/core/js/dist/main.js.map
+/var/ida/nextcloud/core/js/dist/unified-search.js
+/var/ida/nextcloud/core/js/dist/unified-search.js.map
+/var/ida/nextcloud/core/templates/message.html
+/var/ida/nextcloud/lib/private/EventDispatcher/GenericEventWrapper.php
+/var/ida/nextcloud/lib/private/EventDispatcher/SymfonyAdapter.php
