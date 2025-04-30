@@ -2811,13 +2811,14 @@ class TestAuditing(unittest.TestCase):
         self.assertIsNone(report_data.get('changedAfter'))
         self.assertIsNone(report_data.get('changedBefore'))
         self.assertEqual(report_data.get('invalidNodeCount'), 6)
-        self.assertEqual(report_data.get('errorNodeCount'), 15)
-        self.assertEqual(report_data.get('errorCount'), 3)
+        self.assertEqual(report_data.get('errorNodeCount'), 21)
+        self.assertEqual(report_data.get('errorCount'), 4)
         errors = list(report_data['errors'].keys())
-        self.assertEqual(len(errors), 3)
+        self.assertEqual(len(errors), 4)
         self.assertTrue('Node checksum different for filesystem and Nextcloud' in errors)
         self.assertTrue('Node checksum missing for IDA' in errors)
         self.assertTrue('Node does not exist in Metax' in errors)
+        self.assertTrue('Node has no replicated timestamp' in errors)
 
         print("--- Repairing project A")
 

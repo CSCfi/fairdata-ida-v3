@@ -1158,7 +1158,9 @@ def audit_project(config):
                 if ida['pid'] != metax['pid']:
                     errors['Node pid different for IDA and Metax'] = True
 
-            # if known in IDA and replication timestamp defined in IDA details, check if file details agree
+            # if known in IDA, if replication timestamp defined in IDA details, check if file details agree, else
+            # report no replication timestamp (may be a frozen file that was never replicated, or replication may
+            # be ongoing for the action that created the frozen file, in which case it is a false error)
             if ida:
 
                 replicated = ida.get('replicated')
@@ -1195,6 +1197,8 @@ def audit_project(config):
 
                     else:
                         errors['Node does not exist in replication'] = True
+                else:
+                    errors['Node has no replicated timestamp'] = True
 
         if config.AUDIT_CHECKSUMS:
 
