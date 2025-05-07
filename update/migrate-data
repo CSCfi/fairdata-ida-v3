@@ -4,9 +4,12 @@
 
 . /var/ida/update/init.sh
 
+set -e # if anything fails, die die die
+
 echo "--- Migrating all data from $DBNAME_OLD to $DBNAME ..."
 
 /var/ida/update/export-data-from-old-database
+/var/ida/update/validate-exported-data
 /var/ida/update/import-data-into-new-database
 /var/ida/update/update-sequences
 /var/ida/update/update-indices

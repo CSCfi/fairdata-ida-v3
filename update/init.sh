@@ -144,22 +144,22 @@ TABLES="oc_accounts \
         oc_storages \
         oc_users"
 
-OC_ACCOUNTS_FIELDS="uid,data"
-OC_ACCOUNTS_DATA_FIELDS="uid,name,value"
-OC_FILECACHE_FIELDS="fileid,storage,path,path_hash,parent,name,mimetype,mimepart,size,mtime,storage_mtime,encrypted,unencrypted_size,etag,permissions,checksum"
-OC_FILECACHE_EXTENDED_FIELDS="fileid,metadata_etag,creation_time,upload_time"
-OC_GROUPS_FIELDS="gid,displayname"
-OC_GROUP_USER_FIELDS="gid,uid"
-OC_IDA_ACTION_FIELDS="id,pid,action,project,user,node,pathname,initiated,storage,pids,checksums,metadata,replication,completed,failed,cleared,error,retry,retrying"
-OC_IDA_ACTION_FIELDS_TEST="id,pid,action,project,user,node,nodetype,filecount,pathname,initiated,storage,pids,checksums,metadata,replication,completed,failed,cleared,error,retry,retrying"
-OC_IDA_DATA_CHANGE_FIELDS="id,timestamp,project,user,change,pathname,target,mode"
-OC_IDA_FROZEN_FILE_FIELDS="id,node,pathname,action,project,pid,size,checksum,modified,frozen,metadata,replicated,removed,cleared"
-OC_MIMETYPES_FIELDS="id,mimetype"
-OC_MOUNTS_FIELDS="id,storage_id,root_id,user_id,mount_point,mount_id"
-OC_PREFERENCES_FIELDS="userid,appid,configkey,configvalue"
-OC_SHARE_FIELDS="id,share_type,share_with,uid_owner,uid_initiator,parent,item_type,item_source,item_target,file_source,file_target,permissions,stime,accepted,expiration,token,mail_send,share_name,hide_download,label"
-OC_STORAGES_FIELDS="numeric_id,id,available,last_checked"
-OC_USERS_FIELDS="uid,displayname,uid_lower"
+OC_ACCOUNTS_FIELDS='uid,data'
+OC_ACCOUNTS_DATA_FIELDS='uid,name,value'
+OC_FILECACHE_FIELDS='fileid,storage,path,path_hash,parent,name,mimetype,mimepart,size,mtime,storage_mtime,encrypted,unencrypted_size,etag,permissions,checksum'
+OC_FILECACHE_EXTENDED_FIELDS='fileid,metadata_etag,creation_time,upload_time'
+OC_GROUPS_FIELDS='gid,displayname'
+OC_GROUP_USER_FIELDS='gid,uid'
+OC_IDA_ACTION_FIELDS='id,pid,action,project,"user",node,pathname,initiated,storage,pids,checksums,metadata,replication,completed,failed,cleared,error,retry,retrying'
+OC_IDA_ACTION_FIELDS_TEST='id,pid,action,project,"user",node,nodetype,filecount,pathname,initiated,storage,pids,checksums,metadata,replication,completed,failed,cleared,error,retry,retrying'
+OC_IDA_DATA_CHANGE_FIELDS='id,timestamp,project,"user",change,pathname,target,mode'
+OC_IDA_FROZEN_FILE_FIELDS='id,node,pathname,action,project,pid,size,checksum,modified,frozen,metadata,replicated,removed,cleared'
+OC_MIMETYPES_FIELDS='id,mimetype'
+OC_MOUNTS_FIELDS='id,storage_id,root_id,user_id,mount_point,mount_id'
+OC_PREFERENCES_FIELDS='userid,appid,configkey,configvalue'
+OC_SHARE_FIELDS='id,share_type,share_with,uid_owner,uid_initiator,parent,item_type,item_source,item_target,file_source,file_target,permissions,stime,accepted,expiration,token,mail_send,share_name,hide_download,label'
+OC_STORAGES_FIELDS='numeric_id,id,available,last_checked'
+OC_USERS_FIELDS='uid,displayname,uid_lower'
 
 # sequence:table:column
 SEQUENCES=(

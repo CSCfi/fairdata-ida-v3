@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# This script will validate all CSV files exported from the database to ensure
+# they have the correct number of fields, taking into account escaped commas.
+
+. /var/ida/update/init.sh
+
+set -e # if anything fails, die die die
+
+# Ensure DBDATA is defined in configuration, and that the subdirectory exists
+if [ -z "$DBDATA" ]; then
+    echo "Error: Environment variable DBDATA must be defined" >&2
+    exit 1
+fi
+if [ ! -d "$DBDATA" ]; then
+    echo "Error: The directory $DBDATA does not exist!" >&2;
+    exit 1;
+fi
+
+if [ ! -d /var/ida/venv ]; then
+    echo "Error: The python venv does not exist!" >&2;
+    exit 1;
+fi
+
+if [ "$1" = "--test" ]; then
+    echo "TEST MODE: Data will be validated against schemas in new database!"
+    OC_IDA_ACTION_FIELDS="$OC_IDA_ACTION_FIELDS_TEST"
+fi
+
+export DBDATA
+export OC_ACCOUNTS_FIELDS
+export OC_ACCOUNTS_DATA_FIELDS
+export OC_FILECACHE_FIELDS
+export OC_FILECACHE_EXTENDED_FIELDS
+export OC_GROUPS_FIELDS
+export OC_GROUP_USER_FIELDS
+export OC_IDA_ACTION_FIELDS
+export OC_IDA_DATA_CHANGE_FIELDS
+export OC_IDA_FROZEN_FILE_FIELDS
+export OC_MIMETYPES_FIELDS
+export OC_MOUNTS_FIELDS
+export OC_PREFERENCES_FIELDS
+export OC_SHARE_FIELDS
+export OC_STORAGES_FIELDS
+export OC_USERS_FIELDS
+
+source /var/ida/venv/bin/activate
+python -u /var/ida/update/lib/validate_exported_data.py
