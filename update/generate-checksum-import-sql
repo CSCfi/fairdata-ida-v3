@@ -1,0 +1,53 @@
+#!/opt/fairdata/python3/bin/python3
+#
+# This script is used to generate a Postgres SQL script that will re-import any
+# checksums that were discarded by Nextcloud after importing oc_filecache.csv
+# due to mimetype changes detected when running reset-reshare (likely due to a
+# quirk or bug in Nextcloud 31), resulting in the final validate-migrated-data
+# script to report missing checksums.
+#
+# To execute:
+#
+#     cd to directory where oc_filecache.csv is located
+#     ./generate-checksum-import-sql
+#
+# After running, log in to psql and import the generated sql with
+#
+#     nextcloud31=> \i ./import_missing_checksums.sql
+#
+# Restart process from extract-migrated-validation-data
+
+import csv
+
+# Path to the CSV file
+csv_file = 'oc_filecache.csv'
+output_sql_file = 'import_missing_checksums.sql'
+
+# Open the CSV file for reading and the SQL file for writing
+with open(csv_file, 'r') as infile, open(output_sql_file, 'w') as outfile:
+
+    reader = csv.reader(infile)
+
+    # Skip the header row
+    next(reader, None)
+
+    for row in reader:
+
+        # The fileid is in the first field (index 0) and the checksum is in the last field (index -1)
+        fileid = row[0]
+        checksum = row[-1]
+        
+        # Skip the row if checksum is empty or already set
+        if not checksum or checksum == 'NULL':
+            continue
+        
+        # Construct the SQL query to update the checksum for the given fileid
+        sql_query = f"""
+UPDATE oc_filecache
+SET checksum = '{checksum}'
+WHERE fileid = {fileid} AND checksum IS NULL;
+"""
+        
+        # Write the query to the output SQL file
+        outfile.write(sql_query)
+

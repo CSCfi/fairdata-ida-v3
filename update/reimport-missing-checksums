@@ -1,0 +1,74 @@
+#!/bin/bash
+#
+# This script is used to re-import any checksums that were discarded by Nextcloud
+# after importing oc_filecache.csv due to mimetype changes detected when running
+# reset-reshare (likely due to a  quirk or bug in Nextcloud 31), resulting in the
+# final validate-migrated-data script to report missing checksums.
+#
+# It uses the helper script generate-checksum-import-sql
+#
+# Restart process from extract-migrated-validation-data
+#
+# All configuration variables will be taken from the IDA configuration.
+#
+# Strict assumptions are made about the location of git repositories; update as needed.
+
+. /var/ida/update/init.sh
+
+# Ensure DBNAME_NEW and DBNAME_OLD are defined in configuration and not the same
+if [[ -z "$DBNAME_NEW" ]]; then
+  echo "Error: Environment variable DBNAME_NEW must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBNAME_OLD" ]]; then
+  echo "Error: Environment variable DBNAME_OLD must be defined" >&2
+  exit 1
+fi
+if [[ "$DBNAME_NEW" = "$DBNAME_OLD" ]]; then
+  echo "Error: Environment variables DBNAME_NEW and DBNAME_OLD cannot be the same" >&2
+  exit 1
+fi
+
+# Ensure DBHOST, DBPORT, DBUSER, and DBPASSWORD are defined in configuration
+if [[ -z "$DBHOST" ]]; then
+  echo "Error: Environment variable DBHOST must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPORT" ]]; then
+  echo "Error: Environment variable DBPORT must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBUSER" ]]; then
+  echo "Error: Environment variable DBUSER must be defined" >&2
+  exit 1
+fi
+if [[ -z "$DBPASSWORD" ]]; then
+  echo "Error: Environment variable DBPASSWORD must be defined" >&2
+  exit 1
+fi
+
+# Ensure DBDATA is defined in configuration, and that the subdirectory exists
+if [[ -z "$DBDATA" ]]; then
+  echo "Error: Environment variable DBDATA must be defined" >&2
+  exit 1
+fi
+if [[ ! -d "$DBDATA" ]]; then
+  echo "Error: The directory $DBDATA does not exist" >&2
+  exit 1
+fi
+
+#------------------------------------------------------------------------------------------------------------------------
+
+echo "Generating checksum re-import SQL from ${DBDATA}oc_filecache.csv ... "
+
+cd "$DBDATA"
+
+/var/ida/update/generate-checksum-import-sql
+
+echo "Re-importing any missing checksums into the oc_filecache table in $DBNAME_NEW ..."
+
+export PGPASSWORD="$DBPASSWORD"
+
+psql -h $DBHOST -p $DBPORT -d $DBNAME_NEW -U $DBUSER -f import_missing_checksums.sql
+
+echo "Re-importing of missing checksums completed."
