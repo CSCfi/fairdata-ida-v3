@@ -28,19 +28,15 @@ if [ -z "$DIFFS" ]; then
     errorExit "The environment variable NEWDATA must be defined. Aborting."
 fi
 
-if [ -d "$NEWDATA" ]; then
-    echo "Purging existing migrated validation data directory ..."
-    rm -fr "$NEWDATA"
+if [ ! -d "$DIFFS" ]; then
+    errorExit "The directory $DIFFS does not exist. Aborting."
 fi
 
-echo "Creating migrated validation data directory ..."
-mkdir -p "$NEWDATA"
+if [ ! -d "$NEWDATA" ]; then
+    errorExit "The directory $NEWDATA does not exist. Aborting."
+fi
 
-echo "Exporting hostname and environment details ..."
-hostname -f > "$NEWDATA/hostname"
-echo "$IDA_ENVIRONMENT" > "$NEWDATA/environment"
-
-echo "Extracting project migrated validation data ..."
+echo "Extracting project migrated validation data if diffs exist ..."
 
 for PROJECT in $PROJECTS; do
 
@@ -75,7 +71,7 @@ for PROJECT in $PROJECTS; do
     fi
 done
 
-echo "Extracting user migrated validation data ..."
+echo "Extracting user migrated validation data if diffs exist ..."
 
 for USER in $USERS; do
 
