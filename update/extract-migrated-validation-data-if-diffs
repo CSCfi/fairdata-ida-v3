@@ -1,0 +1,107 @@
+#!/bin/bash
+#
+# This script will generate inventories and project summaries for all Fairdata test projects
+# based on the migrated data.
+#
+# It will only extract migration data if there exists an inventory.json diff for the project
+# or a status.txt diff for the user
+#
+# Strict assumptions are made about the location of git repositories; update as needed.
+
+. /var/ida/update/init.sh
+
+echo "--- Extracting migrated validation data ..."
+
+if [ -z "$PROJECTS" ]; then
+    errorExit "The environment variable PROJECTS must be defined. Aborting."
+fi
+
+if [ -z "$USERS" ]; then
+    errorExit "The environment variable USERS must be defined. Aborting."
+fi
+
+if [ -z "$NEWDATA" ]; then
+    errorExit "The environment variable NEWDATA must be defined. Aborting."
+fi
+
+if [ -z "$DIFFS" ]; then
+    errorExit "The environment variable NEWDATA must be defined. Aborting."
+fi
+
+if [ -d "$NEWDATA" ]; then
+    echo "Purging existing migrated validation data directory ..."
+    rm -fr "$NEWDATA"
+fi
+
+echo "Creating migrated validation data directory ..."
+mkdir -p "$NEWDATA"
+
+echo "Exporting hostname and environment details ..."
+hostname -f > "$NEWDATA/hostname"
+echo "$IDA_ENVIRONMENT" > "$NEWDATA/environment"
+
+echo "Extracting project migrated validation data ..."
+
+for PROJECT in $PROJECTS; do
+
+    echo "PROJECT: $PROJECT"
+
+    if [[ " $LARGE_PROJECTS " =~ " $PROJECT " ]]; then
+        echo "Skipping excluded large project $PROJECT ..."
+        continue
+    fi
+
+    if [[ " $INTERNAL_PROJECTS " =~ " $PROJECT " ]]; then
+        echo "Skipping excluded internal project $PROJECT ..."
+        continue
+    fi
+
+    DIFF="${DIFFS}/${PROJECT}.inventory.json.diff"
+
+    if [ ! -s "$DIFF" ]; then
+        echo "Skipping project $PROJECT (zero diffs) ..."
+        continue
+    fi
+
+    /var/ida/update/extract-project-data "$PROJECT" "$NEWDATA" "$TMPDIR" 2>"$ERR"
+
+    EXIT_CODE=$?
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to extract project data for project $PROJECT"
+    elif [ "$EXIT_CODE" -ne 0 ]; then
+        errorExit "Error: Failed to extract project data for project $PROJECT (exit code: $EXIT_CODE)"
+    fi
+done
+
+echo "Extracting user migrated validation data ..."
+
+for USER in $USERS; do
+
+    echo "USER: $USER"
+
+    if [[ " $INTERNAL_USERS " =~ " $USER " ]]; then
+        echo "Skipping excluded internal user $USER ..."
+        continue
+    fi
+
+    DIFF="${DIFFS}/${USER}.status.txt.diff"
+
+    if [ ! -s "$DIFF" ]; then
+        echo "Skipping user $USER (zero diffs) ..."
+        continue
+    fi
+
+    /var/ida/update/extract-user-data "$USER" "$NEWDATA" "$TMPDIR" 2>"$ERR"
+
+    if [ -s "$ERR" ]; then
+        cat "$ERR" >&2
+        errorExit "Error: Failed to extract project data for user $USER"
+    fi
+
+    if [ $? -ne 0 ]; then
+        errorExit "Error: Failed to extract project data for user $USER: exit code: $?"
+    fi
+
+done
