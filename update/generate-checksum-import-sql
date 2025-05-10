@@ -45,7 +45,7 @@ with open(csv_file, 'r') as infile, open(output_sql_file, 'w') as outfile:
         sql_query = f"""
 UPDATE oc_filecache
 SET checksum = '{checksum}'
-WHERE fileid = {fileid} AND checksum IS NULL;
+WHERE fileid = {fileid} AND (checksum IS NULL OR checksum = '');
 """
         
         # Write the query to the output SQL file
