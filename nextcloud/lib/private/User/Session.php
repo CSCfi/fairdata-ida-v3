@@ -750,6 +750,19 @@ class Session implements IUserSession, Emitter {
 	 * @return boolean
 	 */
 	private function checkTokenCredentials(IToken $dbToken, $token) {
+
+        // IDA MODIFICATION START
+        // We don't need to ever check the actual token, only if the user has been disabled since
+        // last authentication. Users never login with passwords, SSO sessions will have their
+        // own expiration time and app tokens never expire and are validated on every HTTP request.
+        // We only will ensure the user is still enabled.
+        if (!is_null($this->activeUser) && !$this->activeUser->isEnabled()) {
+            $this->tokenProvider->invalidateToken($token);
+            return false;
+        }
+        return true;
+        // IDA MODIFICATION END
+
 		// Check whether login credentials are still valid and the user was not disabled
 		// This check is performed each 5 minutes
 		$lastCheck = $dbToken->getLastCheck() ? : 0;

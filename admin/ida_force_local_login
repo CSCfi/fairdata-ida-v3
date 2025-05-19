@@ -21,27 +21,37 @@
 # @license  GNU Affero General Public License, version 3
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
+# This script will take a user name as an argument, retrieve a password from the
+# environment variable OC_PASS and execute a forced local login for the user, which
+# activates the user account such that Nextcloud will not invalidate app passwords
+# after 5 minutes due to the user never having logged in with a password, only via
+# the SSO, which doesn't use the Nextcloud password.
+#--------------------------------------------------------------------------------
+
 . `dirname $0`/../lib/init_script.sh
 
 USAGE="Usage: $SCRIPT user_name"
 
 if [ $# -ne 1 ]; then
-	errorExit "$USAGE"
+	echo "$USAGE" >&2
+    exit 1
 fi
 
 USER="$1"
 
 if [ "$OC_PASS" = "" ]; then
-	errorExit "No new password, OC_PASS is empty, user: ${USER}"
+	echo "No new password, OC_PASS is empty, user: $USER" >&2
+    exit 1
 fi
 
-echoAndLog "Resetting local login password for user ${USER}"
+echoAndLog "Forcing local login for user $USER"
 
-OUT=`php "$OCC" user:resetpassword --password-from-env "$USER" 2>&1`
+HOSTNAME=`hostname`
 
-HITS=`echo $OUT | grep 'Successfully reset password' | wc -l`
-if [ "$HITS" -ne 1 ]; then
-    errorExit "Failed to reset local login password for user ${USER}: ${OUT}"
+OUT=`curl -I -S -s -u "${USER}:${OC_PASS}" -w "%{http_code}" -o /dev/null "https://${HOSTNAME}/remote.php/dav/files/${USER}/"`
+
+if [ "$OUT" != "200" ]; then
+    errorExit "Failed to login to Nextcloud as user ${USER}: ${OUT}"
 fi
 
-echoAndLog "Successfully reset local login password for user ${USER}"
+echoAndLog "Successfully forced local login for user $USER"
