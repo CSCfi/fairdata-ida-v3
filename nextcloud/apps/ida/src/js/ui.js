@@ -124,8 +124,10 @@ function addGuideLinks() {
         return;
     }
 
+    //         <div style="position: fixed; bottom: 0px; left: 15px; padding-bottom: 20px; padding-right: 15px;"></div>
+
     let htmlFragment = `
-        <div style="position: fixed; bottom: 0px; left: 15px; padding-bottom: 20px; padding-right: 15px;">
+        <div style="margin-top: auto; padding: 20px 15px 20px 15px; word-wrap: break-word; overflow-wrap: break-word;">
             <div style="padding-bottom: 20px;">
                 <p>
                     <a style="color: #007FAD;" href="https://www.fairdata.fi/en/ida/quick-start-guide" rel="noopener" target="_blank">
@@ -157,7 +159,7 @@ function addGuideLinks() {
 
     if (lang === 'fi') {
         htmlFragment = `
-            <div style="position: fixed; bottom: 0px; left: 15px; padding-bottom: 20px; padding-right: 15px;">
+            <div style="margin-top: auto; padding: 20px 15px 20px 15px; word-wrap: break-word; overflow-wrap: break-word;">
                 <div style="padding-bottom: 20px;">
                     <p>
                         <a style="color: #007FAD;" href="https://www.fairdata.fi/idan-pikaopas" rel="noopener" target="_blank">
@@ -188,7 +190,7 @@ function addGuideLinks() {
 
     if (lang === 'sv') {
         htmlFragment = `
-            <div style="position: fixed; bottom: 0px; left: 15px; padding-bottom: 20px; padding-right: 15px;">
+            <div style="margin-top: auto; padding: 20px 15px 20px 15px; word-wrap: break-word; overflow-wrap: break-word;">
                 <div style="padding-bottom: 20px;">
                     <p>
                         <a style="color: #007FAD;" href="https://www.fairdata.fi/en/ida/quick-start-guide" rel="noopener" target="_blank">
@@ -295,6 +297,57 @@ function addRootFolderLabels() {
     }
 
     const addIDALabels = () => {
+        consoleDebug('addIDALabels()');
+
+        if (addingIDALabels) return;
+        addingIDALabels = true;
+
+        if (isRootView()) {
+            consoleDebug('Disconnecting observer ...');
+            observer.disconnect();
+
+            const elements = document.querySelectorAll('span.files-list__row-name-');
+
+            elements.forEach(element => {
+                // Remove previously injected labels if any
+                const next1 = element.nextElementSibling;
+                const next2 = next1 ? next1.nextElementSibling : null;
+
+                if (next1?.classList.contains('ida-area-label')) {
+                    next1.remove();
+                }
+                if (next2?.classList.contains('ida-project-title')) {
+                    next2.remove();
+                }
+
+                const folderName = element.textContent.trim();
+                const isStaging = folderName.endsWith(STAGING_FOLDER_SUFFIX);
+                const project = isStaging ? folderName.slice(0, -1) : folderName;
+
+                const areaSpan = document.createElement('span');
+                areaSpan.textContent = isStaging ? t('ida', 'Staging') : t('ida', 'Frozen');
+                areaSpan.setAttribute('style', 'width: 100px; padding-left: 10px;');
+                areaSpan.classList.add('ida-area-label');
+
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = getProjectTitle(project);
+                titleSpan.classList.add('ida-project-title');
+
+                element.insertAdjacentElement('afterend', areaSpan);
+                areaSpan.insertAdjacentElement('afterend', titleSpan);
+
+                element.setAttribute('style', 'width: 150px;');
+            });
+
+            consoleDebug('Reconnecting observer ...');
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+
+        addingIDALabels = false;
+    };
+
+    /*
+    const addIDALabels = () => {
 
         consoleDebug('addIDALabels()');
 
@@ -338,6 +391,18 @@ function addRootFolderLabels() {
 
     const observerCallback = (mutationsList) => {
         addIDALabels();
+    };
+    */
+
+    let labelUpdateTimeout = null;
+
+    const observerCallback = (mutationsList) => {
+        if (labelUpdateTimeout) {
+            clearTimeout(labelUpdateTimeout);
+        }
+        labelUpdateTimeout = setTimeout(() => {
+            addIDALabels();
+        }, 10);
     };
 
     const observer = new MutationObserver(observerCallback);
