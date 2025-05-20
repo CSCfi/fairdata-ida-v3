@@ -24,7 +24,7 @@
 import Vue from 'vue'
 import { STAGING_FOLDER_SUFFIX } from './constants.js'
 
-const CONSOLE_DEBUG = false;  // set to true to enable console.debug messages
+const CONSOLE_DEBUG = false; // set to true to enable console.debug messages
 
 export const consoleDebug = (...args) => {
     if (CONSOLE_DEBUG) {

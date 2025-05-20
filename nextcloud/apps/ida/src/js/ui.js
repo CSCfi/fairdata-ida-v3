@@ -273,143 +273,125 @@ function addActionNotifications() {
 }
 
 function addRootFolderLabels() {
-
-    // Add frozen/staging labels and project titles in root view
-
     consoleDebug('addRootFolderLabels()');
-    consoleDebug(window.location.pathname);
-
-    if (window.location.pathname.includes('/s/NOT-FOR-PUBLICATION-')) {
-        return;
-    }
+    if (window.location.pathname.includes('/s/NOT-FOR-PUBLICATION-')) return;
 
     let addingIDALabels = false;
+    let labelUpdateTimeout = null;
+    let sidebarVisible = !!document.getElementById('app-sidebar-vue');
 
     const isRootView = () => {
+        consoleDebug('isRootView()');
         const pathname = window.location.pathname;
         const params = new URLSearchParams(window.location.search);
         const dir = params.get('dir');
-        const isRoot = pathname.endsWith('/apps/files/files') && (!dir || dir === '/');
-        consoleDebug('window.location.pathname: ' + window.location.pathname);
+        const isRoot = pathname.includes('/apps/files/files') && (!dir || dir === '/');
+        consoleDebug('window.location.pathname: ' + pathname);
         consoleDebug('params.get(dir): ' + dir);
         consoleDebug('isRoot: ' + isRoot);
         return isRoot;
-    }
+    };
+
+    const removeIDALabels = () => {
+        consoleDebug('removeIDALabels()');
+        document.querySelectorAll('.ida-area-label, .ida-project-title').forEach(el => el.remove());
+        document.querySelectorAll('span.files-list__row-name-').forEach(el => {
+            el.style = ''; // Reset width
+        });
+    };
 
     const addIDALabels = () => {
-        consoleDebug('addIDALabels()');
 
+        consoleDebug('addIDALabels()');
+        consoleDebug('addingIDALabels: ' + addingIDALabels);
         if (addingIDALabels) return;
+
+        consoleDebug('sidebarVisible:  ' + sidebarVisible);
+        if (sidebarVisible) return;
+
+        const rootView = isRootView();
+        consoleDebug('isRootView():    ' + rootView);
+        if (!rootView) return;
+
         addingIDALabels = true;
 
-        if (isRootView()) {
-            consoleDebug('Disconnecting observer ...');
-            observer.disconnect();
+        consoleDebug('Disconnecting contentVueObserver ...');
+        contentVueObserver.disconnect();
 
-            const elements = document.querySelectorAll('span.files-list__row-name-');
+        removeIDALabels();
 
-            elements.forEach(element => {
-                // Remove previously injected labels if any
-                const next1 = element.nextElementSibling;
-                const next2 = next1 ? next1.nextElementSibling : null;
+        const appContentVue = document.getElementById('app-content-vue');
+        const elements = document.querySelectorAll('span.files-list__row-name-');
 
-                if (next1?.classList.contains('ida-area-label')) {
-                    next1.remove();
-                }
-                if (next2?.classList.contains('ida-project-title')) {
-                    next2.remove();
-                }
+        elements.forEach(element => {
+            const folderName = element.textContent.trim();
+            const isStaging = folderName.endsWith(STAGING_FOLDER_SUFFIX);
+            const project = isStaging ? folderName.slice(0, -1) : folderName;
+            const areaSpan = document.createElement('span');
+            const titleSpan = document.createElement('span');
+            areaSpan.textContent = isStaging ? t('ida', 'Staging') : t('ida', 'Frozen');
+            areaSpan.classList.add('ida-area-label');
+            areaSpan.style = 'width: 100px; padding-left: 10px;';
+            titleSpan.textContent = getProjectTitle(project);
+            titleSpan.classList.add('ida-project-title');
+            element.insertAdjacentElement('afterend', areaSpan);
+            areaSpan.insertAdjacentElement('afterend', titleSpan);
+            element.style = 'width: 150px;';
+        });
 
-                const folderName = element.textContent.trim();
-                const isStaging = folderName.endsWith(STAGING_FOLDER_SUFFIX);
-                const project = isStaging ? folderName.slice(0, -1) : folderName;
-
-                const areaSpan = document.createElement('span');
-                areaSpan.textContent = isStaging ? t('ida', 'Staging') : t('ida', 'Frozen');
-                areaSpan.setAttribute('style', 'width: 100px; padding-left: 10px;');
-                areaSpan.classList.add('ida-area-label');
-
-                const titleSpan = document.createElement('span');
-                titleSpan.textContent = getProjectTitle(project);
-                titleSpan.classList.add('ida-project-title');
-
-                element.insertAdjacentElement('afterend', areaSpan);
-                areaSpan.insertAdjacentElement('afterend', titleSpan);
-
-                element.setAttribute('style', 'width: 150px;');
-            });
-
-            consoleDebug('Reconnecting observer ...');
-            observer.observe(document.body, { childList: true, subtree: true });
+        consoleDebug('Reconnecting contentVueObserver ...');
+        if (appContentVue) {
+            consoleDebug('contentVueObserver: appContentVue');
+            contentVueObserver.observe(appContentVue, { childList: true, subtree: true });
+        } else {
+            consoleDebug('contentVueObserver: document.body');
+            contentVueObserver.observe(document.body, { childList: true, subtree: true });
         }
 
         addingIDALabels = false;
     };
 
-    /*
-    const addIDALabels = () => {
+    const debounceLabelUpdate = () => {
+        consoleDebug('debounceLabelUpdate()');
+        if (labelUpdateTimeout) clearTimeout(labelUpdateTimeout);
+        labelUpdateTimeout = setTimeout(addIDALabels, 100);
+    };
 
-        consoleDebug('addIDALabels()');
+    const contentVueObserver = new MutationObserver(debounceLabelUpdate);
 
-        if (addingIDALabels) return;
+    const sidebarPresenceObserver = new MutationObserver(() => {
+        consoleDebug('sidebarPresenceObserver: checking for sidebar presence ...');
+        const currentSidebar = !!document.getElementById('app-sidebar-vue');
+        if (currentSidebar !== sidebarVisible) {
+            consoleDebug(`Sidebar visibility changed: ${sidebarVisible} → ${currentSidebar}`);
+            sidebarVisible = currentSidebar;
 
-        addingIDALabels = true;
-
-        if (isRootView()) {
-
-            consoleDebug('Disconnecting observer ...');
-            observer.disconnect();
-
-            const elements = document.querySelectorAll('span.files-list__row-name-');
-
-            elements.forEach(element => {
-                // Avoid duplicate processing on elements
-                if (!element.hasAttribute('ida-labels-added')) {
-                    const folderName = element.textContent.trim();
-                    const isStaging = folderName.endsWith(STAGING_FOLDER_SUFFIX);
-                    const project = isStaging ? folderName.slice(0, -1) : folderName;
-                    const areaSpan = document.createElement('span');
-                    areaSpan.textContent = isStaging ? t('ida', 'Staging') : t('ida', 'Frozen');
-                    areaSpan.setAttribute('style', 'width: 100px; padding-left: 10px;');
-                    areaSpan.classList.add('ida-area-label');
-                    const titleSpan = document.createElement('span');
-                    titleSpan.textContent = getProjectTitle(project);
-                    titleSpan.classList.add('ida-project-title');
-                    element.insertAdjacentElement('afterend', areaSpan);
-                    areaSpan.insertAdjacentElement('afterend', titleSpan);
-                    element.setAttribute('style', 'width: 150px;');   // Fix width of folder name for justified layout
-                    element.setAttribute('ida-labels-added', 'true'); // Mark as modified
-                }
-            });
-
-            consoleDebug('Reconnecting observer ...');
-            observer.observe(document.body, { childList: true, subtree: true });
+            if (sidebarVisible) {
+                consoleDebug('Sidebar opened — removing IDA labels and stopping updates');
+                removeIDALabels();
+                contentVueObserver.disconnect(); // Stop updates while sidebar is open
+            } else {
+                consoleDebug('Sidebar closed — restoring IDA labels and resuming updates');
+                addIDALabels();
+            }
         }
-
-        addingIDALabels = false;
-    };
-
-    const observerCallback = (mutationsList) => {
-        addIDALabels();
-    };
-    */
-
-    let labelUpdateTimeout = null;
-
-    const observerCallback = (mutationsList) => {
-        if (labelUpdateTimeout) {
-            clearTimeout(labelUpdateTimeout);
-        }
-        labelUpdateTimeout = setTimeout(() => {
-            addIDALabels();
-        }, 10);
-    };
-
-    const observer = new MutationObserver(observerCallback);
+    });
 
     addIDALabels();
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    const appContentVue = document.getElementById('app-content-vue');
+
+    if (appContentVue) {
+        consoleDebug('contentVueObserver: appContentVue');
+        contentVueObserver.observe(appContentVue, { childList: true, subtree: true });
+    } else {
+        consoleDebug('contentVueObserver: document.body');
+        contentVueObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    sidebarPresenceObserver.observe(document.body, { childList: true, subtree: true });
+
+    executeOnURLChange(addIDALabels);
 }
 
 function addNodeDetails() {
