@@ -44,7 +44,9 @@
 # b. Project B will have a folder frozen, and will have files both changed in size
 #    and touched with new modification timestamps in the filesystem, covering errors
 #    where Nextcloud and the filesystem disagree about size and modification
-#    timestamps of files.
+#    timestamps of files. In addition, the replicated timestamp of a frozen file
+#    will be removed from IDA, but the replicated file will otherwise remain
+#    unchanged in the tape archive cache.
 #
 # c. Project C will have a folder frozen, and will have files replaced by folders
 #    and folders replaced by files in both the frozen and staging areas of the
@@ -54,7 +56,7 @@
 # d. Project D will have a folder frozen, and will have changes to files in IDA,
 #    Metax, and replication, removing a file from IDA, removing a file from Metax,
 #    removing a file from replication, and changing file details for a file in IDA
-#    such that it disagrees with both Metax and replication.
+#    such that it disagrees with both Metax and replication. 
 #
 # e. Project E will have no modifications of any kind, and therefore should not
 #    have any errors reported of any kind.
@@ -117,7 +119,7 @@
 #    the project state is as if the failed freeze action had
 #    completed successfully.
 #
-# 6. Checksum and timestamp option checks will be tested as follows:
+# 7. Checksum and timestamp option checks will be tested as follows:
 # 
 # a. Project B will be modified by changing the cache checksums of three frozen
 #    files, in the cache, IDA, and Metax respectively, and the cache checksum of
@@ -126,7 +128,7 @@
 # b. Project B will be further modified by changing the modified timestamp of
 #    three different frozen files, in the cache, IDA, and Metax respectively, and the
 #    cache modified timestamp of one different file in staging.
-#    
+#
 # c. Project B will then be audited with no parameters (no checksum nor
 #    timestamp checks) to verify that no errors are reported.
 # 
@@ -508,6 +510,13 @@ class TestAuditing(unittest.TestCase):
                     % (self.config["DBTABLEPREFIX"], invalid_timestamp_seconds, storage_id_b, pathname))
         conn.commit()
         self.assertEqual(cur.rowcount, 1, "Failed to update Nextcloud file node modification timestamp")
+
+        pathname = "/testdata/2017-08/Experiment_1/baseline/test05.dat"
+        print("(removing replicated timestamp of file %s in IDA db)" % pathname)
+        cur.execute("UPDATE %sida_frozen_file SET replicated = NULL WHERE project = 'test_project_b' AND pathname = '%s'"
+                    % (self.config["DBTABLEPREFIX"], pathname))
+        conn.commit()
+        self.assertEqual(cur.rowcount, 1, "Failed to update IDA file replicated timestamp")
 
         print("(retrieving frozen file PID lists for project B from IDA and Metax after modifications)")
         frozen_file_pids_3 = get_frozen_file_pids(self, 'test_project_b', test_user_b)
@@ -1265,13 +1274,13 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(report_data.get("metaxFileCount"), 6)
 
         print("Verify correct number of reported invalid nodes")
-        self.assertEqual(report_data.get("invalidNodeCount"), 2)
+        self.assertEqual(report_data.get("invalidNodeCount"), 3)
 
         print("Verify correct number of reported node errors")
-        self.assertEqual(report_data.get("errorNodeCount"), 6)
+        self.assertEqual(report_data.get("errorNodeCount"), 7)
 
         print("Verify correct number of reported errors")
-        self.assertEqual(report_data.get("errorCount"), 6)
+        self.assertEqual(report_data.get("errorCount"), 7)
 
         print("Verify correct oldest and newest dates")
         self.assertIsNotNone(report_data.get("oldest"))
@@ -1308,6 +1317,13 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(nextcloud.get("type"), "file")
         self.assertEqual(nextcloud.get("modified"), invalid_timestamp)
         self.assertIsNotNone(nextcloud.get("uploaded"))
+
+        print("Verify correct error report of missing IDA replicated timestamp for frozen file")
+        node = nodes.get("frozen/testdata/2017-08/Experiment_1/baseline/test05.dat")
+        self.assertIsNotNone(node)
+        errors = node.get("errors")
+        self.assertIsNotNone(errors)
+        self.assertTrue("Node has no replicated timestamp" in errors)
 
         print("--- Auditing staging area of project B and checking results")
 
@@ -1369,13 +1385,13 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(report_data.get("metaxFileCount"), 6)
 
         print("Verify correct number of reported invalid nodes")
-        self.assertEqual(report_data.get("invalidNodeCount"), 2)
+        self.assertEqual(report_data.get("invalidNodeCount"), 3)
 
         print("Verify correct number of reported node errors")
-        self.assertEqual(report_data.get("errorNodeCount"), 6)
+        self.assertEqual(report_data.get("errorNodeCount"), 7)
 
         print("Verify correct number of reported errors")
-        self.assertEqual(report_data.get("errorCount"), 6)
+        self.assertEqual(report_data.get("errorCount"), 7)
 
         print("Verify correct oldest and newest dates")
         self.assertIsNotNone(report_data.get("oldest"))
@@ -1409,13 +1425,13 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(report_data.get("metaxFileCount"), 6)
 
         print("Verify correct number of reported invalid nodes")
-        self.assertEqual(report_data.get("invalidNodeCount"), 2)
+        self.assertEqual(report_data.get("invalidNodeCount"), 3)
 
         print("Verify correct number of reported node errors")
-        self.assertEqual(report_data.get("errorNodeCount"), 6)
+        self.assertEqual(report_data.get("errorNodeCount"), 7)
 
         print("Verify correct number of reported errors")
-        self.assertEqual(report_data.get("errorCount"), 6)
+        self.assertEqual(report_data.get("errorCount"), 7)
 
         print("Verify correct oldest and newest dates")
         self.assertIsNotNone(report_data.get("oldest"))
@@ -1446,13 +1462,13 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(report_data.get("metaxFileCount"), 6)
 
         print("Verify correct number of reported invalid nodes")
-        self.assertEqual(report_data.get("invalidNodeCount"), 2)
+        self.assertEqual(report_data.get("invalidNodeCount"), 3)
 
         print("Verify correct number of reported node errors")
-        self.assertEqual(report_data.get("errorNodeCount"), 6)
+        self.assertEqual(report_data.get("errorNodeCount"), 7)
 
         print("Verify correct number of reported errors")
-        self.assertEqual(report_data.get("errorCount"), 6)
+        self.assertEqual(report_data.get("errorCount"), 7)
 
         print("Verify correct oldest and newest dates")
         self.assertIsNotNone(report_data.get("oldest"))
@@ -2461,6 +2477,7 @@ class TestAuditing(unittest.TestCase):
         self.assertTrue(path.exists())
 
         cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_d)
+
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:

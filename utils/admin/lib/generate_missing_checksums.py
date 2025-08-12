@@ -123,7 +123,7 @@ def generate_missing_checksums(config):
 
         if recorded_size != size_on_disk:
  
-            msg = "Warning: Recorded size %d does not match size on disk %d for %s %s (skipped)" % (recorded_size, size_on_disk, config.PROJECT, pathname[5:])
+            msg = "Recorded size %d does not match size on disk %d for %s %s (skipped)" % (recorded_size, size_on_disk, config.PROJECT, pathname[5:])
             logging.warning(msg)
             sys.stderr.write("%s\n" % msg)
 
@@ -181,13 +181,13 @@ def store_checksums_in_cache(config, files):
                     sys.stdout.write("%s\n" % msg)
                 else:
                     conn.rollback()
-                    msg = "Warning: Failed to record checksum for %s %s" % (config.PROJECT, pathname[5:])
+                    msg = "Failed to record checksum for %s %s" % (config.PROJECT, pathname[5:])
                     logging.warning(msg)
                     sys.stderr.write("%s\n" % msg)
 
         except Exception as e:
             conn.rollback()
-            msg = "Warning: Failed to record checksum for %s %s: %s" % (config.PROJECT, pathname[5:], str(e).strip())
+            msg = "Failed to record checksum for %s %s: %s" % (config.PROJECT, pathname[5:], str(e).strip())
             logging.warning(msg)
             sys.stderr.write("%s\n" % msg)
 

@@ -31,6 +31,7 @@ import time
 import json
 import logging
 import requests
+from pathlib import Path
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from utils import LOG_ENTRY_FORMAT, TIMESTAMP_FORMAT, load_configuration, generate_timestamp, get_project_pathname
 
@@ -99,6 +100,9 @@ def main():
         #             update the Metax frozen file timestamp to match the filesytem timestamp
         #     if the node has a frozen timestamp error:
         #         update the Metax frozen timestamp to match the IDA frozen timestamp
+        #     if the node has a missing replicated timestamp error:
+        #         if the node exists in the tape archive cache:
+        #             copy the frozen timestamp and record it as the replicated timestamp
 
         for pathname in nodes:
 
@@ -109,18 +113,22 @@ def main():
 
             modification_timestamp_error = False
             frozen_timestamp_error = False
+            replicated_timestamp_error = False
 
             for error in node.get("errors", []):
                 if ("modification timestamp" in error):
                     modification_timestamp_error = True
                 elif ("frozen timestamp" in error):
                     frozen_timestamp_error = True
+                elif ("replicated timestamp" in error):
+                    replicated_timestamp_error = True
 
-            if modification_timestamp_error or frozen_timestamp_error:
+            if modification_timestamp_error or frozen_timestamp_error or replicated_timestamp_error:
 
                 if config.DEBUG:
                     sys.stderr.write("MODIFICATION TIMESTAMP ERROR: %s\n" % str(modification_timestamp_error))
                     sys.stderr.write("FROZEN TIMESTAMP ERROR: %s\n" % str(frozen_timestamp_error))
+                    sys.stderr.write("REPLICATED TIMESTAMP ERROR: %s\n" % str(replicated_timestamp_error))
 
                 node_type = get_node_type(config, node)
                 modified_timestamp = get_filesystem_modified_timestamp(config, node)
@@ -148,6 +156,10 @@ def main():
                         update_metax_timestamp(config, 'frozen', pathname, frozen_file_pid, frozen_timestamp)
                     else:
                         update_metax_timestamp(config, 'file_frozen', pathname, frozen_file_pid, frozen_timestamp)
+
+                if replicated_timestamp_error:
+                    if frozen_file and file_exists_in_tape_archive_cache(config, pathname):
+                        update_ida_replicated_timestamp(config, pathname, frozen_file_pid, frozen_timestamp)
 
         logging.info("DONE")
 
@@ -194,6 +206,15 @@ def get_frozen_file_pid(config, node):
     return pid
 
 
+def file_exists_in_tape_archive_cache(config, pathname):
+    filesystem_pathname = "%s/projects/%s%s" % (config.DATA_REPLICATION_ROOT, config.PROJECT, pathname[6:])
+    path = Path(filesystem_pathname)
+    file_exists = path.exists() and path.is_file()
+    if config.DEBUG:
+        sys.stderr.write("FROZEN FILE %s EXISTS IN TAPE CACHE: %s\n" % (filesystem_pathname, file_exists))
+    return file_exists
+
+
 def update_nextcloud_modified_timestamp(config, pathname, timestamp):
 
     url = "%s/repairNodeTimestamp" % config.IDA_API
@@ -203,7 +224,7 @@ def update_nextcloud_modified_timestamp(config, pathname, timestamp):
     response = requests.post(url, auth=auth, headers=config.HEADERS, json=data, verify=config.VERIFY_SSL)
 
     if response.status_code < 200 or response.status_code > 299:
-        msg = "Warning: Failed to update modified timestamp in Nextcloud to %s for %s: %d" % (
+        msg = "Failed to update modified timestamp in Nextcloud to %s for %s: %d" % (
             timestamp,
             get_project_pathname(config.PROJECT, pathname),
             response.status_code
@@ -224,7 +245,7 @@ def update_ida_modified_timestamp(config, pathname, file_pid, timestamp):
     response = requests.post(url, auth=auth, headers=config.HEADERS, json=data, verify=config.VERIFY_SSL)
 
     if response.status_code < 200 or response.status_code > 299:
-        msg = "Warning: Failed to update modified timestamp in IDA to %s for %s: %d" % (
+        msg = "Failed to update modified timestamp in IDA to %s for %s: %d" % (
             timestamp,
             get_project_pathname(config.PROJECT, pathname),
             response.status_code
@@ -232,6 +253,27 @@ def update_ida_modified_timestamp(config, pathname, file_pid, timestamp):
         logging.warning(msg)
     else:
         msg = "Updated modified timestamp in IDA to %s for %s" % (timestamp, get_project_pathname(config.PROJECT, pathname))
+        logging.info(msg)
+    sys.stdout.write("%s\n" % msg)
+
+
+def update_ida_replicated_timestamp(config, pathname, file_pid, timestamp):
+
+    url = "%s/files/%s" % (config.IDA_API, file_pid)
+    data = { "replicated": timestamp }
+    auth = ("%s%s" % (config.PROJECT_USER_PREFIX, config.PROJECT), config.PROJECT_USER_PASS)
+
+    response = requests.post(url, auth=auth, headers=config.HEADERS, json=data, verify=config.VERIFY_SSL)
+
+    if response.status_code < 200 or response.status_code > 299:
+        msg = "Failed to update replicated timestamp in IDA to %s for %s: %d" % (
+            timestamp,
+            get_project_pathname(config.PROJECT, pathname),
+            response.status_code
+        )
+        logging.warning(msg)
+    else:
+        msg = "Updated replicated timestamp in IDA to %s for %s" % (timestamp, get_project_pathname(config.PROJECT, pathname))
         logging.info(msg)
     sys.stdout.write("%s\n" % msg)
 
@@ -250,7 +292,7 @@ def update_metax_timestamp(config, field_name, pathname, file_pid, timestamp):
         response = requests.patch(url, auth=auth, headers=config.HEADERS, json=data)
 
     if response.status_code < 200 or response.status_code > 299:
-        msg = "Warning: Failed to update %s timestamp in Metax to %s for %s: %d" % (
+        msg = "Failed to update %s timestamp in Metax to %s for %s: %d" % (
             field_name,
             timestamp,
             get_project_pathname(config.PROJECT, pathname),

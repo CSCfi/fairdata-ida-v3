@@ -137,7 +137,7 @@ class TestChecksums(unittest.TestCase):
         # Run generate-missing-checksums and ensure warning is output for file regarding size mismatch.
         cmd = "sudo -u %s DEBUG=false %s/utils/admin/generate-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
-        warning = "Warning: Recorded size 4 does not match size on disk 7 for test_project_a /test_project_a+/testdata/newfile.dat (skipped)"
+        warning = "Recorded size 4 does not match size on disk 7 for test_project_a /test_project_a+/testdata/newfile.dat (skipped)"
         self.assertTrue(warning in output, output)
 
         # Fix file on disk so it matches recorded file size.
@@ -157,7 +157,6 @@ class TestChecksums(unittest.TestCase):
         cmd = "sudo -u %s DEBUG=false %s/utils/admin/generate-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         status = " recorded in cache for test_project_a /test_project_a+/testdata/newfile.dat"
-        self.assertFalse("Warning:" in output, output)
         self.assertTrue(status in output, output)
 
         # Run list-missing-checksums to ensure no files listed.
