@@ -100,7 +100,7 @@ class TestOldData(unittest.TestCase):
 
         print ("(auditing old data for project %s max_days %d force_audit %s)" % (project, max_days, force_audit))
 
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/audit-old-data %s %d --json-output %s --quiet" % (self.config["HTTPD_USER"], self.config["ROOT"], project, max_days, self.config.get('no-user-email'))
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/audit-old-data %s %d --json-output %s --quiet" % (self.config["HTTPD_USER"], self.config["ROOT"], project, max_days, self.config.get('no-user-email'))
 
         if force_audit:
             cmd = "%s --force-audit" % cmd
@@ -155,7 +155,7 @@ class TestOldData(unittest.TestCase):
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        cmd = "sudo -u %s PROJECTS=\"%s\" DEBUG=false %s/utils/admin/audit-all-old-data %d --json-output %s --quiet" % (self.config["HTTPD_USER"], projects, self.config["ROOT"], max_days, self.config.get('no-email'))
+        cmd = "sudo -u %s PROJECTS=\"%s\" DEBUG=false %s/utils/appsupport/audit-all-old-data %d --json-output %s --quiet" % (self.config["HTTPD_USER"], projects, self.config["ROOT"], max_days, self.config.get('no-email'))
 
         if force_audit:
             cmd = "%s --force-audit" % cmd
@@ -351,7 +351,7 @@ class TestOldData(unittest.TestCase):
 
         print("(suspending test_project_b)")
 
-        cmd = "sudo -u %s %s/utils/admin/suspend-project test_project_b --silent" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "sudo -u %s %s/utils/appsupport/suspend-project test_project_b --silent" % (self.config["HTTPD_USER"], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
 

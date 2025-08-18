@@ -127,7 +127,7 @@ Usage: $SCRIPT project action
 #--------------------------------------------------------------------------------
 # Initialize admin script with common definitions
 
-INIT_FILE=`dirname `../../utils/admin/lib/init_admin_script.sh
+INIT_FILE=`dirname `../../utils/appsupport/lib/init_admin_script.sh
 
 if [ -e $INIT_FILE ]
 then

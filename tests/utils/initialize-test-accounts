@@ -451,7 +451,7 @@ for PROJECT in $PROJECTS; do
     STEP="   Generating cache checksums for ${PROJECT}"
     printf "%${PADDING}s" "$STEP"
 
-    OUT=`$ROOT/utils/admin/generate-missing-checksums $PROJECT 2>&1`
+    OUT=`$ROOT/utils/appsupport/generate-missing-checksums $PROJECT 2>&1`
 
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
@@ -505,7 +505,7 @@ FOUND=`echo "$PROJECTS" | grep "test_project_s"`
 
 if [ "$FOUND" ]; then
     echo "Suspending project test_project_s..."
-    /var/ida/utils/admin/suspend-project test_project_s --silent >/dev/null
+    /var/ida/utils/appsupport/suspend-project test_project_s --silent >/dev/null
 fi
 
 #--------------------------------------------------------------------------------

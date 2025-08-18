@@ -24,7 +24,7 @@ cd /var/ida/tests/utils
 
 7. Back in the Nextcloud container, do a batch freeze for test_project_b:
 ```
-cd /var/ida/utils/admin
+cd /var/ida/utils/appsupport
 ./execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_1
 ./execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_2
 ./execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_3

@@ -1912,7 +1912,7 @@ class TestIdaApp(unittest.TestCase):
 
         frozen_area_root = "%s/PSO_test_project_b/files/test_project_b" % (self.config["STORAGE_OC_DATA_ROOT"])
         staging_area_root = "%s/PSO_test_project_b/files/test_project_b%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
-        cmd_base="sudo -u %s SIMULATE_AGENTS=true DEBUG=false %s/utils/admin/execute-batch-action" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd_base="sudo -u %s SIMULATE_AGENTS=true DEBUG=false %s/utils/appsupport/execute-batch-action" % (self.config["HTTPD_USER"], self.config["ROOT"])
 
         print("Attempt to freeze a folder with more than max allowed files")
         data = {"project": "test_project_b", "pathname": "/testdata/MaxFiles"}

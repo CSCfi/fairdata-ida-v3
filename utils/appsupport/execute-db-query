@@ -1,0 +1,70 @@
+#!/bin/bash
+#--------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+#--------------------------------------------------------------------------------
+# This script will execute a query using read-only database credentials.
+#--------------------------------------------------------------------------------
+
+SCRIPT=`basename $0`
+
+USAGE="
+Usage: $SCRIPT 'QUERY'
+       echo 'QUERY'    | $SCRIPT
+       cat <query.sql> | $SCRIPT
+"
+
+PROJECT="null"
+
+INIT_FILE=`dirname "$(realpath $0)"`/lib/init_appsupport_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+PROG_LOCATION=`/usr/bin/which psql 2>/dev/null`
+
+if [ ! -e "$PROG_LOCATION" ]; then
+    errorExit "Can't find psql in your \$PATH"
+fi
+
+#--------------------------------------------------------------------------------
+
+QUERY="$*"
+
+if [ -z "$QUERY" ]; then
+    if ! [ -t 0 ]; then
+        QUERY=$(cat)
+    fi
+fi
+
+if [ -z "$QUERY" ]; then
+    errorExit "Missing query to execute"
+fi
+
+export PGPASSWORD="$DBROPASSWORD"
+
+psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBROUSER" -c "$QUERY"
+

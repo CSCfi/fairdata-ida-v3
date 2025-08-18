@@ -205,7 +205,7 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(result, 0)
 
         # ensure all cache checksums have been generated for test_project_a (if OK, assume OK for all test projects)
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/list-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/list-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
             self.assertEqual(len(output), 0)
@@ -855,7 +855,7 @@ class TestAuditing(unittest.TestCase):
         print("--- Checking detection of active projects")
 
         print("(retrieving list of active projects since start of tests)")
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/list-active-projects %s" % (
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/list-active-projects %s" % (
             self.config["HTTPD_USER"],
             self.config["ROOT"],
             self.config["START"]
@@ -890,7 +890,7 @@ class TestAuditing(unittest.TestCase):
         self.assertIn("test_project_f", output)
 
         print("(auditing active projects since start of tests)")
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/audit-active-projects %s" % (
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/audit-active-projects %s" % (
             self.config["HTTPD_USER"],
             self.config["ROOT"],
             self.config["START"]
@@ -925,7 +925,7 @@ class TestAuditing(unittest.TestCase):
         self.assertIn('"project": "test_project_f"', output)
 
         print("(retrieving list of active projects since initialization)")
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/list-active-projects %s" % (
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/list-active-projects %s" % (
             self.config["HTTPD_USER"],
             self.config["ROOT"],
             self.config["INITIALIZED"]
@@ -960,7 +960,7 @@ class TestAuditing(unittest.TestCase):
         self.assertNotIn("test_project_f", output)
 
         print("(retrieving list of active projects since modifications)")
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/list-active-projects %s" % (
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/list-active-projects %s" % (
             self.config["HTTPD_USER"],
             self.config["ROOT"],
             self.config["MODIFIED"]
@@ -2329,7 +2329,7 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(len(metax_file_pids_1), 6)
 
         print("(repairing project A)")
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_a)
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_a)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -2371,7 +2371,7 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(len(metax_file_pids_1), 6)
 
         print("(repairing project B)")
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_b)
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_b)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -2413,7 +2413,7 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(len(metax_file_pids_1), 6)
 
         print("(repairing project C)")
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_c)
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_c)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -2476,7 +2476,7 @@ class TestAuditing(unittest.TestCase):
             self.fail("Failed to delete folder %s: %s" % (pathname, str(error)))
         self.assertTrue(path.exists())
 
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_d)
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_d)
 
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
@@ -2672,7 +2672,7 @@ class TestAuditing(unittest.TestCase):
         metax_file_pids_1 = get_metax_file_pids(self, 'test_project_d')
 
         print("(repairing project D)")
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project test_project_d" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project test_project_d" % (self.config["HTTPD_USER"], self.config["ROOT"])
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -2839,7 +2839,7 @@ class TestAuditing(unittest.TestCase):
 
         print("--- Repairing project A")
 
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname)
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -3153,7 +3153,7 @@ class TestAuditing(unittest.TestCase):
 
         print("--- Repairing project B")
 
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname)
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -3316,7 +3316,7 @@ class TestAuditing(unittest.TestCase):
 
         print("--- Repairing project E (with no audit error report provided)")
 
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project test_project_e" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project test_project_e" % (self.config["HTTPD_USER"], self.config["ROOT"])
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -3468,7 +3468,7 @@ class TestAuditing(unittest.TestCase):
 
         print("--- Repairing project E (with audit error report provided)")
 
-        cmd = "sudo -u %s DEBUG=false %s/utils/admin/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_e)
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_e)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:

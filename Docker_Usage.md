@@ -39,7 +39,7 @@ Below are listed scripts that can be run with a basic Docker setup of IDA. These
 #### List active projects
 
 ```
-cd /var/ida/utils/admin
+cd /var/ida/utils/appsupport
 ./list-active-projects
 ```
 
@@ -75,7 +75,7 @@ cd /var/ida/tests/utils
 Typical usage of this script requires a project with many uploaded or generated files (files can be initialized with the `/var/ida/tests/utils/initialize_max_files` script)
 
 ```
-cd /var/ida/utils/admin
+cd /var/ida/utils/appsupport
 
 # Generic usage
 ./execute-batch-action {{ project }} {{ path }}
