@@ -819,48 +819,52 @@ class GenericAgent():
         Cleanup old sentinel monitoring files of no longer existing agent processes, which can loiter
         around due to crashes or other scenarios where the agent could not react to sigterm or sigint.
         Removes old monitoring files of all types of agents from the same host.
+
+        This version is SELinux-friendly by checking for the existence of specific PIDs,
+        instead of iterating over all system processes.
         """
-        if not os.path.isdir(self._uida_conf_vars['RABBIT_MONITORING_DIR']):
+        monitoring_dir = self._uida_conf_vars.get('RABBIT_MONITORING_DIR')
+        if not os.path.isdir(monitoring_dir):
             return
 
-        self._logger.info('Cleaning up old sentinel monitoring files from %s...' % self._uida_conf_vars['RABBIT_MONITORING_DIR'])
+        self._logger.info('Cleaning up old sentinel monitoring files from %s...' % monitoring_dir)
 
-        # recognizes current active processes when the process is started with a
-        # command e.g. python -m agents.metadata.metadata_agent
-        active_agent_processes = [
-            p.info['pid'] for p in psutil.process_iter(attrs=['pid', 'name', 'cmdline'])
-            if 'python' in p.info['name']
-            and 'cmdline' in p.info
-            and len(p.info['cmdline']) > 1
-            and p.info['cmdline'][-1].startswith('agents.')
-            and p.info['cmdline'][-1].endswith('_agent')
-        ]
-
-        old_monitoring_files = glob.glob(
-            '%s/%s-*' % (self._uida_conf_vars['RABBIT_MONITORING_DIR'], self._hostname)
-        )
+        # Get all potential monitoring files for this hostname.
+        monitoring_file_pattern = '%s/%s-*' % (monitoring_dir, self._hostname)
+        old_monitoring_files = glob.glob(monitoring_file_pattern)
 
         deleted_files_count = 0
 
-        for file in old_monitoring_files:
-            for active_pid in active_agent_processes:
-                if file.endswith(str(active_pid)):
-                    # monitoring file of an active process. do not remove!
-                    break
-            else:
-                # the above loop went all the way through without breaking - the file is an old monitoring file.
-                try:
-                    os.remove(file)
-                except FileNotFoundError:
-                    # some other process got there first? thats fine
-                    pass
-                except PermissionError:
-                    # log warning for informational purposes only. manual intervention needed to
-                    # clean em up, but not fatal for agent functioning.
-                    self._logger.warning(
-                        'Unable to remove old sentinel monitoring file due to permission issues. File: %s'
-                        % file
-                    )
-                deleted_files_count += 1
+        for file_path in old_monitoring_files:
+            # Don't try to clean up our own monitoring file.
+            if file_path == self._sentinel_monitoring_file:
+                continue
+
+            try:
+                # The PID is the last part of the filename after the last '-'
+                pid_str = file_path.split('-')[-1]
+                pid = int(pid_str)
+
+                # Ask psutil directly if this *one* specific PID still exists.
+                # This requires almost no special SELinux permissions.
+                if not psutil.pid_exists(pid):
+                    # The PID does not exist, so the file is an orphan.
+                    self._logger.debug("Removing orphan monitoring file '%s' for dead PID %d" % (file_path, pid))
+                    try:
+                        os.remove(file_path)
+                        deleted_files_count += 1
+                    except FileNotFoundError:
+                        # Another process might have deleted it in the meantime, should be fine.
+                        pass
+                    except PermissionError:
+                        self._logger.warning(
+                            'Unable to remove old sentinel monitoring file due to permission issues. File: %s'
+                            % file_path
+                        )
+
+            except (ValueError, IndexError):
+                # Handles cases where a file might match the glob pattern but without a valid PID at the end
+                self._logger.warning("Could not parse PID from unexpected monitoring file: %s" % file_path)
+                continue
 
         self._logger.debug('Removed %d old monitoring files' % deleted_files_count)
