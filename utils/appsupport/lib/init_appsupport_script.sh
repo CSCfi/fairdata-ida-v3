@@ -175,6 +175,20 @@ fi
 HOSTNAME=`hostname`
 
 #--------------------------------------------------------------------------------
+# Ensure that the PROJECT_USER account belongs to the PROJECT group (there have
+# been some rare occurrences where due to migration, IdM sync, or other causes,
+# a PSO user has become disassociated with its project, so we check here to be
+# absolutely certain all is well before proceeding...)
+
+if [ -n "$PROJECT" ] && [ "$PROJECT" != "null" ]; then
+    BELONGS_TO_GROUP=$($ROOT/nextcloud/occ user:info "$PROJECT_USER" --output=json | \
+                           jq -r '.groups[]' 2>/dev/null | grep -w "$PROJECT")
+    if [ -z "$BELONGS_TO_GROUP" ]; then
+        errorExit "User $PROJECT_USER does not belong to $PROJECT project group" 
+    fi
+fi
+
+#--------------------------------------------------------------------------------
 
 ERR="/var/tmp/ida_${SCRIPT}_$$.err"
 
