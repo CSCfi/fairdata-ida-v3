@@ -249,8 +249,10 @@ class ActionMapper extends QBMapper
                           ->andWhere($query->expr()->neq('action', $query->createNamedParameter('suspend')));
                     break;
                 case 'initiating':
-                    // WHERE cleared IS NULL AND storage IS NULL AND action != 'suspend'
+                    // WHERE cleared IS NULL AND failed is NULL AND completed IS NULL AND storage IS NULL AND action != 'suspend'
                     $query->where($query->expr()->isNull('cleared'))
+                          ->andWhere($query->expr()->isNull('failed'))
+                          ->andWhere($query->expr()->isNull('completed'))
                           ->andWhere($query->expr()->isNull('storage'))
                           ->andWhere($query->expr()->neq('action', $query->createNamedParameter('suspend')));
                     break;

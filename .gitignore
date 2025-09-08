@@ -42,4 +42,4 @@ __pycache__/
 /cli/snapshots
 /cli/tags
 !/.gitignore
-appsupport-test-command-*
+fd-appsupport-test-command-*

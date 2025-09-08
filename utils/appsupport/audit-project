@@ -50,7 +50,7 @@ Usage: $SCRIPT PROJECT [OPTIONS]
        PROJECT          the project to be audited
        --full           full audit, implies --timestamps --checksums and none of --changed-* --staging --frozen
        --changed-after  auditing will be limited to project data changes after the specified date[time]
-       --changed-before auditing will be limited to project data changes after before the specified date[time]
+       --changed-before auditing will be limited to project data changes before the specified date[time]
        DATE[TIME]       an ISO date or datetime string /YYYY-MM-DD(Thh:mm:ssZ])?/
        --staging        auditing will be limited to files in the staging area
        --frozen         auditing will be limited to files in the frozen area
