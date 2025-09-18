@@ -54,15 +54,6 @@ trap cleanup EXIT
 
 #--------------------------------------------------------------------------------
 
-# If there is no email sender defined in the environment, we do nothing
-
-if [ "$EMAIL_SENDER" = "" ]; then
-    echo "Error: No EMAIL_SENDER environment variable defined. Exiting." >&2
-    exit 1
-fi
-
-#--------------------------------------------------------------------------------
-
 PROJECT="$1"
 
 if [ "$PROJECT" = "" ]; then
@@ -104,13 +95,6 @@ MESSAGE="${MESSAGE}
 
 RECIPIENTS=`$ROOT/utils/appsupport/fetch-project-emails "$PROJECT" 2>/dev/null`
 
-# If neither project nor internal recipients are defined, we do nothing
-
-if [ "${RECIPIENTS}${EMAIL_RECIPIENTS}" = "" ]; then
-    echo "No project nor internal recipients. Exiting."
-    exit
-fi
-
 if [ "$RECIPIENTS" = "" ]; then
     echo "Warning: The project ${PROJECT} has no users!"
 fi
@@ -149,14 +133,32 @@ if [ "$DEBUG" = "true" ]; then
     echo "SUBJECT:          ${SUBJECT}"
     echo "MESSAGE:          ${MESSAGE}"
     echo "COMMAND:          ${COMMAND}"
+    echo "ECHO_TEST_EMAILS: ${ECHO_TEST_EMAILS}"
 fi
 
-echo "$MESSAGE" | eval "$COMMAND" 2>$ERR
+if [ "$ECHO_TEST_EMAILS" = "true" ]; then
+    echo "From: ${EMAIL_SENDER}"
+    echo "To: ${RECIPIENTS}"
+    echo "Subject: ${SUBJECT}"
+    echo "${MESSAGE}"
+else
+    if [ -z "$EMAIL_SENDER" ]; then
+        echo "No EMAIL_SENDER defined. Exiting."
+        exit 0
+    fi
 
-if [ -s $ERR ]; then
-    cat $ERR >&2
-    echo "Failed to send email to project users!" >&2
-    exit 1
+    if [ -z "$RECIPIENTS" ]; then
+        echo "No RECIPIENTS defined. Exiting."
+        exit 0
+    fi
+
+    echo "$MESSAGE" | eval "$COMMAND" 2>$ERR
+
+    if [ -s $ERR ]; then
+        cat $ERR >&2
+        echo "Failed to send email to project users!" >&2
+        exit 1
+    fi
 fi
 
 echo "Email sent to all project ${PROJECT} users and/or default internal recipients."

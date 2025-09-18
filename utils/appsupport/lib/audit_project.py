@@ -33,10 +33,9 @@ import re
 import dateutil.parser
 from datetime import datetime, timezone
 from pathlib import Path
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning
 from sortedcontainers import SortedList, SortedDict
 from subprocess import Popen, PIPE
-from stat import *
 from utils import LOG_ENTRY_FORMAT, TIMESTAMP_FORMAT, NULL_VALUES, load_configuration, normalize_timestamp, \
                   generate_timestamp, generate_checksum, get_last_add_change_timestamp
 
@@ -46,16 +45,99 @@ time.tzset()
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-# NOTES:
-#
-# Node contexts:
-#
-# filesystem    glusterfs filesystem details
-# nextcloud     Nextcloud file cache details
-# ida           IDA frozen file details
-# metax         Metax file details
+
+def get_incomplete_actions(config):
+
+    # NOTE: we want to exclude files associated with actions that are pending, but
+    # also actions that have failed but have not yet been cleared. So we select
+    # actions that have no completed nor cleared timestamps, but ignoring suspend
+    # actions.
+
+    logging.debug("get_incomplete_actions project = %s" % config.PROJECT)
+
+    conn = psycopg2.connect(database=config.DBNAME,
+                            user=config.DBROUSER,
+                            password=config.DBROPASSWORD,
+                            host=config.DBHOST,
+                            port=config.DBPORT)
+
+    cur = conn.cursor()
+
+    query = "SELECT pid FROM {}ida_action \
+             WHERE project = %s \
+             AND completed IS NULL \
+             AND cleared IS NULL \
+             AND action <> 'suspend'".format(config.DBTABLEPREFIX)
+
+    logging.debug("get_incomplete_actions query = %s" % query)
+
+    cur.execute(query, (config.PROJECT,))
+
+    rows = cur.fetchall()
+
+    logging.debug("get_incomplete_actions rows = %d" % len(rows))
+
+    actions = set()
+
+    for row in rows:
+        actions.add(row[0])
+
+    return actions
+
+
+def get_action_file_pathnames(config, action):
+
+    logging.debug("get_action_file_pathnames action = %s" % action)
+
+    conn = psycopg2.connect(database=config.DBNAME,
+                            user=config.DBROUSER,
+                            password=config.DBROPASSWORD,
+                            host=config.DBHOST,
+                            port=config.DBPORT)
+
+    cur = conn.cursor()
+
+    query = "SELECT pathname FROM {}ida_frozen_file WHERE action = %s".format(config.DBTABLEPREFIX)
+
+    logging.debug("get_action_file_pathnames query = %s" % query)
+
+    cur.execute(query, (action,))
+
+    rows = cur.fetchall()
+
+    logging.debug("get_action_file_pathnames rows = %d" % len(rows))
+
+    # NOTE: relative file pathnames will be duplicated with prefixes for both
+    # 'frozen/' and 'staging/' areas because we won't know at which stage in the
+    # processing the action is and the action could still be initiating; therefore,
+    # the files associated with the action could be either in the frozen or staging
+    # area at the time of auditing -- a sort of Schrödinger's pathname -- so we
+    # include both pathname variants so that both will be excluded from the auditing.
+
+    pathnames = set()
+
+    for row in rows:
+        pathnames.add("frozen%s" % row[0])
+        pathnames.add("staging%s" % row[0])
+
+    return pathnames
+
+
+def get_incomplete_action_file_pathnames(config):
+    pathnames = set()
+    for action in get_incomplete_actions(config):
+        pathnames.update(get_action_file_pathnames(config, action))
+    return pathnames
+
 
 def main():
+
+    # Node contexts:
+    #
+    # filesystem    glusterfs filesystem details
+    # nextcloud     Nextcloud file cache details
+    # ida           IDA frozen file details
+    # metax         Metax file details
 
     try:
 
@@ -102,6 +184,9 @@ def main():
         config.AUDIT_FROZEN = True
         config.AUDIT_TIMESTAMPS = False
         config.AUDIT_CHECKSUMS = False
+
+        # Exclude all files associated with ongoing actions (neither completed nor cleared)
+        config.INCOMPLETE_ACTION_FILE_PATHNAMES = get_incomplete_action_file_pathnames(config)
 
         if argc > 6:
             for i in range(6,argc):
@@ -184,11 +269,19 @@ def main():
             sys.stderr.write("START:              %s\n" % config.START)
             sys.stderr.write("START_TS:           %d\n" % config.START_TS)
             sys.stderr.write("START_TS_CHK:       %s\n" % normalize_timestamp(datetime.utcfromtimestamp(config.START_TS)))
+            sys.stderr.write("INCOMPLETE FILES:   %d\n" % len(config.INCOMPLETE_ACTION_FILE_PATHNAMES))
 
         if (config.AFTER_TS >= config.BEFORE_TS):
             raise Exception("AFTER timestamp must be earlier than AUDIT_BEFORE adjusted timestamp")
 
         # Initialize logging using UTC timestamps
+
+        if config.DEBUG:
+            config.LOG_LEVEL = logging.DEBUG
+        else:
+            config.LOG_LEVEL = logging.INFO
+
+        config.LOG_LEVEL = logging.DEBUG # TEMP HACK
 
         logging.basicConfig(
             filename=config.LOG,
@@ -274,35 +367,37 @@ def add_frozen_files(nodes, counts, config):
 
         pathname = "frozen%s" % row[0]
 
-        node_details = {
-            'type': 'file',
-            'size': row[1],
-            'modified': row[2],
-            'pid': row[3],
-            'checksum': checksum,
-            'frozen': row[5],
-            'replicated': row[6]
-        }
+        if pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
 
-        if node_details['size'] in NULL_VALUES:
-            node_details['size'] = 0
+            node_details = {
+                'type': 'file',
+                'size': row[1],
+                'modified': row[2],
+                'pid': row[3],
+                'checksum': checksum,
+                'frozen': row[5],
+                'replicated': row[6]
+            }
 
-        for field in [ 'pid', 'checksum', 'modified', 'frozen', 'replicated' ]:
-            if node_details[field] in NULL_VALUES:
-                node_details[field] = None
+            if node_details['size'] in NULL_VALUES:
+                node_details['size'] = 0
 
-        try:
-            node = nodes[pathname]
-            node['ida'] = node_details
-        except KeyError:
-            node = {}
-            node['ida'] = node_details
-            nodes[pathname] = node
+            for field in [ 'pid', 'checksum', 'modified', 'frozen', 'replicated' ]:
+                if node_details[field] in NULL_VALUES:
+                    node_details[field] = None
 
-        counts['frozenFileCount'] = counts['frozenFileCount'] + 1
+            try:
+                node = nodes[pathname]
+                node['ida'] = node_details
+            except KeyError:
+                node = {}
+                node['ida'] = node_details
+                nodes[pathname] = node
 
-        if config.DEBUG:
-            sys.stderr.write("%s: ida: %d %s\n" % (config.PROJECT, counts['frozenFileCount'], pathname))
+            counts['frozenFileCount'] = counts['frozenFileCount'] + 1
+
+            if config.DEBUG:
+                sys.stderr.write("%s: ida: %d %s\n" % (config.PROJECT, counts['frozenFileCount'], pathname))
 
     # Close database connection
     cur.close()
@@ -376,95 +471,100 @@ def add_metax_files(nodes, counts, config):
 
         for file in files:
 
-            if config.DEBUG:
-                sys.stderr.write("FILE: %s\n" % json.dumps(file))
-                sys.stderr.write("REMOVED: %s\n" % json.dumps(file.get('removed')))
+            if config.METAX_API_VERSION >= 3:
+                pathname = "frozen%s" % file['pathname']
+            else:
+                pathname = "frozen%s" % file['file_path']
 
-            # Even though Metax should not return records for removed files, we check just to be absolutely sure...
-            if not file.get('removed', False):
+            if pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
 
-                if config.METAX_API_VERSION >= 3:
+                if config.DEBUG:
+                    sys.stderr.write("FILE: %s\n" % json.dumps(file))
+                    sys.stderr.write("REMOVED: %s\n" % json.dumps(file.get('removed')))
 
-                    frozen = normalize_timestamp(file['frozen'])
+                # Even though Metax should not return records for removed files, we check just to be absolutely sure...
+                if not file.get('removed', False):
 
-                    # Only continue for files frozen after AFTER and before BEFORE
-                    if config.AFTER < frozen < config.BEFORE:
+                    if config.METAX_API_VERSION >= 3:
 
-                        pathname = "frozen%s" % file['pathname']
-                        modified = normalize_timestamp(file['modified'])
+                        frozen = normalize_timestamp(file['frozen'])
 
-                        checksum = str(file['checksum'])
-                        if checksum.startswith('sha256:'):
-                            checksum = checksum[7:]
+                        # Only continue for files frozen after AFTER and before BEFORE
+                        if config.AFTER < frozen < config.BEFORE:
 
-                        node_details = {
-                            'type': 'file',
-                            'size': file['size'],
-                            'pid': file['storage_identifier'],
-                            'checksum': checksum,
-                            'modified': modified,
-                            'frozen': frozen
-                        }
+                            modified = normalize_timestamp(file['modified'])
 
-                        if node_details['size'] in NULL_VALUES:
-                            node_details['size'] = 0
+                            checksum = str(file['checksum'])
+                            if checksum.startswith('sha256:'):
+                                checksum = checksum[7:]
 
-                        for field in [ 'pid', 'checksum', 'modified', 'frozen' ]:
-                            if node_details[field] in NULL_VALUES:
-                                node_details[field] = None
+                            node_details = {
+                                'type': 'file',
+                                'size': file['size'],
+                                'pid': file['storage_identifier'],
+                                'checksum': checksum,
+                                'modified': modified,
+                                'frozen': frozen
+                            }
 
-                        if config.DEBUG:
-                            sys.stderr.write("NODE: %s %s\n" % (pathname, json.dumps(node_details)))
+                            if node_details['size'] in NULL_VALUES:
+                                node_details['size'] = 0
 
-                        try:
-                            node = nodes[pathname]
-                            node['metax'] = node_details
-                        except KeyError:
-                            node = {}
-                            node['metax'] = node_details
-                            nodes[pathname] = node
+                            for field in [ 'pid', 'checksum', 'modified', 'frozen' ]:
+                                if node_details[field] in NULL_VALUES:
+                                    node_details[field] = None
 
-                        counts['metaxFileCount'] = counts['metaxFileCount'] + 1
+                            if config.DEBUG:
+                                sys.stderr.write("NODE: %s %s\n" % (pathname, json.dumps(node_details)))
 
-                else:
+                            try:
+                                node = nodes[pathname]
+                                node['metax'] = node_details
+                            except KeyError:
+                                node = {}
+                                node['metax'] = node_details
+                                nodes[pathname] = node
 
-                    frozen = normalize_timestamp(file['file_frozen'])
+                            counts['metaxFileCount'] = counts['metaxFileCount'] + 1
 
-                    # Only continue for files frozen after AFTER and before BEFORE
-                    if config.AFTER < frozen < config.BEFORE:
+                    else:
 
-                        pathname = "frozen%s" % file['file_path']
-                        modified = normalize_timestamp(file['file_modified'])
-                        checksum = file['checksum']['value']
+                        frozen = normalize_timestamp(file['file_frozen'])
 
-                        node_details = {
-                            'type': 'file',
-                            'size': file['byte_size'],
-                            'pid': file['identifier'],
-                            'checksum': checksum,
-                            'modified': modified,
-                            'frozen': frozen
-                        }
+                        # Only continue for files frozen after AFTER and before BEFORE
+                        if config.AFTER < frozen < config.BEFORE:
 
-                        if node_details['size'] in NULL_VALUES:
-                            node_details['size'] = 0
+                            modified = normalize_timestamp(file['file_modified'])
+                            checksum = file['checksum']['value']
 
-                        for field in [ 'pid', 'checksum', 'modified', 'frozen' ]:
-                            if node_details[field] in NULL_VALUES:
-                                node_details[field] = None
+                            node_details = {
+                                'type': 'file',
+                                'size': file['byte_size'],
+                                'pid': file['identifier'],
+                                'checksum': checksum,
+                                'modified': modified,
+                                'frozen': frozen
+                            }
 
-                        if config.DEBUG:
-                            sys.stderr.write("NODE: %s %s\n" % (pathname, json.dumps(node_details)))
+                            if node_details['size'] in NULL_VALUES:
+                                node_details['size'] = 0
 
-                        try:
-                            node = nodes[pathname]
-                            node['metax'] = node_details
-                        except KeyError:
-                            node = {}
-                            node['metax'] = node_details
-                            nodes[pathname] = node
+                            for field in [ 'pid', 'checksum', 'modified', 'frozen' ]:
+                                if node_details[field] in NULL_VALUES:
+                                    node_details[field] = None
 
-                        counts['metaxFileCount'] = counts['metaxFileCount'] + 1
+                            if config.DEBUG:
+                                sys.stderr.write("NODE: %s %s\n" % (pathname, json.dumps(node_details)))
+
+                            try:
+                                node = nodes[pathname]
+                                node['metax'] = node_details
+                            except KeyError:
+                                node = {}
+                                node['metax'] = node_details
+                                nodes[pathname] = node
+
+                            counts['metaxFileCount'] = counts['metaxFileCount'] + 1
 
         if len(files) < config.MAX_FILE_COUNT:
             done = True
@@ -619,11 +719,11 @@ def add_nextcloud_nodes(nodes, counts, config):
     # Add all relevant Nexcloud node records
 
     if config.AUDIT_STAGING == False:
-        path_pattern = "^files/%s/" % config.PROJECT     # select file pathnames only in frozen area
+        path_pattern = r"^files/%s/" % config.PROJECT     # select file pathnames only in frozen area
     elif config.AUDIT_FROZEN == False:
-        path_pattern = "^files/%s\+/" % config.PROJECT   # select file pathnames only in staging area
+        path_pattern = r"^files/%s\+/" % config.PROJECT   # select file pathnames only in staging area
     else:
-        path_pattern = "^files/%s\+?/" % config.PROJECT  # select file pathnames in both staging and frozen areas
+        path_pattern = r"^files/%s\+?/" % config.PROJECT  # select file pathnames in both staging and frozen areas
 
     query = "SELECT cache.path, cache.mimetype, cache.size, cache.mtime, cache.checksum, extended.upload_time \
              FROM %sfilecache as cache LEFT JOIN %sfilecache_extended as extended \
@@ -660,83 +760,85 @@ def add_nextcloud_nodes(nodes, counts, config):
         else:
             pathname = "frozen/%s" % pathname[(project_name_len + 2):]
 
-        node = nodes.get(pathname)
+        if pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
 
-        if (node is None) or ('nextcloud' not in node):
+            node = nodes.get(pathname)
 
-            node_type = 'file'
+            if (node is None) or ('nextcloud' not in node):
 
-            if row[1] == 2:
-                node_type = 'folder'
+                node_type = 'file'
 
-            modified = normalize_timestamp(datetime.utcfromtimestamp(row[3]))
+                if row[1] == 2:
+                    node_type = 'folder'
 
-            if node_type == 'file':
+                modified = normalize_timestamp(datetime.utcfromtimestamp(row[3]))
 
-                file_count = file_count + 1
+                if node_type == 'file':
 
-                if row[4] in NULL_VALUES:
-                    checksum = None
-                else:
-                    checksum = row[4].lower()
-                    if checksum.startswith('sha256:'):
-                        checksum = checksum[7:]
+                    file_count = file_count + 1
 
-                if row[5] in NULL_VALUES:
-                    uploaded = None
-                else:
-                    uploaded = normalize_timestamp(datetime.utcfromtimestamp(row[5]))
-
-                # If there is no upload timestamp, retrieve the latest 'add' timestamp from the changes table
-                # for the project and pathname in staging, if any, as the upload timestamp
-
-                if not uploaded:
-                    if pathname.startswith('frozen/'):
-                        relative_pathname = pathname[6:]
+                    if row[4] in NULL_VALUES:
+                        checksum = None
                     else:
-                        relative_pathname = pathname[7:]
-                    uploaded = get_last_add_change_timestamp(config, relative_pathname)
+                        checksum = row[4].lower()
+                        if checksum.startswith('sha256:'):
+                            checksum = checksum[7:]
 
-                node_details = {
-                    'type': node_type,
-                    'size': row[2],
-                    'modified': modified,
-                    'checksum': checksum,
-                    'uploaded': uploaded
-                }
+                    if row[5] in NULL_VALUES:
+                        uploaded = None
+                    else:
+                        uploaded = normalize_timestamp(datetime.utcfromtimestamp(row[5]))
 
-            else: # node_type == 'folder'
+                    # If there is no upload timestamp, retrieve the latest 'add' timestamp from the changes table
+                    # for the project and pathname in staging, if any, as the upload timestamp
 
-                node_details = {
-                    'type': node_type,
-                    'modified': modified
-                }
+                    if not uploaded:
+                        if pathname.startswith('frozen/'):
+                            relative_pathname = pathname[6:]
+                        else:
+                            relative_pathname = pathname[7:]
+                        uploaded = get_last_add_change_timestamp(config, relative_pathname)
 
-            add_node = True
+                    node_details = {
+                        'type': node_type,
+                        'size': row[2],
+                        'modified': modified,
+                        'checksum': checksum,
+                        'uploaded': uploaded
+                    }
 
-            # If we only care about changed nodes, ignore the node if the change timestamp is neither
-            # later than AFTER nor earlier than BEFORE
+                else: # node_type == 'folder'
 
-            if config.CHANGED_ONLY:
-                changed = max(
-                    [ node_details.get('uploaded'), node_details.get('modified'), config.PROJECT_CREATED ],
-                    key=lambda x: x if x is not None else ''
-                )
-                if not (config.AFTER < changed < config.BEFORE):
-                    add_node = False
+                    node_details = {
+                        'type': node_type,
+                        'modified': modified
+                    }
 
-            if add_node:
-                if node:
-                    node['nextcloud'] = node_details
-                else:
-                    node = {}
-                    node['nextcloud'] = node_details
-                    nodes[pathname] = node
+                add_node = True
 
-                counts['nextcloudNodeCount'] = counts['nextcloudNodeCount'] + 1
+                # If we only care about changed nodes, ignore the node if the change timestamp is neither
+                # later than AFTER nor earlier than BEFORE
 
-                if config.DEBUG:
-                    sys.stderr.write("%s: nextcloud: %d %s\n" % (config.PROJECT, file_count, pathname))
+                if config.CHANGED_ONLY:
+                    changed = max(
+                        [ node_details.get('uploaded'), node_details.get('modified'), config.PROJECT_CREATED ],
+                        key=lambda x: x if x is not None else ''
+                    )
+                    if not (config.AFTER < changed < config.BEFORE):
+                        add_node = False
+
+                if add_node:
+                    if node:
+                        node['nextcloud'] = node_details
+                    else:
+                        node = {}
+                        node['nextcloud'] = node_details
+                        nodes[pathname] = node
+
+                    counts['nextcloudNodeCount'] = counts['nextcloudNodeCount'] + 1
+
+                    if config.DEBUG:
+                        sys.stderr.write("%s: nextcloud: %d %s\n" % (config.PROJECT, file_count, pathname))
 
     # If CHANGED_ONLY is true, the query above only selected changed nodes, but we also want all ancestor
     # folders which were not marked as changed but should still exist, so populate any/all ancestor
@@ -907,14 +1009,14 @@ def add_filesystem_nodes(nodes, counts, config):
     else:
 
         if config.AUDIT_STAGING == False:
-            find_root = "files/%s/" % config.PROJECT     # select file pathnames only in frozen area
-            min_depth = '1'
+            find_root = r"files/%s/" % config.PROJECT     # select file pathnames only in frozen area
+            min_depth = r"1"
         elif config.AUDIT_FROZEN == False:
-            find_root = "files/%s\+/" % config.PROJECT   # select file pathnames only in staging area
-            min_depth = '1'
+            find_root = r"files/%s\+/" % config.PROJECT   # select file pathnames only in staging area
+            min_depth = r"1"
         else:
-            find_root = 'files'                          # select file pathnames in both staging and frozen areas
-            min_depth = '2'
+            find_root = r"files"                          # select file pathnames in both staging and frozen areas
+            min_depth = r"2"
 
         command = "cd %s; find %s -mindepth %s -printf \"%%Y\\t%%s\\t%%T@\\t%%p\\n\"" % (pso_root, find_root, min_depth)
 
@@ -925,7 +1027,7 @@ def add_filesystem_nodes(nodes, counts, config):
 
         pattern = re.compile("^(?P<type>[^\t])+\t(?P<size>[^\t]+)\t(?P<modified>[^\t]+)\t(?P<pathname>.+)$")
 
-        for line in pipe.stdout:
+        for line in pipe.stdout or '':
 
             match = pattern.match(line.decode(sys.stdout.encoding))
             values = match.groupdict()
@@ -943,42 +1045,45 @@ def add_filesystem_nodes(nodes, counts, config):
 
                 pathname = pathname[5:]
                 project_name_len = len(config.PROJECT)
+
                 if pathname[(project_name_len + 1)] == '+':
                     pathname = "staging/%s" % pathname[(project_name_len + 3):]
                 else:
                     pathname = "frozen/%s" % pathname[(project_name_len + 2):]
 
-                node_type = 'file'
+                if pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
 
-                modified = normalize_timestamp(datetime.utcfromtimestamp(modified))
+                    node_type = 'file'
 
-                if type == 'd':
-                    node_type = 'folder'
+                    modified = normalize_timestamp(datetime.utcfromtimestamp(modified))
 
-                if node_type == 'file':
-                    file_count = file_count + 1
-                    if config.AUDIT_CHECKSUMS:
-                        checksum = generate_checksum(filesystem_pathname)
-                        if checksum.startswith('sha256:'):
-                            checksum = checksum[7:]
-                        node_details = {'type': node_type, 'size': size, 'modified': modified, 'checksum': checksum}
+                    if type == 'd':
+                        node_type = 'folder'
+
+                    if node_type == 'file':
+                        file_count = file_count + 1
+                        if config.AUDIT_CHECKSUMS:
+                            checksum = generate_checksum(filesystem_pathname)
+                            if checksum.startswith('sha256:'):
+                                checksum = checksum[7:]
+                            node_details = {'type': node_type, 'size': size, 'modified': modified, 'checksum': checksum}
+                        else:
+                            node_details = {'type': node_type, 'size': size, 'modified': modified}
                     else:
-                        node_details = {'type': node_type, 'size': size, 'modified': modified}
-                else:
-                    node_details = {'type': node_type, 'modified': modified}
+                        node_details = {'type': node_type, 'modified': modified}
 
-                try:
-                    node = nodes[pathname]
-                    node['filesystem'] = node_details
-                except KeyError:
-                    node = {}
-                    node['filesystem'] = node_details
-                    nodes[pathname] = node
+                    try:
+                        node = nodes[pathname]
+                        node['filesystem'] = node_details
+                    except KeyError:
+                        node = {}
+                        node['filesystem'] = node_details
+                        nodes[pathname] = node
 
-                counts['filesystemNodeCount'] = counts['filesystemNodeCount'] + 1
+                    counts['filesystemNodeCount'] = counts['filesystemNodeCount'] + 1
 
-                if config.DEBUG:
-                    sys.stderr.write("%s: filesystem: %d %s %s\n" % (config.PROJECT, file_count, node_type, pathname))
+                    if config.DEBUG:
+                        sys.stderr.write("%s: filesystem: %d %s %s\n" % (config.PROJECT, file_count, node_type, pathname))
 
 
 def audit_project(config):

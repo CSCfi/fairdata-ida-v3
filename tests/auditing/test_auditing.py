@@ -2909,7 +2909,25 @@ class TestAuditing(unittest.TestCase):
             self.assertEqual(checksum, invalid_checksum_uri)
             self.assertEqual(checksum, invalid_checksum_uri, "%s %s != %s" % (pathname, checksum, invalid_checksum_uri))
 
-        print("--- Auditing project A and verifying checksum errors reported")
+        print("--- Auditing project A and verifying no errors reported since files with checksum errors belong to incomplete action")
+
+        report_data = audit_project(self, "test_project_a", "OK")
+        self.assertTrue(report_data.get('auditStaging'), False)
+        self.assertTrue(report_data.get('auditFrozen'), False)
+        self.assertTrue(report_data.get('auditChecksums'), False)
+        self.assertTrue(report_data.get('auditTimestamps'), False)
+        self.assertIsNone(report_data.get('changedAfter'))
+        self.assertIsNone(report_data.get('changedBefore'))
+
+        print("--- Clearing failed freeze action")
+
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/mark-action-as-cleared test_project_a %s" % (self.config["HTTPD_USER"], self.config["ROOT"], action['pid'])
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+
+        print("--- Auditing project A and verifying checksum errors are now reported since cleared action files no longer excluded")
 
         report_data = audit_project(self, "test_project_a", "ERR")
         report_pathname = report_data["reportPathname"]

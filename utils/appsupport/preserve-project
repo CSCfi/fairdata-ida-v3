@@ -53,6 +53,7 @@ fi
 export ROOT
 export EMAIL_SENDER
 export EMAIL_RECIPIENTS
+export ECHO_TEST_EMAILS
 
 #--------------------------------------------------------------------------------
 echo "Verifying project ${PROJECT} exists..."
@@ -300,9 +301,44 @@ if [ -s $ERR ]; then
     errorExit "Failed to email project ${PROJECT} users!"
 fi
 
-if [ "$ECHO_TEST_EMAILS" = "true" ]; then
-    echo "Subject: ${SUBJECT}${MESSAGE}"
+#--------------------------------------------------------------------------------
+
+echo "Generating listing of published project datasets after pruning..."
+
+$ROOT/utils/appsupport/list-published-datasets $PROJECT > "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets.check"
+
+#--------------------------------------------------------------------------------
+
+echo "Generating listing of published project files after pruning..."
+
+$ROOT/utils/appsupport/list-published-files $PROJECT > "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files.check"
+
+#--------------------------------------------------------------------------------
+
+echo "Verifying all published data remains unchanged..."
+
+DIFF1=$(diff -U0 --suppress-common-lines "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets" "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets.check" | wc -l)
+DIFF2=$(diff -U0 --suppress-common-lines "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files" "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files.check" | wc -l)
+
+if [ "${DIFF1}${DIFF2}" != "00" ]; then
+    SUBJECT="Error: Published data for preserved project ${PROJECT} has been unexpectedly affected!"
+    MESSAGE="
+${SUBJECT}
+
+Published dataset listing differences: ${DIFF1}
+Published file listing differences:    ${DIFF2}
+"
+    $ROOT/utils/appsupport/email-appsupport "$SUBJECT" "$MESSAGE" 2>$ERR
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        echoAndLog "$MSG"
+    fi
+
+    errorExit "$SUBJECT"
 fi
+
+rm -f "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets.check" 2>/dev/null
+rm -f "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files.check" 2>/dev/null
 
 #--------------------------------------------------------------------------------
 

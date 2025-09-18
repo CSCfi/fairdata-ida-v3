@@ -35,6 +35,7 @@ Usage: $SCRIPT PROJECT [--force]
 export ROOT
 export EMAIL_SENDER
 export EMAIL_RECIPIENTS
+export ECHO_TEST_EMAILS
 
 #--------------------------------------------------------------------------------
 # Initialize script with common definitions
@@ -313,10 +314,6 @@ if [ -s $ERR ]; then
     MSG=`cat $ERR | tr "\n" " " `
     addToLog "$MSG"
     errorExit "Failed to email project ${PROJECT} users!"
-fi
-
-if [ "$ECHO_TEST_EMAILS" = "true" ]; then
-    echo "Subject: ${SUBJECT}${MESSAGE}"
 fi
 
 #--------------------------------------------------------------------------------

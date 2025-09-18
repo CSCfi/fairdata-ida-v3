@@ -46,6 +46,11 @@ else
     exit 1
 fi
 
+export ROOT
+export EMAIL_SENDER
+export EMAIL_RECIPIENTS
+export ECHO_TEST_EMAILS
+
 #--------------------------------------------------------------------------------
 echo "Verifying project ${PROJECT} exists..."
 
@@ -188,20 +193,12 @@ If you have any questions, please contact the CSC Service Desk (servicedesk@csc.
 
 fi
 
-export ROOT
-export EMAIL_SENDER
-export EMAIL_RECIPIENTS
-
 $ROOT/utils/appsupport/email-project-users "$PROJECT" "$SUBJECT" "$MESSAGE" 2>$ERR
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR | tr "\n" " " `
     addToLog "$MSG"
     errorExit "Failed to email project ${PROJECT} users!"
-fi
-
-if [ "$ECHO_TEST_EMAILS" = "true" ]; then
-    echo "Subject: ${SUBJECT}${MESSAGE}"
 fi
 
 addToLog "DONE"

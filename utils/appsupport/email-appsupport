@@ -54,18 +54,6 @@ trap cleanup EXIT
 
 #--------------------------------------------------------------------------------
 
-if [ "$EMAIL_SENDER" = "" ]; then
-    echo "Error: No EMAIL_SENDER environment variable defined. Exiting." >&2
-    exit 1
-fi
-
-if [ "$EMAIL_RECIPIENTS" = "" ]; then
-    echo "Error: No EMAIL_RECIPIENTS environment variable defined. Exiting." >&2
-    exit 1
-fi
-
-#--------------------------------------------------------------------------------
-
 SUBJECT="$1"
 
 if [ "$SUBJECT" = "" ]; then
@@ -111,14 +99,32 @@ if [ "$DEBUG" = "true" ]; then
     echo "SUBJECT:          ${SUBJECT}"
     echo "MESSAGE:          ${MESSAGE}"
     echo "COMMAND:          ${COMMAND}"
+    echo "ECHO_TEST_EMAILS: ${ECHO_TEST_EMAILS}"
 fi
 
-echo "$MESSAGE" | eval "$COMMAND" 2>$ERR
+if [ "$ECHO_TEST_EMAILS" = "true" ]; then
+    echo "From: ${EMAIL_SENDER}"
+    echo "To: ${EMAIL_RECIPIENTS}"
+    echo "Subject: ${SUBJECT}"
+    echo "${MESSAGE}"
+else
+    if [ -z "$EMAIL_SENDER" ]; then
+        echo "No EMAIL_SENDER defined. Exiting."
+        exit 0
+    fi
 
-if [ -s $ERR ]; then
-    cat $ERR >&2
-    echo "Failed to send email to internal application support staff!" >&2
-    exit 1
+    if [ -z "$EMAIL_RECIPIENTS" ]; then
+        echo "No EMAIL_RECIPIENTS defined. Exiting."
+        exit 0
+    fi
+
+    echo "$MESSAGE" | eval "$COMMAND" 2>$ERR
+
+    if [ -s $ERR ]; then
+        cat $ERR >&2
+        echo "Failed to send email to internal application support staff!" >&2
+        exit 1
+    fi
 fi
 
 echo "Email sent to all internal application support staff."

@@ -31,7 +31,7 @@ import psycopg2
 import dateutil.parser
 from datetime import datetime
 from hashlib import sha256
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning
 
 # Use UTC
 os.environ['TZ'] = 'UTC'
@@ -50,7 +50,7 @@ def load_configuration(filesystem_pathname):
     """
 
     module_name = 'config.variables'
-    
+
     try:
         # python versions >= 3.5
         module_spec = importlib.util.spec_from_file_location(module_name, filesystem_pathname)
@@ -170,7 +170,7 @@ def get_last_add_change_timestamps(config):
              ) \
              SELECT pathname, timestamp  \
              FROM latest_timestamps".format(config.DBTABLEPREFIX)
-    
+
     logging.debug("get_last_add_change_timestamps query = %s" % query)
 
     cur.execute(query, (config.PROJECT, staging_pathname_prefix))
