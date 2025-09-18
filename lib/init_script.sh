@@ -25,9 +25,9 @@
 
 PATH="/opt/fairdata/python3/bin:$PATH"
 
-for NEEDS_PROG in curl php python3 realpath
+for NEEDS_PROG in curl php python3 realpath jq
 do
-    PROG_LOCATION=`/usr/bin/which $NEEDS_PROG 2>/dev/null`
+    PROG_LOCATION=$(/usr/bin/which $NEEDS_PROG 2>/dev/null)
     if [ ! -e "$PROG_LOCATION" ]; then
         echo "Can't find $NEEDS_PROG in your \$PATH"
         exit 1
@@ -38,18 +38,18 @@ done
 # Load service constants and configuration settings
 
 SCRIPT_PATHNAME="$(realpath $0)"
-PARENT_FOLDER=`dirname "$SCRIPT_PATHNAME"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+PARENT_FOLDER=$(dirname "$SCRIPT_PATHNAME")
+PARENT_BASENAME=$(basename "$PARENT_FOLDER")
 
 if [ "$SCRIPT" == "" ]; then
-    SCRIPT=`basename $SCRIPT_PATHNAME`
+    SCRIPT=$(basename $SCRIPT_PATHNAME)
 else
-    SCRIPT=`basename $SCRIPT`
+    SCRIPT=$(basename $SCRIPT)
 fi
 
 while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+    PARENT_FOLDER=$(dirname "$PARENT_FOLDER")
+    PARENT_BASENAME=$(basename "$PARENT_FOLDER")
 done
 
 CONSTANTS_FILE="$PARENT_FOLDER/lib/constants.sh"
@@ -98,7 +98,7 @@ fi
 #--------------------------------------------------------------------------------
 # Ensure script is run as apache
 
-ID=`id -u -n`
+ID=$(id -u -n)
 if [ "$ID" != "$HTTPD_USER" ]; then
     echo "You must execute this script as $HTTPD_USER"
     exit 1
@@ -133,7 +133,8 @@ CURL_PATCH="curl $CURL_OPS -X PATCH"
 IDA_HEADERS="-H \"OCS-APIRequest: true\" -H \"IDA-Mode: System\""
 IDA_MODE_HEADER="IDA-Mode: System"
 
-START=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+TODAY=$(date -u +"%Y-%m-%d")
+START=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 PROCESSID="$$"
 
@@ -145,7 +146,7 @@ fi
 #--------------------------------------------------------------------------------
 # Initialize log and tmp folders, if necessary...
 
-LOGS=`dirname "$LOG"`
+LOGS=$(dirname "$LOG")
 
 if [ ! -d $LOGS ]; then
     mkdir -p $LOGS 2>/dev/null
@@ -173,19 +174,19 @@ fi
 # Initialize log file and record start of script execution
 
 if [ ! -e $LOG ]; then
-    OUT=`touch $LOG`
+    OUT=$(touch $LOG)
     if [ "$?" -ne 0 ]; then
         echo "Can't create log file \"$LOG\"" >&2
         exit 1
     fi
-    OUT=`chown $HTTPD_USER:$HTTPD_USER $LOG`
+    OUT=$(chown $HTTPD_USER:$HTTPD_USER $LOG)
     if [ "$?" -ne 0 ]; then
         echo "Can't set ownership of log file \"$LOG\"" >&2
         exit 1
     fi
 fi
 
-OUT=`echo "$START $SCRIPT ($PROCESSID) START $@" 2>/dev/null >>"$LOG"`
+OUT=$(echo "$START $SCRIPT ($PROCESSID) START $@" 2>/dev/null >>"$LOG")
 if [ "$?" -ne 0 ]; then
     echo "Can't write to log file \"$LOG\"" >&2
     exit 1
@@ -194,59 +195,31 @@ fi
 #--------------------------------------------------------------------------------
 # Common functions for all scripts
 
-function urlEncode () {
-    # Escape all special characters, for use in curl URLs
-    local RESULT=`echo "${1}" | \
-                      sed -e  's:\%:%25:g' \
-                          -e  's: :%20:g' \
-                          -e  's:\\+:%2b:g' \
-                          -e  's:<:%3c:g' \
-                          -e  's:>:%3e:g' \
-                          -e  's:\#:%23:g' \
-                          -e  's:{:%7b:g' \
-                          -e  's:}:%7d:g' \
-                          -e  's:|:%7c:g' \
-                          -e  's:\\\\:%5c:g' \
-                          -e  's:\\^:%5e:g' \
-                          -e  's:~:%7e:g' \
-                          -e  's:\\[:%5b:g' \
-                          -e  's:\\]:%5d:g' \
-                          -e $'s:\':%27:g' \
-                          -e  's:\`:%60:g' \
-                          -e  's:;:%3b:g' \
-                          -e  's:\\?:%3f:g' \
-                          -e  's/:/%3a/g' \
-                          -e  's:@:%40:g' \
-                          -e  's:=:%3d:g' \
-                          -e  's:\\&:%26:g' \
-                          -e  's:\\$:%24:g' \
-                          -e  's:\\!:%21:g' \
-                          -e  's:\\*:%2a:g'`
-
-    echo "${RESULT}"
+function urlEncode() {
+    jq -rn --arg v "$1" '$v|@uri'
 }
 
 function addToLog () {
-    MSG=`echo "$@" | tr '\n' ' '`
-    TIMESTAMP=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+    MSG=$(echo "$@" | tr '\n' ' ')
+    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     echo "$TIMESTAMP $SCRIPT ($PROCESSID) $MSG" 2>/dev/null >>"$LOG"
     sync
     sleep 0.1
 }
 
 function echoAndLog () {
-    MSG=`echo "$@" | tr '\n' ' '`
+    MSG=$(echo "$@" | tr '\n' ' ')
     echo "$MSG"
-    TIMESTAMP=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     echo "$TIMESTAMP $SCRIPT ($PROCESSID) $MSG" 2>/dev/null >>"$LOG"
     sync
     sleep 0.1
 }
 
 function errorExit () {
-    MSG=`echo "$@" | tr '\n' ' '`
+    MSG=$(echo "$@" | tr '\n' ' ')
     echo "$MSG" >&2
-    TIMESTAMP=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     echo "$TIMESTAMP $SCRIPT ($PROCESSID) FATAL ERROR $MSG" >>"$LOG"
     sync
     sleep 0.1

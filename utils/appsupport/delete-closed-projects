@@ -29,13 +29,17 @@
 # Internal projects and projects which do not exist in IDA are skipped.
 #
 # It is expected that this script will be executed nightly.
+#
+# NOTE: If any MOCK_*_PROJECTS environment variables are defined, e.g. set by
+# testing, then they will override obtaining such project lists from the actual
+# environment.
 # --------------------------------------------------------------------------------
 
-SCRIPT=`basename $0`
+SCRIPT=$(basename $0)
 USAGE="Usage: $SCRIPT"
 PROJECT="null"
 
-INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
+INIT_FILE=$(dirname $0)/lib/init_appsupport_script.sh
 
 if [ -e $INIT_FILE ]
 then
@@ -50,61 +54,71 @@ export EMAIL_RECIPIENTS
 
 #--------------------------------------------------------------------------------
 
-echo "Retrieving list of projects with a CSC data deletion process substate 'grace'..."
-
-GRACE_PROJECTS=`$ROOT/utils/appsupport/list-grace-projects 2>$ERR`
-
-if [ -s $ERR ]; then
-    MSG=`cat $ERR | tr "\n" " " `
-    addToLog "$MSG"
-    errorExit "Failed to retrieve grace projects"
+if [ "$MOCK_GRACE_PROJECTS" ]; then
+    GRACE_PROJECTS="$MOCK_GRACE_PROJECTS"
+else
+    echo "Retrieving list of projects with a CSC data deletion process substate 'grace'..."
+    GRACE_PROJECTS=$($ROOT/utils/appsupport/list-grace-projects 2>$ERR)
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        addToLog "$MSG"
+        errorExit "Failed to retrieve grace projects"
+    fi
 fi
 
-echo "Retrieving list of projects with a CSC data deletion process substate 'deletedata'..."
-
-DELETEDATA_PROJECTS=`$ROOT/utils/appsupport/list-deletedata-projects 2>$ERR`
-
-if [ -s $ERR ]; then
-    MSG=`cat $ERR | tr "\n" " " `
-    addToLog "$MSG"
-    errorExit "Failed to retrieve deletedata projects"
+if [ "$MOCK_DELETEDATA_PROJECTS" ]; then
+    DELETEDATA_PROJECTS="$MOCK_DELETEDATA_PROJECTS"
+else
+    echo "Retrieving list of projects with a CSC data deletion process substate 'deletedata'..."
+    DELETEDATA_PROJECTS=$($ROOT/utils/appsupport/list-deletedata-projects 2>$ERR)
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        addToLog "$MSG"
+        errorExit "Failed to retrieve deletedata projects"
+    fi
 fi
 
-echo "Retrieving list of projects which are already suspended..."
-
-SUSPENDED_PROJECTS=`$ROOT/utils/appsupport/list-suspended-projects 2>$ERR`
-
-if [ -s $ERR ]; then
-    MSG=`cat $ERR | tr "\n" " " `
-    addToLog "$MSG"
-    errorExit "Failed to retrieve suspended projects"
+if [ "$MOCK_SUSPENDED_PROJECTS" ]; then
+    SUSPENDED_PROJECTS="$MOCK_SUSPENDED_PROJECTS"
+else
+    echo "Retrieving list of projects which are already suspended..."
+    SUSPENDED_PROJECTS=$($ROOT/utils/appsupport/list-suspended-projects 2>$ERR)
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        addToLog "$MSG"
+        errorExit "Failed to retrieve suspended projects"
+    fi
 fi
 
-echo "Retrieving list of projects which are internal..."
-
-INTERNAL_PROJECTS=`$ROOT/utils/appsupport/list-internal-projects 2>$ERR`
-
-if [ -s $ERR ]; then
-    MSG=`cat $ERR | tr "\n" " " `
-    addToLog "$MSG"
-    errorExit "Failed to retrieve internal projects"
+if [ "$MOCK_INTERNAL_PROJECTS" ]; then
+    INTERNAL_PROJECTS="$MOCK_INTERNAL_PROJECTS"
+else
+    echo "Retrieving list of projects which are internal..."
+    INTERNAL_PROJECTS=$($ROOT/utils/appsupport/list-internal-projects 2>$ERR)
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        addToLog "$MSG"
+        errorExit "Failed to retrieve internal projects"
+    fi
 fi
 
 for PROJECT in $GRACE_PROJECTS; do
 
-    IS_INTERNAL=`echo "$INTERNAL_PROJECTS" | grep "$PROJECT"`
+    IS_INTERNAL=$(echo "$INTERNAL_PROJECTS" | grep -w "$PROJECT")
 
     if [ "$IS_INTERNAL" ]; then
         echo "Project ${PROJECT} is internal (skipped)"
         continue
     fi
 
-    if [ ! -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files" ]; then
-        echo "Project ${PROJECT} does not exist in IDA (ignored)"
-        continue
+    if [ -z "$MOCK_GRACE_PROJECTS" ]; then
+        if [ ! -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files" ]; then
+            echo "Project ${PROJECT} does not exist in IDA (ignored)"
+            continue
+        fi
     fi
 
-    IS_SUSPENDED=`echo "$SUSPENDED_PROJECTS" | grep "$PROJECT"`
+    IS_SUSPENDED=$(echo "$SUSPENDED_PROJECTS" | grep -w "$PROJECT")
 
     if [ "$IS_SUSPENDED" ]; then
         echo "Project ${PROJECT} is already suspended"
@@ -121,7 +135,7 @@ for PROJECT in $GRACE_PROJECTS; do
     $ROOT/utils/appsupport/suspend-project $PROJECT --delete 2>$ERR
 
     if [ -s $ERR ]; then
-        MSG=`cat $ERR | tr "\n" " " `
+        MSG=$(cat $ERR | tr '\n' ' ')
         addToLog "$MSG"
         errorExit "Failed to suspend project ${PROJECT}"
     fi
@@ -132,59 +146,81 @@ done
 
 for PROJECT in $DELETEDATA_PROJECTS; do
 
-    IS_INTERNAL=`echo "$INTERNAL_PROJECTS" | grep "$PROJECT"`
+    IS_INTERNAL=$(echo "$INTERNAL_PROJECTS" | grep -w "$PROJECT")
 
     if [ "$IS_INTERNAL" ]; then
         echo "Project ${PROJECT} is internal (skipped)"
         continue
     fi
 
-    if [ ! -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files" ]; then
-        echo "Project ${PROJECT} does not exist in IDA (ignored)" >&2
-        continue
+    if [ -z "$MOCK_DELETEDATA_PROJECTS" ]; then
+        if [ ! -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files" ]; then
+            echo "Project ${PROJECT} does not exist in IDA (ignored)" >&2
+            continue
+        fi
     fi
 
-    # Per changes in the terms of service, we need to refine the project deletion process so that
-    # projects which have published data are not deleted; rather, they remain suspended and only
-    # data that is not part of a published dataset is purged, but all data that is part of a published
-    # dataset is retained until the project is manually and explicitly deleted.
-    # 
-    # These changes will be implemented in three phases:
-    # Phase 1: Disable automated deletion process, leaving deletion of projects manual
-    # Phase 2: Identify projects to be deleted which have published data, and exclude them from deletion,
-    #          and purge all data from the staging area
-    # Phase 3: Identify projects to be deleted which have published data, and exclude them from deletion,
-    #          and purge all data from the staging area and purge all frozen data not included in any datassets
-    #
-    # This current code implements Phase 1. No projects are deleted, but application support staff are informed
+    # Per the terms of service, closed projects which have published data are not deleted; rather,
+    # they remain suspended and only data that is not part of any published dataset is purged, but
+    # all data that is part of any published dataset is retained until the project is manually and
+    # explicitly deleted.
 
-    MESSAGE="Project ${PROJECT} should be deleted"
-    SUBJECT="
-Project ${PROJECT} should be deleted, but only if it has no published data.
-    
-CHECK FIRST! and delete the project manually if there is no published data."
-    echo "$MESSAGE"
-    $ROOT/utils/appsupport/email-appsupport "$MESSAGE" "$SUBJECT" 2>$ERR
-    if [ -s $ERR ]; then
-        MSG=`cat $ERR | tr "\n" " " `
-        echoAndLog "$MSG"
+    if [ "$MOCK_PUBLISHED_PROJECTS" ]; then
+        if echo "$MOCK_PUBLISHED_PROJECTS" | grep -qw "$PROJECT"; then
+            HAS_PUBLISHED_DATASETS="true"
+        else
+            HAS_PUBLISHED_DATASETS="false"
+        fi
+    else
+        HAS_PUBLISHED_DATASETS=$($ROOT/utils/appsupport/has-published-datasets "$PROJECT")
     fi
-    continue
 
-    #if [ "$IDA_ENVIRONMENT" != "PRODUCTION" ]; then
-    #    echo "Project ${PROJECT} should be deleted"
-    #    continue
-    #fi
+    if [ "$HAS_PUBLISHED_DATASETS" = "true" ]; then
 
-    #$ROOT/utils/appsupport/delete-project $PROJECT 2>$ERR
+        # Only actually preserve the project if in production, otherwise just inform about appropriate actions but do nothing
 
-    #if [ -s $ERR ]; then
-    #    MSG=`cat $ERR | tr "\n" " " `
-    #    addToLog "$MSG"
-    #    errorExit "Failed to delete project ${PROJECT}"
-    #fi
+        if [ "$IDA_ENVIRONMENT" != "PRODUCTION" ]; then
+            echo "Project ${PROJECT} should be preserved"
+            continue
+        fi
 
-    #echoAndLog "Project ${PROJECT} has been deleted"
+        # If project already preserved, do nothing
+
+        if [ -f "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files/PRESERVED" ]; then
+            echo "Project ${PROJECT} is already preserved"
+            continue
+        fi
+
+        $ROOT/utils/appsupport/preserve-project $PROJECT 2>$ERR
+
+        if [ -s $ERR ]; then
+            MSG=$(cat $ERR | tr '\n' ' ')
+            addToLog "$MSG"
+            errorExit "Failed to preserve project ${PROJECT}"
+        fi
+
+        echoAndLog "Project ${PROJECT} has been preserved"
+
+    else
+
+        # Only actually delete the project if in production, otherwise just inform about appropriate actions but do nothing
+
+        if [ "$IDA_ENVIRONMENT" != "PRODUCTION" ]; then
+            echo "Project ${PROJECT} should be deleted"
+            continue
+        fi
+
+        $ROOT/utils/appsupport/delete-project $PROJECT 2>$ERR
+
+        if [ -s $ERR ]; then
+            MSG=$(cat $ERR | tr '\n' ' ')
+            addToLog "$MSG"
+            errorExit "Failed to delete project ${PROJECT}"
+        fi
+
+        echoAndLog "Project ${PROJECT} has been deleted"
+
+    fi
 
 done
 

@@ -58,7 +58,7 @@ if [ "$DATA" ]; then
     LAST_DATA_CHANGE=$(echo "$DATA" | jq -r '.lastDataChange' | sed -e 's/T.*$//')
     STORAGE_VOLUME=$(echo "$DATA" | jq -r '.storageVolume')
 else
-    errorExit "Error: Failed to retrieve project stats"
+    errorExit "Failed to retrieve project stats"
 fi
 
 USERS=$($CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" -H "OCS-APIRequest: true" "${GROUP_API}/${PROJECT}")
@@ -71,7 +71,7 @@ if [ "$USERS" ]; then
             sed -e 's/<.*$//' |
             grep -v '^[[:space:]]*$')
 else
-    errorExit "Error: Failed to retrieve project users"
+    errorExit "Failed to retrieve project users"
 fi
 
 ACTION_STATUS=$($CURL_GET $PROJECT_USER_CREDENTIALS -H "$IDA_MODE_HEADER" "$IDA_API/status")
@@ -80,14 +80,38 @@ if [ "$ACTION_STATUS" ]; then
     ACTION_STATUS=$(echo "$ACTION_STATUS" | jq --indent 4 | \
     grep -e '"failed"' -e '"pending"' -e '"suspended"' | sed -e 's/, *$//' -e 's/"//g' | sort -r)
 else
-    errorExit "Error: Failed to retrieve project action status"
+    errorExit "Failed to retrieve project action status"
 fi
+
+PUBLISHED_DATASETS=$($ROOT/utils/appsupport/list-published-datasets $PROJECT 2>$ERR)
+
+if [ -s $ERR ]; then
+    MSG=$(cat $ERR)
+    addToLog "$MSG"
+    errorExit "Failed to retrieve listing of published datasets"
+fi
+
+PROJECT_STATE=$($ROOT/utils/appsupport/fetch-datadeletion-substate $PROJECT 2>$ERR)
+
+if [ -s $ERR ]; then
+    MSG=$(cat $ERR)
+    addToLog "$MSG"
+    errorExit "Failed to retrieve data deletion substate"
+fi
+
+if [ -z "$PROJECT_STATE" ]; then
+    PROJECT_STATE="open"
+fi
+
+# --------------------------------------------------------------------------------
 
 if [ "$JSON" ]; then
     USERS=$(format_token_list_as_json "$USERS" 8)
     ACTION_STATUS=$(format_field_list_as_json "$ACTION_STATUS" 8)
+    PUBLISHED_DATASETS=$(format_token_list_as_json "$PUBLISHED_DATASETS" 8)
     echo "{"
     echo "    \"project\": \"${PROJECT}\","
+    echo "    \"state\": \"${PROJECT_STATE}\","
     echo "    \"quota\": ${QUOTA},"
     echo "    \"used\": ${USED},"
     echo "    \"staged\": ${STAGED_VOLUME},"
@@ -103,13 +127,18 @@ if [ "$JSON" ]; then
     echo "    ],"
     echo "    \"actionStatus\": {"
     printf "%s\n" "$ACTION_STATUS"
-    echo "    }"
+    echo "    },"
+    echo "    \"publishedDatasets\": ["
+    printf "%s\n" "$PUBLISHED_DATASETS"
+    echo "    ]"
     echo "}"
 else
     QUOTA=$(bytesToHR "0${QUOTA}")
     USED=$(bytesToHR "0${USED}")
     STAGED_VOLUME=$(bytesToHR "0${STAGED_VOLUME}")
     FROZEN_VOLUME=$(bytesToHR "0${FROZEN_VOLUME}")
+    echo "State:"
+    echo "    ${PROJECT_STATE}"
     echo "Quota:"
     echo "    ${QUOTA}"
     echo "Used:"
@@ -136,6 +165,10 @@ else
     fi
     echo "Action status: "
     echo "$ACTION_STATUS"
+    echo "Published datasets: "
+    if [ "$PUBLISHED_DATASETS" ]; then
+        echo "$PUBLISHED_DATASETS" | sed -e 's/^/    /'
+    fi
 fi
 
 addToLog "DONE"

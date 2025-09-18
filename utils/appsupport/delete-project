@@ -21,6 +21,22 @@
 # @license  GNU Affero General Public License, version 3
 # @link     https://www.fairdata.fi/en/ida
 # --------------------------------------------------------------------------------
+
+SCRIPT=`basename $0`
+
+USAGE="
+Usage: $SCRIPT PROJECT [--force]
+       $SCRIPT -h
+
+       PROJECT = the project name
+       --force = the project will be preserved regardless of its datadeletion substate or grace period
+"
+
+export ROOT
+export EMAIL_SENDER
+export EMAIL_RECIPIENTS
+
+#--------------------------------------------------------------------------------
 # Initialize script with common definitions
 
 INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
@@ -34,6 +50,7 @@ else
 fi
 
 #--------------------------------------------------------------------------------
+
 echo "Verifying project ${PROJECT} exists..."
 
 if [ ! -d $PROJECT_STORAGE_OC_DATA_ROOT ]; then
@@ -42,11 +59,29 @@ fi
 
 #--------------------------------------------------------------------------------
 
+echo "Verifying project ${PROJECT} is suspended..."
+    
+SUSPENDED=$($CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" "$IDA_API/actions?status=suspend" 2>$ERR | \
+           tr "\n" " " | tr "{" "\n" | grep "\"action\": *\"suspend*\"" | grep "\"project\": *\"$PROJECT\"" | \
+           sed -e 's/^.*"initiated": *"//' | sed -e 's/".*$//' | sort -u | tail -1)
+
+if [ -s $ERR ]; then
+    MSG=`cat $ERR | tr "\n" " " `
+    addToLog "$MSG"
+    errorExit "Failed to retrieve pending actions for project ${PROJECT}!"
+fi
+
+if [ "$SUSPENDED" = "" ]; then
+    errorExit "The specified project ${PROJECT} is not suspended"
+fi
+
+#--------------------------------------------------------------------------------
+
 if [ "$2" != "--force" ]; then
 
     echo "Verifying project ${PROJECT} has CSC Data Deletion Process state 'deletedata' and is active for IDA..."
 
-    OUT=`curl --fail -k -s -S "$CSC_DATA_DELETION_MICROSERVICE/projects?projects=$PROJECT" 2>$ERR`
+    OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?projects=$PROJECT" 2>$ERR)
 
     if [ -s $ERR ]; then
         MSG=`cat $ERR | tr "\n" " " `
@@ -66,22 +101,6 @@ if [ "$2" != "--force" ]; then
     if [ "$PROJECT_IDA" != "IDA" ]
     then
         errorExit "Project $PROJECT is not active in the IDA service. Aborting."
-    fi
-
-    echo "Verifying project ${PROJECT} is suspended..."
-    
-    SUSPENDED=`$CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" "$IDA_API/actions?status=suspend" 2>$ERR | \
-               tr "\n" " " | tr "{" "\n" | grep "\"action\": *\"suspend*\"" | grep "\"project\": *\"$PROJECT\"" | \
-               sed -e 's/^.*"initiated": *"//' | sed -e 's/".*$//' | sort -u | tail -1`
-
-    if [ -s $ERR ]; then
-        MSG=`cat $ERR | tr "\n" " " `
-        addToLog "$MSG"
-        errorExit "Failed to retrieve pending actions for project ${PROJECT}!"
-    fi
-
-    if [ "$SUSPENDED" = "" ]; then
-        errorExit "The specified project ${PROJECT} is not suspended"
     fi
 
     echo "Verifying project ${PROJECT} is past the quarantine (grace) period..."
@@ -117,15 +136,22 @@ fi
 
 #--------------------------------------------------------------------------------
 
-echo "Moving project files to project trash subfolder..."
+echo "Moving project files to project trash..."
 
-mv -t ${PROJECT_TRASH_DATA_ROOT} ${PROJECT_ROOT}/* 2>$ERR
-
-if [ -s $ERR ]; then
-    MSG=`cat $ERR | tr "\n" " " `
-    addToLog "$MSG"
-    errorExit "Failed to move project files to trash for project ${PROJECT}!"
-fi
+(
+    set -euo pipefail
+    # Iterate over list of all data storage root relative pathnames
+    while IFS= read -r DATA_ROOT_RELATIVE_PATHNAME; do
+        # Move file to trash
+        DATA_PATHNAME="${PROJECT_STORAGE_OC_DATA_ROOT}/${DATA_ROOT_RELATIVE_PATHNAME}"
+        TRASH_PATHNAME="${PROJECT_TRASH_DATA_ROOT}/${DATA_ROOT_RELATIVE_PATHNAME}"
+        TRASH_DIRNAME=$(dirname "$TRASH_PATHNAME")
+        if [ ! -d "$TRASH_DIRNAME" ]; then
+            mkdir -p "$TRASH_DIRNAME"
+        fi
+        mv -f "$DATA_PATHNAME" "$TRASH_PATHNAME"
+    done < <(cd "$PROJECT_STORAGE_OC_DATA_ROOT"; find . -type f -printf '/%P\n' || true)
+)
 
 #--------------------------------------------------------------------------------
 
@@ -233,10 +259,14 @@ if [ -d "$PROJECT_REPLICATION_ROOT" ]; then
 
     if [ -s $ERR ]; then
         MSG=`cat $ERR | tr "\n" " " `
-        echoAndLog "$MSG"
+        addToLog "$MSG"
         errorExit "Failed to delete project files from tape replication cache for project ${PROJECT}!"
     fi
 fi
+
+#--------------------------------------------------------------------------------
+
+echoAndLog "Project ${PROJECT} removed. Project data copied to trash subfolder ${PROJECT_TRASH_DATA_ROOT}"
 
 #--------------------------------------------------------------------------------
 
@@ -245,32 +275,50 @@ echo "Reporting data deleted for project..."
 $ROOT/utils/appsupport/report-datadeleted $PROJECT 2>$ERR
 
 if [ -s $ERR ]; then
-    MSG=`cat $ERR | tr "\n" " " `
+    MSG=$(cat $ERR | tr '\n' ' ')
     addToLog "$MSG"
-    echoAndLog "Error: Failed to report data deleted for project ${PROJECT}! (ignored)"
+    SUBJECT="Failed to report data deleted for project ${PROJECT}!"
+    MESSAGE="
+${SUBJECT}
+
+${MSG}
+"
+    echoAndLog "Error: ${SUBJECT} (ignored)"
+    $ROOT/utils/appsupport/email-appsupport "$SUBJECT" "$MESSAGE" 2>$ERR
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        echoAndLog "$MSG"
+    fi
 fi
 
 #--------------------------------------------------------------------------------
 
 echo "Sending email to project users..."
 
-SUBJECT="Project ${PROJECT} removed" 
-MESSAGE="The project ${PROJECT} has been REMOVED from the IDA service and is no longer accessible. If the project had any data in IDA, that data has now been DELETED as agreed with the project manager and/or organization's IDA contact person. If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi)."
+SUBJECT="Project ${PROJECT} has been removed from the IDA service" 
 
-export ROOT
-export EMAIL_SENDER
-export EMAIL_RECIPIENTS
+MESSAGE="
+You are a member of the CSC project ${PROJECT}, which has had rights to use the IDA service.
+
+The project has been REMOVED from the IDA service in accordance with the official CSC Data Deletion Policy (https://docs.csc.fi/accounts/how-to-manage-your-project/#project-closure).
+
+All project data has been DELETED from the IDA service.
+
+If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi).
+"
 
 $ROOT/utils/appsupport/email-project-users "$PROJECT" "$SUBJECT" "$MESSAGE" 2>$ERR
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR | tr "\n" " " `
     addToLog "$MSG"
-    errorExit "Error: Failed to email project ${PROJECT} users!"
+    errorExit "Failed to email project ${PROJECT} users!"
+fi
+
+if [ "$ECHO_TEST_EMAILS" = "true" ]; then
+    echo "Subject: ${SUBJECT}${MESSAGE}"
 fi
 
 #--------------------------------------------------------------------------------
-
-echoAndLog "Project ${PROJECT} removed. Project data copied to trash subfolder ${PROJECT_TRASH_DATA_ROOT}"
 
 addToLog "DONE"

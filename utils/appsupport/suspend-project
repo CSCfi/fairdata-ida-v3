@@ -127,21 +127,65 @@ if [ "$2" = "--silent" ]; then
 fi
 
 if [ "$2" = "--delete" ]; then
-    SUBJECT="Project ${PROJECT} will be removed from the IDA service"
-    MESSAGE="You are a member of the CSC project ${PROJECT}, which has had rights to use the IDA service.
 
-The project will be REMOVED from the IDA service in accordance with the official CSC Data Deletion Policy (https://docs.csc.fi/accounts/how-to-manage-your-project/#project-closure).
+    HAS_PUBLISHED_DATASETS=$($ROOT/utils/appsupport/has-published-datasets $PROJECT)
+
+    SUBJECT="Project ${PROJECT} will be removed from the IDA service"
+
+    if [ "$HAS_PUBLISHED_DATASETS" = "true" ]; then
+
+        MESSAGE="
+You are a member of the CSC project ${PROJECT}, which has had rights to use the IDA service.
+
+The project is now SUSPENDED in and will be REMOVED from the IDA service in accordance with the official CSC Data Deletion Policy (https://docs.csc.fi/accounts/how-to-manage-your-project/#project-closure).
+
+Access to the project space is now READ-ONLY.
+
+These actions are due to either having no active users in the service, or due to an agreement with the project manager and/or organization's IDA contact person.
+
+All unpublished project data will be DELETED from the IDA service during the final removal step following the official grace period.
+
+All published project data (included in one or more published datasets which are openly available, under embargo, or accessible to logged-in users through Etsin) will REMAIN in the IDA service to ensure long-term accessibility of the published datasets, unless otherwise agreed.
+
+You will receive a notification when the project has been removed from the service.
+
+If you have any questions about the retention of published project data, please contact your home organization’s IDA contact person (https://wiki.eduuni.fi/x/FWmLGw).
+
+If you have any other questions, please contact the CSC Service Desk (servicedesk@csc.fi).
+"
+
+    else
+
+        MESSAGE="
+You are a member of the CSC project ${PROJECT}, which has had rights to use the IDA service.
+
+The project is now SUSPENDED in and will be REMOVED from the IDA service in accordance with the official CSC Data Deletion Policy (https://docs.csc.fi/accounts/how-to-manage-your-project/#project-closure).
+
+Access to the project space is now READ-ONLY.
+
+These actions are due to either having no active users in the service, or due to an agreement with the project manager and/or organization's IDA contact person.
+
+All project data will be DELETED from the IDA service during the final removal step following the official grace period.
+
+You will receive a notification when the project has been removed from the service.
+
+If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi).
+"
+
+    fi
+else
+
+    SUBJECT="Project ${PROJECT} suspended in the IDA service"
+    MESSAGE="
+You are a member of the CSC project ${PROJECT}, which has had rights to use the IDA service.
 
 The project is now SUSPENDED in the IDA service.
 
-The removal is either due to having no active users in the service, or due to an agreement with the project manager and/or organization's IDA contact person.
+Access to the project space is now READ-ONLY.
 
-If the project has any data in IDA, that data will be deleted during the final removal step as agreed with the project manager and/or organization's IDA contact person.
+If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi).
+"
 
-You will receive a notification when the project has been removed from the service. If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi)."
-else
-    SUBJECT="Project ${PROJECT} suspended."
-    MESSAGE="The project ${PROJECT} has been SUSPENDED in the IDA service. Access to the project space is now READ-ONLY. If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi)."
 fi
 
 export ROOT
@@ -153,7 +197,11 @@ $ROOT/utils/appsupport/email-project-users "$PROJECT" "$SUBJECT" "$MESSAGE" 2>$E
 if [ -s $ERR ]; then
     MSG=`cat $ERR | tr "\n" " " `
     addToLog "$MSG"
-    errorExit "Error: Failed to email project ${PROJECT} users!"
+    errorExit "Failed to email project ${PROJECT} users!"
+fi
+
+if [ "$ECHO_TEST_EMAILS" = "true" ]; then
+    echo "Subject: ${SUBJECT}${MESSAGE}"
 fi
 
 addToLog "DONE"

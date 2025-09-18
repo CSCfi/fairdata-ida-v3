@@ -469,11 +469,10 @@ return [
             //     cleared = timestamp
         ],
         [
-            // Delete frozen file record (used by tests only)
-            'name' => 'FrozenFile#deleteFile',
+            // Mark frozen file record as removed (used when pruning/preserving closed projects)
+            'name' => 'FrozenFile#removeFile',
             'url'  => '/api/files/{pid}',
             'verb' => 'DELETE'
-            // Used by tests and special admin tasks only, not by any regular processes
             // Restricted to admin or PSO user of specified project
             // Required parameters:
             //     pid = the PID of the file

@@ -585,6 +585,230 @@ class TestDatasets(unittest.TestCase):
         self.assertEqual(inventory.get('totalFrozenFiles', -1), 5001)
 
         # --------------------------------------------------------------------------------
+
+        print("Test appsupport scripts...")
+
+        cmd_base = "sudo -u apache %s/utils/appsupport" % (self.config['ROOT'])
+
+        # list-published-projects
+        #   output includes test_project_a
+        #   output does not include test_project_b
+
+        print("    list-published-projects")
+        cmd = "%s/list-published-projects" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("test_project_a", output)
+        self.assertNotIn("test_project_b", output)
+
+        # has-published-datasets
+        #   output for test_project_a is true
+        #   output for test_project_b is false
+
+        print("    has-published-datasets")
+
+        cmd = "%s/has-published-datasets test_project_a" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertEqual("true", output.strip())
+
+        cmd = "%s/has-published-datasets test_project_b" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertEqual("false", output.strip())
+
+        # list-published-datasets
+        #   output for test_project_a includes 6 datasets
+        #   output includes dataset_1_pid
+        #   output includes dataset_2_pid
+        #   output includes dataset_3_pid
+        #   output includes dataset_4_pid
+        #   output includes dataset_5_pid
+        #   output includes dataset_6_pid
+        #   output for test_project_b includes 0 datasets
+
+        print("    list-published-datasets")
+
+        cmd = "%s/list-published-datasets test_project_a --json" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(6, len(datasets))
+
+        cmd = "%s/list-published-datasets test_project_a" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn(dataset_1_pid, output)
+        self.assertIn(dataset_2_pid, output)
+        self.assertIn(dataset_3_pid, output)
+        self.assertIn(dataset_4_pid, output)
+        self.assertIn(dataset_5_pid, output)
+        self.assertIn(dataset_6_pid, output)
+
+        cmd = "%s/list-published-datasets test_project_b --json" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(0, len(datasets))
+
+        cmd = "%s/list-published-datasets test_project_b" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertEqual("", output)
+
+        # list-published-files
+        #   output for test_project_a includes 51 files, including:
+        #       /testdata/2017-08/Experiment_1/test01.dat
+        #       /testdata/2017-08/Experiment_2/test01.dat
+        #       /testdata/2017-10/Experiment_3/test01.dat
+        #       /testdata/2017-10/Experiment_4/test01.dat
+        #   output for test_project_b includes 0 files
+
+        print("    list-published-files")
+
+        cmd = "%s/list-published-files test_project_a --json" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(51, len(datasets))
+
+        cmd = "%s/list-published-files test_project_a" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("/testdata/2017-08/Experiment_1/test01.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_2/test01.dat", output)
+        self.assertIn("/testdata/2017-10/Experiment_3/test01.dat", output)
+        self.assertIn("/testdata/2017-10/Experiment_4/test01.dat", output)
+
+        cmd = "%s/list-published-files test_project_b --json" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(0, len(datasets))
+
+        cmd = "%s/list-published-files test_project_b" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertEqual("", output)
+
+        # list-dataset-files
+        #   output for dataset_1_pid includes 13 files:
+        #       /testdata/2017-08/Experiment_1/baseline/test01.dat
+        #       /testdata/2017-08/Experiment_1/baseline/test02.dat
+        #       /testdata/2017-08/Experiment_1/baseline/test03.dat
+        #       /testdata/2017-08/Experiment_1/baseline/test04.dat
+        #       /testdata/2017-08/Experiment_1/baseline/test05.dat
+        #       /testdata/2017-08/Experiment_1/baseline/zero_size_file
+        #       /testdata/2017-08/Experiment_1/test01.dat
+        #       /testdata/2017-08/Experiment_1/test02.dat
+        #       /testdata/2017-08/Experiment_1/test03.dat
+        #       /testdata/2017-08/Experiment_1/test04.dat
+        #       /testdata/2017-08/Experiment_1/test05.dat
+        #       /testdata/2017-08/Experiment_1/zero_size_file
+        #   output for dataset_2_pid includes 13 files
+        #   output for dataset_3_pid includes 13 files
+        #   output for dataset_4_pid includes 13 files
+        #   output for dataset_5_pid includes 13 files
+        #   output for dataset_6_pid includes 13 files
+
+        print("    list-dataset-files")
+
+        cmd = "%s/list-dataset-files %s --json" % (cmd_base, dataset_1_pid)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(13, len(datasets))
+
+        cmd = "%s/list-dataset-files %s" % (cmd_base, dataset_1_pid)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("/testdata/2017-08/Experiment_1/baseline/test01.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/baseline/test02.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/baseline/test03.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/baseline/test04.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/baseline/test05.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/baseline/zero_size_file", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/test01.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/test02.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/test03.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/test04.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/test05.dat", output)
+        self.assertIn("/testdata/2017-08/Experiment_1/zero_size_file", output)
+
+        # check-datasets-from-ida
+        #   output for test_project_a /testdata/2017-08/Experiment_1/test01.dat is 1 dataset: dataset_1_pid
+
+        print("    check-datasets-from-ida")
+
+        cmd = "%s/check-datasets-from-ida test_project_a \"/testdata/2017-08/Experiment_1/test01.dat\" --json" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(1, len(datasets))
+
+        cmd = "%s/check-datasets-from-ida test_project_a \"/testdata/2017-08/Experiment_1/test01.dat\"" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertEqual(dataset_1_pid, output.strip())
+
+        # check-datasets-from-metax
+        #   files = experiment_1_files[1]['pid'], experiment_2_files[8]['pid'], experiment_3_files[10]['pid']
+        #   output for echo files | check-datasets-from-metax is 3 datasets
+        #   output includes dataset_1_pid
+        #   output includes dataset_2_pid
+        #   output includes dataset_3_pid
+
+        print("    check-datasets-from-metax")
+
+        files = "%s\n%s\n%s\n" % (experiment_1_files[1]['pid'], experiment_2_files[8]['pid'], experiment_3_files[10]['pid'])
+        cmd = "echo \"%s\" | %s/check-datasets-from-metax --json" % (files, cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(3, len(datasets))
+
+        cmd = "echo \"%s\" | %s/check-datasets-from-metax" % (files, cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn(dataset_1_pid, output)
+        self.assertIn(dataset_2_pid, output)
+        self.assertIn(dataset_3_pid, output)
+
+        # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done
 
         self.success = True

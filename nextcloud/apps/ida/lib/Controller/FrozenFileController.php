@@ -633,6 +633,53 @@ class FrozenFileController extends Controller
     }
 
     /**
+     * Mark as removed all existing frozen file records with the specified PID
+     *
+     * Restricted to admin and PSO users for the project specified for the action.
+     *
+     * @param string $pid the PID of the file
+     *
+     * @return DataResponse
+     *
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    public function removeFile($pid) {
+
+        $this->logger->info('removeFile: pid=' . $pid);
+
+        try {
+            try {
+                API::verifyRequiredStringParameter('pid', $pid);
+            }
+            catch (Exception $e) {
+                return API::badRequestErrorResponse($e->getMessage());
+            }
+
+            $fileEntity = $this->fileMapper->findFile($pid, null, true);
+
+            if ($fileEntity === null) {
+                return API::notFoundErrorResponse('The specified file was not found.');
+            }
+
+            // Restrict to admin and PSO user for the specified project. 
+
+            if ($this->userId != 'admin' && $this->userId != Constants::PROJECT_USER_PREFIX . $fileEntity->getProject()) {
+                return API::forbiddenErrorResponse('Session user does not have permission to modify the specified file.');
+            }
+
+            $this->updateFile($pid, null, null, null, null, null, null, Generate::newTimestamp(), null);
+
+            return API::successResponse('File ' . $pid . ' marked as removed.');
+        }
+        catch (Exception $e) {
+            return API::serverErrorResponse($e->getMessage());
+        }
+    }
+
+    /**
      * Set the title of the specified project
      *
      * Restricted to admin or PSO user

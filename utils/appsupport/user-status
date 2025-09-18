@@ -67,7 +67,7 @@ if [ "$USER" = "admin" ]; then
     PROJECTS=""
 else
     PROJECTS=$($CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" -H "OCS-APIRequest: true" "${USER_API}/${USER}/groups" | \
-               grep "<element>" | sed -e 's/^.*<element>/    /' | sed -e 's/<.*$//')
+               grep "<element>" | sed -e 's/^.*<element>/    /' | sed -e 's/<.*$//' | sort -u)
 fi
 
 ENABLED=$($CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" -H "OCS-APIRequest: true" "${USER_API}/${USER}" |

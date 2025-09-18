@@ -23,9 +23,9 @@
 
 # Verify needed utilities are available
 
-for NEEDS_PROG in jq column
+for NEEDS_PROG in column
 do
-    PROG_LOCATION=`/usr/bin/which $NEEDS_PROG 2>/dev/null`
+    PROG_LOCATION=$(/usr/bin/which $NEEDS_PROG 2>/dev/null)
     if [ ! -e "$PROG_LOCATION" ]; then
         errorExit "Can't find $NEEDS_PROG in your \$PATH. Aborting."
     fi
@@ -33,7 +33,7 @@ done
 
 # Initialize script with common definitions
 
-INIT_FILE=`dirname "$(realpath $0)"`/../../lib/init_script.sh
+INIT_FILE=$(dirname "$(realpath $0)")/../../lib/init_script.sh
 
 if [ -e $INIT_FILE ]
 then
@@ -46,7 +46,7 @@ fi
 # Process input and get project name, per default admin script behavior
 
 if [ "$SCRIPT" = "" ]; then
-    SCRIPT=`basename "$(realpath $0)"`
+    SCRIPT=$(basename "$(realpath $0)")
 fi
 
 if [ "$USAGE" = "" ]; then
@@ -63,7 +63,7 @@ if [ "$1" = "-h" ]; then
 fi
 
 if [ "$PROJECT" = "" ]; then
-    PROJECT=`echo "$1" | sed -e 's/ *//g' `
+    PROJECT=$(echo "$1" | sed -e 's/ *//g')
 fi
 
 if [ "$PROJECT" = "" ]; then
@@ -148,8 +148,8 @@ if [ "$QUARANTINE_PERIOD" = "" ]; then
     errorExit "The variable QUARANTINE_PERIOD must be defined"
 fi
 
-if [ "$START" = "" ]; then
-    errorExit "The variable START must be defined"
+if [ "$TODAY" = "" ]; then
+    errorExit "The variable TODAY must be defined"
 fi
 
 if [ "$IDA_MODE_HEADER" = "" ]; then
@@ -161,8 +161,11 @@ PROJECT_ROOT="${STORAGE_OC_DATA_ROOT}/${PROJECT_USER}"
 PROJECT_STORAGE_OC_DATA_ROOT="${PROJECT_ROOT}/files"
 PROJECT_LOCK="${PROJECT_STORAGE_OC_DATA_ROOT}/LOCK"
 PROJECT_SUSPENDED="${PROJECT_STORAGE_OC_DATA_ROOT}/SUSPENDED"
+PROJECT_PRESERVED="${PROJECT_STORAGE_OC_DATA_ROOT}/PRESERVED"
+PROJECT_STAGING_ROOT="${PROJECT_STORAGE_OC_DATA_ROOT}/${PROJECT}${STAGING_FOLDER_SUFFIX}"
+PROJECT_FROZEN_ROOT="${PROJECT_STORAGE_OC_DATA_ROOT}/${PROJECT}"
 PROJECT_REPLICATION_ROOT="${DATA_REPLICATION_ROOT}/projects/${PROJECT}"
-PROJECT_TRASH_DATA_ROOT="${TRASH_DATA_ROOT}/${START}_${PROJECT}"
+PROJECT_TRASH_DATA_ROOT="${TRASH_DATA_ROOT}/${TODAY}_${PROJECT}"
 PROJECT_USER_CREDENTIALS="-u ${PROJECT_USER}:${PROJECT_USER_PASS}"
 ADMIN_CREDENTIALS="-u ${NC_ADMIN_USER}:${NC_ADMIN_PASS}"
 
@@ -172,15 +175,16 @@ else
     METAX_CREDENTIALS="-u ${METAX_USER}:${METAX_PASS}"
 fi
 
-HOSTNAME=`hostname`
+HOSTNAME=$(hostname)
 
 #--------------------------------------------------------------------------------
-# Ensure that the PROJECT_USER account belongs to the PROJECT group (there have
-# been some rare occurrences where due to migration, IdM sync, or other causes,
-# a PSO user has become disassociated with its project, so we check here to be
-# absolutely certain all is well before proceeding...)
+# Ensure that the PROJECT exists and that the PROJECT_USER account exists and
+# belongs to the PROJECT group
 
 if [ -n "$PROJECT" ] && [ "$PROJECT" != "null" ]; then
+    if [ ! -d "$PROJECT_ROOT" ]; then
+        errorExit "Project $PROJECT does not exist" 
+    fi
     BELONGS_TO_GROUP=$($ROOT/nextcloud/occ user:info "$PROJECT_USER" --output=json | \
                            jq -r '.groups[]' 2>/dev/null | grep -w "$PROJECT")
     if [ -z "$BELONGS_TO_GROUP" ]; then
@@ -206,8 +210,6 @@ if [ "$DEBUG" = "true" ]; then
     echo "ROOT:                         $ROOT"
     echo "STORAGE_OC_DATA_ROOT:         $STORAGE_OC_DATA_ROOT"
     echo "DATA_REPLICATION_ROOT:        $DATA_REPLICATION_ROOT"
-    echo "PROJECT_REPLICATION_ROOT:     $PROJECT_REPLICATION_ROOT"
-    echo "PROJECT_TRASH_DATA_ROOT:      $PROJECT_TRASH_DATA_ROOT"
     echo "IDA_API:                      $IDA_API"
     echo "METAX_API:                    $METAX_API"
     echo "METAX_API_VERSION:            $METAX_API_VERSION"
@@ -225,11 +227,15 @@ if [ "$DEBUG" = "true" ]; then
     echo "PROJECT_USER_PREFIX:          $PROJECT_USER_PREFIX"
     echo "PROJECT_USER_PASS:            $PROJECT_USER_PASS"
     echo "PROJECT_USER:                 $PROJECT_USER"
-    echo "PROJECT_STORAGE_OC_DATA_ROOT: $PROJECT_STORAGE_OC_DATA_ROOT"
+    echo "PROJECT_USER_CREDENTIALS:     $PROJECT_USER_CREDENTIALS"
     echo "PROJECT_ROOT:                 $PROJECT_ROOT"
     echo "PROJECT_LOCK:                 $PROJECT_LOCK"
     echo "PROJECT_SUSPENDED:            $PROJECT_SUSPENDED"
-    echo "PROJECT_USER_CREDENTIALS:     $PROJECT_USER_CREDENTIALS"
+    echo "PROJECT_STORAGE_OC_DATA_ROOT: $PROJECT_STORAGE_OC_DATA_ROOT"
+    echo "PROJECT_STAGING_ROOT:         $PROJECT_STAGING_ROOT"
+    echo "PROJECT_FROZEN_ROOT:          $PROJECT_FROZEN_ROOT"
+    echo "PROJECT_REPLICATION_ROOT:     $PROJECT_REPLICATION_ROOT"
+    echo "PROJECT_TRASH_DATA_ROOT:      $PROJECT_TRASH_DATA_ROOT"
     echo "ADMIN_CREDENTIALS:            $ADMIN_CREDENTIALS"
     echo "LOG:                          $LOG"
     echo "ERR:                          $ERR"
@@ -240,7 +246,7 @@ fi
 
 function bytesToHR()
 {
-    local SIZE=`printf "%.f" "$1"`
+    local SIZE=$(printf "%.f" "$1")
     local UNITS="B KiB MiB GiB TiB PiB"
     local UNIT="B"
 
@@ -270,12 +276,12 @@ function hrToBytes()
     local UNIT="$2"
 
     if [ "$UNIT" = "" ]; then
-        SIZE=`echo "$1" | sed -e 's/[^0-9\.]//g'`
-        UNIT=`echo "$1" | sed -e 's/[^a-zA-Z]//g'`
+        SIZE=$(echo "$1" | sed -e 's/[^0-9\.]//g')
+        UNIT=$(echo "$1" | sed -e 's/[^a-zA-Z]//g')
     fi
 
-    SIZE=`printf "%f" "$SIZE"`
-    UNIT=`echo "$UNIT" | tr '[a-z]' '[A-Z]'`
+    SIZE=$(printf "%f" "$SIZE")
+    UNIT=$(echo "$UNIT" | tr '[a-z]' '[A-Z]')
 
     if [ "$SIZE" = "" ]; then
         SIZE=0

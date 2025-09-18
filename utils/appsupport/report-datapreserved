@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2022 Ministry of Education and Culture, Finland
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -57,13 +57,13 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_POST "$CSC_DATA_DELETION_MICROSERVICE/report?service=IDA&action=datadeleted&project=$PROJECT&token=$CSC_DATA_DELETION_SECURITY_TOKEN" 2>$ERR)
+OUT=$($CURL_POST "$CSC_DATA_DELETION_MICROSERVICE/report?service=IDA&action=datapreserved&project=$PROJECT&token=$CSC_DATA_DELETION_SECURITY_TOKEN" 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=$(cat $ERR | tr '\n' ' ')
     addToLog "$MSG"
     echo "$MSG" >&2
-    errorExit "Failed to report data deleted for project"
+    errorExit "Failed to report data preserved for project"
 fi
 
 MSG=$(echo "$OUT" | tr '\n' ' ')

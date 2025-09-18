@@ -74,6 +74,16 @@ function report_success {
     echo ""
 }
 
+function fix_dev_permissions {
+    # If in development environment, relax permissions allowing code updates if
+    # the DEV_PERMISSIONS variable is defined in user's environment
+    if [ "$ENVIRONMENT" = "DEV" ]; then
+        if [ "$DEV_PERMISSIONS" ]; then
+            chmod -R "$DEV_PERMISSIONS" "$ROOT"
+        fi
+    fi
+}
+
 # Load service constants and configuration settings
 
 PARENT_FOLDER=$(dirname "$(realpath $0)")
@@ -138,6 +148,11 @@ rm -f $STORAGE_OC_DATA_ROOT/control/OFFLINE 2>/dev/null
 # Ensure test python environment is properly configured and active
 
 source $ROOT/venv/bin/activate
+
+#--------------------------------------------------------------------------------
+# Ensure correct permissions
+
+source $ROOT/utils/fix-permissions
 
 #--------------------------------------------------------------------------------
 # Execute tests per the provided command line arguments
@@ -215,13 +230,13 @@ else
         exit 1
     fi
 
-    python -W ignore -m unittest discover -f -q tests.olddata
+    python -W ignore -m unittest discover -f -q tests.auditing
 
     if [ $? -ne 0 ]; then
         exit 1
     fi
 
-    python -W ignore -m unittest discover -f -q tests.auditing
+    python -W ignore -m unittest discover -f -q tests.datadeletion
 
     if [ $? -ne 0 ]; then
         exit 1
@@ -230,3 +245,5 @@ else
     report_success
 
 fi
+
+fix_dev_permissions

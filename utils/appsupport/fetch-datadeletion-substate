@@ -23,11 +23,9 @@
 # --------------------------------------------------------------------------------
 # Initialize script with common definitions
 
-SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT ID"
-PROJECT="null"
+SCRIPT=$(basename $0)
 
-INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
+INIT_FILE=$(dirname $0)/lib/init_appsupport_script.sh
 
 if [ -e $INIT_FILE ]
 then
@@ -41,27 +39,39 @@ if [ "$CSC_DATA_DELETION_MICROSERVICE" == "" ]; then
     errorExit "The variable CSC_DATA_DELETION_MICROSERVICE is not defined in the configuration. Aborting." >&2
 fi
 
-WORKFLOW_ID="$1"
+# --------------------------------------------------------------------------------
 
-if [ -z "$WORKFLOW_ID" ]
-then
-    echo "$USAGE"
-    exit 1
+# If the project PRESERVED sentinel file exists, report a substate 'datapreserved'
+# else retrieve its substate from the microservice.
+
+if [ -f "$PROJECT_PRESERVED" ]; then
+    STATE="datapreserved"
 fi
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
-OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/workflow?id=$WORKFLOW_ID" 2>$ERR)
+if [ -z "$STATE" ]; then
 
-if [ -s $ERR ]; then
-    MSG=`cat $ERR`
-    addToLog "$MSG"
-    echo "$MSG"
-    errorExit "Failed to retrieve workflow details."
+    OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&projects=${PROJECT}" 2>$ERR)
+
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        addToLog "$MSG"
+    fi
+
+    if [ "$OUT" ]; then
+        STATE=$(echo "$OUT" | jq '.[0] | .state' --raw-output 2>/dev/null)
+    fi
+
+    if [ "$STATE" = "null" ]; then
+        STATE="unknown"
+    fi
 fi
 
-MSG=`echo $OUT | tr "\n" " " `
-addToLog "$MSG"
-echo "$OUT"
+if [ -z "$STATE" ]; then
+    STATE="unknown"
+fi
+
+echo "$STATE"
 
 addToLog "DONE"

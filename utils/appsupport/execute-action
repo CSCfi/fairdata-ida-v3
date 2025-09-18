@@ -107,7 +107,7 @@ fi
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    echoAndLog "$MSG"
+    addToLog "$MSG"
     errorExit "Action $ACTION failed for pathname $PATHNAME in project $PROJECT"
 fi
 

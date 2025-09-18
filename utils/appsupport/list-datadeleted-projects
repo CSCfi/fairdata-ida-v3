@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2023 Ministry of Education and Culture, Finland
+# Copyright (C) 2022 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -21,19 +21,11 @@
 # @license  GNU Affero General Public License, version 3
 # @link     https://www.fairdata.fi/en/ida
 # --------------------------------------------------------------------------------
-
-SCRIPT=`basename "$(realpath $0)"`
-
-USAGE="
-Usage: $SCRIPT PROJECT PID
-       $SCRIPT -h
-
-       PROJECT = the project name
-       PID     = the pid of the frozen file
-"
-
-#--------------------------------------------------------------------------------
 # Initialize script with common definitions
+
+SCRIPT=`basename $0`
+USAGE="Usage: $SCRIPT [--json]"
+PROJECT="null"
 
 INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
 
@@ -45,28 +37,27 @@ else
     exit 1
 fi
 
-#--------------------------------------------------------------------------------
-# Process command line arguments
-
-if [ "$#" != 2 ]; then
-    echo "$USAGE" >&2
-    errorExit "Invalid number of arguments"
+if [ "$CSC_DATA_DELETION_MICROSERVICE" == "" ]; then
+    errorExit "The variable CSC_DATA_DELETION_MICROSERVICE is not defined in the configuration. Aborting." >&2
 fi
 
-PROJECT="$1"
-FILE="$2"
+JSON=$(echo "$*" | grep -w -- '--json')
 
 #--------------------------------------------------------------------------------
 
-URL="${IDA_API}/files/${FILE}"
-
-$CURL_DELETE $PROJECT_USER_CREDENTIALS -H "$IDA_MODE_HEADER" "${URL}" 2>$ERR | jq --indent 4
+OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&states=datadeleted&open=false" 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     addToLog "$MSG"
-    errorExit "Failed to delete file details in IDA"
+    echo "$MSG" >&2
+    errorExit "Failed to retrieve projects from microservice"
+fi
+
+if [ "$JSON" ]; then
+    echo "$OUT" | jq --indent 4 '.'
+else
+    echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
 fi
 
 addToLog "DONE"
-

@@ -121,8 +121,14 @@ if [ "$2" = "--silent" ]; then
     exit
 fi
 
-SUBJECT="Project ${PROJECT} unsuspended" 
-MESSAGE="The project ${PROJECT} has been UNSUSPENDED in the IDA service. Full access to project data is restored. If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi)."
+SUBJECT="Project ${PROJECT} unsuspended in the IDA service" 
+MESSAGE="
+The project ${PROJECT} has been UNSUSPENDED in the IDA service.
+
+Full access to project data is restored.
+
+If you have any questions, please contact the CSC Service Desk (servicedesk@csc.fi).
+"
 
 export ROOT
 export EMAIL_SENDER
@@ -133,7 +139,7 @@ $ROOT/utils/appsupport/email-project-users "$PROJECT" "$SUBJECT" "$MESSAGE" 2>$E
 if [ -s $ERR ]; then
     MSG=`cat $ERR | tr "\n" " " `
     addToLog "$MSG"
-    errorExit "Error: Failed to email project ${PROJECT} users!"
+    errorExit "Failed to email project ${PROJECT} users!"
 fi
 
 addToLog "DONE"

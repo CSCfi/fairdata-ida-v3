@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2023 Ministry of Education and Culture, Finland
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -28,12 +28,13 @@ USAGE="
 Usage: $SCRIPT PID
        $SCRIPT -h
 
-       PID = the pid of the frozen file
+       PID = the pid of the dataset
 "
-PROJECT="null"
 
 #--------------------------------------------------------------------------------
 # Initialize script with common definitions
+
+PROJECT="null"
 
 INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
 
@@ -53,22 +54,22 @@ if [ "$#" != 1 ]; then
     errorExit "Invalid number of arguments"
 fi
 
-FILE="$1"
+DATASET="$1"
 
 #--------------------------------------------------------------------------------
 
-URL="${METAX_API}/files/${FILE}"
+URL="${METAX_API}/datasets/${DATASET}"
 
 if [ $METAX_API_VERSION -ge 3 ]; then
-    OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "${URL}" 2>$ERR`
+    OUT=`$CURL_GET -H "$METAX_AUTH_HEADER" "${URL}" 2>$ERR`
 else
-    OUT=`$CURL_DELETE $METAX_CREDENTIALS "${URL}" 2>$ERR`
+    OUT=`$CURL_GET $METAX_CREDENTIALS "${URL}" 2>$ERR`
 fi
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     addToLog "$MSG"
-    errorExit "Failed to delete file details in Metax"
+    errorExit "Failed to retrieve file details in Metax"
 fi
 
 echo "$OUT" | jq --indent 4

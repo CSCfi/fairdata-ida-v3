@@ -46,12 +46,15 @@ SCRIPT=`basename "$(realpath $0)"`
 PROJECT="null"
 
 USAGE="
-Usage: $SCRIPT (PROJECT|ERROR_FILE)
+Usage: $SCRIPT (PROJECT|ERROR_FILE) [--force]
        $SCRIPT -h
 
        PROJECT     the project to be repaired
        ERROR_FILE  the pathname of an audit error file
+       --force     if specified, allows repair process to perform actions which will deprecate datasets
 "
+
+FORCE=$(echo "$*" | grep -- "--force")
 
 #--------------------------------------------------------------------------------
 
@@ -78,13 +81,39 @@ else
 fi
 
 #--------------------------------------------------------------------------------
+# If any datasets will be deprecated by repair process, based on specified audit
+# error report, or if no audit report is specified, and --force is not specified,
+# do not proceed.
+
+if [ "$ERROR_FILE" ]; then
+    DATASETS_AFFECTED=$($ROOT/utils/appsupport/check-datasets-pre-repair "$ERROR_FILE" 2>$ERR | tr "\n" " ")
+else
+    DATASETS_AFFECTED="(unknown)"
+fi
+
+if [ -s $ERR ]; then
+    MSG=`cat $ERR`
+    addToLog "$MSG"
+    errorExit "Failed to check datasets pre-repair"
+fi
+
+if [ "$DATASETS_AFFECTED" ]; then
+    if [ "$FORCE" ]; then
+        echoAndLog "Repair will deprecate the datasets $DATASETS_AFFECTED"
+    else
+        errorExit "Repair will deprecate the datasets $DATASETS_AFFECTED"
+    fi
+fi
+
+#--------------------------------------------------------------------------------
+
 echo "Suspending project... (silently)"
 
 $ROOT/utils/appsupport/suspend-project "$PROJECT" --silent 2>$ERR
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    echoAndLog "$MSG"
+    addToLog "$MSG"
     errorExit "Failed to suspend project"
 fi
 
@@ -124,7 +153,7 @@ if [ "$ERROR_FILE" ]; then
 
     if [ -s $ERR ]; then
         MSG=`cat $ERR`
-        echoAndLog "$MSG"
+        addToLog "$MSG"
         errorExit "Failed to extract frozen file pathnames from audit error report"
     fi
 
@@ -147,7 +176,7 @@ fi
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    echoAndLog "$MSG"
+    addToLog "$MSG"
     errorExit "Failed to repair project data in IDA"
 fi
 
@@ -172,7 +201,7 @@ $ROOT/utils/appsupport/unsuspend-project "$PROJECT" --silent 2>$ERR
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    echoAndLog "$MSG"
+    addToLog "$MSG"
     errorExit "Failed to unsuspend project"
 fi
 

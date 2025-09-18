@@ -1361,7 +1361,7 @@ class FreezingController extends Controller
 
             // Record file details within scope of action
 
-            $this->registerFiles('frozen', $project, $nextcloudFiles, $actionEntity->getPid(), $actionEntity->getInitiated());
+            $this->registerFiles('unfreeze', $project, $nextcloudFiles, $actionEntity->getPid(), $actionEntity->getInitiated());
 
             // Record node type and file count
 

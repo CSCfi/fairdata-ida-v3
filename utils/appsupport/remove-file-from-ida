@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2019 Ministry of Education and Culture, Finland
+# Copyright (C) 2023 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -25,12 +25,11 @@
 SCRIPT=`basename "$(realpath $0)"`
 
 USAGE="
-Usage: $SCRIPT PROJECT PATHNAME [-i]
+Usage: $SCRIPT PROJECT PID
        $SCRIPT -h
 
-       PROJECT  = the project name
-       PATHNAME = the relative pathname of the frozen file
-       -i       = include inactive files
+       PROJECT = the project name
+       PID     = the pid of the frozen file
 "
 
 #--------------------------------------------------------------------------------
@@ -46,47 +45,26 @@ else
     exit 1
 fi
 
-#--------------------------------------------------------------------------------
-# Process command line arguments
+PID="$2"
 
-if [ "$#" -lt 2 ]; then
-    echo "$USAGE" >&2
-    errorExit "Invalid number of arguments"
+if [ -z "$PID" ]; then
+    errorExit "Required frozen file PID missing"
 fi
-
-PROJECT="$1"
-PATHNAME="$2"
-INACTIVE="$3"
 
 #--------------------------------------------------------------------------------
 
-PATHNAME=$(urlEncode "${PATHNAME}")
-
-URL="$IDA_API/files/byProjectPathname/${PROJECT}?pathname=${PATHNAME}"
-
-if [ "$INACTIVE" = "-i" ]; then
-    URL="${URL}&includeInactive=true"
-fi
-
-if [ "$DEBUG" = "true" ]
-then
-    echo "PROJECT:  $PROJECT"
-    echo "PATHNAME: $PATHNAME"
-    echo "REQUEST:  $CURL_GET $PROJECT_USER_CREDENTIALS -H \"$IDA_MODE_HEADER\" \"${URL}\""
-fi
-
-if [ ! -d $PROJECT_STORAGE_OC_DATA_ROOT ]; then
-    errorExit "The specified project ${PROJECT} does not exist"
-fi
-
-OUT=`$CURL_GET $PROJECT_USER_CREDENTIALS -H "$IDA_MODE_HEADER" "${URL}" 2>$ERR `
+OUT=$($CURL_DELETE $PROJECT_USER_CREDENTIALS -H "$IDA_MODE_HEADER" "${IDA_API}/files/${PID}" 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     addToLog "$MSG"
-    errorExit "Failed to retrieve file details for file pathname $PATHNAME"
+    errorExit "Failed to mark frozen file as removed in IDA for PID $PID"
 fi
 
-echo "$OUT" | jq --indent 4
+if [ "$DEBUG" = "true" ]; then
+    echo "$OUT" | jq --indent 4
+fi
+
+echoAndLog "Frozen file with PID $PID marked as removed in IDA"
 
 addToLog "DONE"

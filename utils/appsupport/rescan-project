@@ -46,7 +46,7 @@ $OCC files:scan --path="${PROJECT_USER_PREFIX}${PROJECT}/files/${PROJECT}${STAGI
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    echoAndLog "$MSG"
+    addToLog "$MSG"
     errorExit "Failed to rescan project files in staging area of Nextcloud"
 fi
 
@@ -57,7 +57,7 @@ $OCC files:scan --path="${PROJECT_USER_PREFIX}${PROJECT}/files/${PROJECT}" "${PR
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    echoAndLog "$MSG"
+    addToLog "$MSG"
     errorExit "Failed to rescan project files in frozen area of Nextcloud"
 fi
 
@@ -68,7 +68,7 @@ php $ROOT/nextcloud/cron.php
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    echoAndLog "$MSG"
+    addToLog "$MSG"
     errorExit "Failed to run Nextcloud housekeeping"
 fi
 

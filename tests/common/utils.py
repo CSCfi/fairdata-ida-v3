@@ -166,6 +166,7 @@ def load_configuration():
         'STAGING_FOLDER_SUFFIX':  service_constants.STAGING_FOLDER_SUFFIX,
         'STORAGE_OC_DATA_ROOT':   server_configuration.STORAGE_OC_DATA_ROOT,
         'DATA_REPLICATION_ROOT':  server_configuration.DATA_REPLICATION_ROOT,
+        'TRASH_DATA_ROOT':        server_configuration.TRASH_DATA_ROOT,
         'MAX_FILE_COUNT':         service_constants.MAX_FILE_COUNT,
         'DBTYPE':                 server_configuration.DBTYPE,
         'DBNAME':                 server_configuration.DBNAME,

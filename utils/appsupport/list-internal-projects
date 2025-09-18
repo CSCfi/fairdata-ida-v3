@@ -26,7 +26,7 @@
 SCRIPT=`basename "$(realpath $0)"`
 
 USAGE="
-Usage: $SCRIPT
+Usage: $SCRIPT [--local]
        $SCRIPT -h
 "
 
@@ -44,16 +44,22 @@ fi
 
 #--------------------------------------------------------------------------------
 
-# Get all internal projects known to the IdM
-PROJECTS=`ldapsearch -x -H "$LDAP_HOST_URL" -D "$LDAP_BIND_USER" -w "$LDAP_PASSWORD" -b "$LDAP_SEARCH_BASE" \
-    '(&(objectClass=CSCServiceIDAClass)(CSCServiceIDAQuotaGranter=cn=00006,ou=Organizations,o=CSC))' CSCPrjNUM \
-    | grep 'CSCPrjNUM: ' | sed -e 's/^.*CSCPrjNUM: *//' -e 's/  *$//' | sort | uniq`
+if [ "$1" != "--local" ]; then
+    # Get all internal projects known to the IdM
+    PROJECTS=`ldapsearch -x -H "$LDAP_HOST_URL" -D "$LDAP_BIND_USER" -w "$LDAP_PASSWORD" -b "$LDAP_SEARCH_BASE" \
+        '(&(objectClass=CSCServiceIDAClass)(CSCServiceIDAQuotaGranter=cn=00006,ou=Organizations,o=CSC))' CSCPrjNUM \
+        | grep 'CSCPrjNUM: ' | sed -e 's/^.*CSCPrjNUM: *//' -e 's/  *$//' | sort | uniq`
 
-# Limit projects to those which exist in IDA
-for PROJECT in $PROJECTS; do
-    if [ -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files/${PROJECT}" ]; then
-        echo "$PROJECT"
-    fi
-done
+    # Limit projects to those which exist in IDA
+    for PROJECT in $PROJECTS; do
+        if [ -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files/${PROJECT}" ]; then
+            echo "$PROJECT"
+        fi
+    done
+fi
+
+if [ -d /mnt/storage_vol01/ida/PSO_ida_safe_tests_project ]; then
+    echo ida_safe_tests_project
+fi
 
 addToLog "DONE"

@@ -41,6 +41,11 @@
 #    errors where Nextcloud and the filesystem disagree on the existence of files
 #    and folders, and the number of nodes.
 #
+#    A dataset will be created which contains all of the frozen files, including
+#    those which will be deleted, such that the repair process will result in
+#    the deleted frozen files being reported as removed to Metax, resulting in the
+#    dataset becoming deprecated in Metax when the project is repaired.
+#
 # b. Project B will have a folder frozen, and will have files both changed in size
 #    and touched with new modification timestamps in the filesystem, covering errors
 #    where Nextcloud and the filesystem disagree about size and modification
@@ -248,7 +253,6 @@ class TestAuditing(unittest.TestCase):
         invalid_checksum_uri = "sha256:%s" % invalid_checksum
 
         pso_user_a = ("PSO_test_project_a", self.config["PROJECT_USER_PASS"])
-        pso_user_b = ("PSO_test_project_b", self.config["PROJECT_USER_PASS"])
 
         test_user_a = ("test_user_a", self.config["TEST_USER_PASS"])
         test_user_b = ("test_user_b", self.config["TEST_USER_PASS"])
@@ -351,6 +355,41 @@ class TestAuditing(unittest.TestCase):
 
         wait_for_pending_actions(self, "test_project_a", test_user_a)
         check_for_failed_actions(self, "test_project_a", test_user_a)
+
+        print("Retrieve frozen file details for all files associated with freeze action of folder /2017-08/Experiment_1/baseline")
+        response = requests.get("%s/files/action/%s" % (self.config["IDA_API"], action_data["pid"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200, response.text)
+        experiment_1_files = response.json()
+        self.assertEqual(len(experiment_1_files), 6)
+
+        print("Creating Dataset for test_project_a containing all files in scope /testdata/2017-08/Experiment_1")
+        if self.config["METAX_API_VERSION"] >= 3:
+            dataset_data = DATASET_TEMPLATE_V3
+            dataset_data['title'] = DATASET_TITLES[0]
+            dataset_data['fileset'] = {
+                "storage_service": "ida",
+                "csc_project": "test_project_a",
+                "directory_actions": [
+                    {
+                        "action": "add",
+                        "pathname": "/testdata/2017-08/Experiment_1/"
+                    }
+                ]
+            }
+            response = requests.post("%s/datasets" % self.config['METAX_API'], headers=self.metax_headers, json=dataset_data)
+        else:
+            dataset_data = DATASET_TEMPLATE_V1
+            dataset_data['research_dataset']['title'] = DATASET_TITLES[0]
+            dataset_data['research_dataset']['files'] = build_dataset_files(self, experiment_1_files)
+            response = requests.post("%s/datasets" % self.config['METAX_API'], json=dataset_data, auth=self.metax_user)
+        self.assertEqual(response.status_code, 201, response.text)
+        dataset = response.json()
+        if self.config["METAX_API_VERSION"] >= 3:
+            dataset_pid = dataset['id']
+            dataset_urn = dataset['persistent_identifier']
+        else:
+            dataset_pid = dataset['identifier']
+            dataset_urn = dataset['research_dataset']['preferred_identifier']
 
         print("(retrieving frozen file PID lists for project A from IDA and Metax after freezing)")
         frozen_file_pids_2 = get_frozen_file_pids(self, 'test_project_a', test_user_a)
@@ -2315,6 +2354,28 @@ class TestAuditing(unittest.TestCase):
         remove_report(self, report_data['reportPathname'])
 
         # --------------------------------------------------------------------------------
+        # Test check-datasets-pre-repair to ensure the affected dataset is reported,
+        # and no others
+
+        print("--- Running pre-repair dataset check")
+
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/check-datasets-pre-repair %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_a)
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertEqual(dataset_pid, output.strip())
+
+        print("(verifying dataset affected by project A repair is not yet deprecated)")
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/fetch-dataset-in-metax %s" % (self.config["HTTPD_USER"], self.config["ROOT"], dataset_pid)
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        dataset = json.loads(output)
+        self.assertIsNone(dataset.get('deprecated'), output)
+
+        # --------------------------------------------------------------------------------
 
         print("--- Repairing projects A, B, C, and D for re-auditing")
 
@@ -2328,8 +2389,19 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(len(frozen_file_pids_1), 6)
         self.assertEqual(len(metax_file_pids_1), 6)
 
-        print("(repairing project A)")
+        print("(verify repair of project A without --force is not allowed due to dataset deprecation)")
         cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_a)
+        failed = False
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            failed = True
+            output = error.output.decode(sys.stdout.encoding)
+            self.assertIn("Repair will deprecate the datasets ", output)
+        self.assertTrue(failed, output)
+
+        print("(repairing project A)")
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s --force" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_a)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -2359,6 +2431,15 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(len(frozen_file_pid_diff_2v1), 0)
         self.assertEqual(len(metax_file_pid_diff_1v2), 6)
         self.assertEqual(len(metax_file_pid_diff_2v1), 0)
+
+        print("(verifying dataset affected by project A repair is now deprecated)")
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/fetch-dataset-in-metax %s" % (self.config["HTTPD_USER"], self.config["ROOT"], dataset_pid)
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        dataset = json.loads(output)
+        self.assertIsNotNone(dataset.get('deprecated'), output)
 
         print("(retrieving frozen file PID lists for project B from IDA and Metax before repair)")
         frozen_file_pids_1 = get_frozen_file_pids(self, 'test_project_b', test_user_b)
@@ -2671,8 +2752,19 @@ class TestAuditing(unittest.TestCase):
         frozen_file_pids_1 = get_frozen_file_pids(self, 'test_project_d', test_user_d)
         metax_file_pids_1 = get_metax_file_pids(self, 'test_project_d')
 
-        print("(repairing project D)")
+        print("(verify repair of project D without --force is not allowed due to no audit report specified)")
         cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project test_project_d" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        failed = False
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            failed = True
+            output = error.output.decode(sys.stdout.encoding)
+            self.assertIn("Repair will deprecate the datasets (unknown)", output)
+        self.assertTrue(failed, output)
+
+        print("(repairing project D)")
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project test_project_d --force" % (self.config["HTTPD_USER"], self.config["ROOT"])
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
@@ -3316,7 +3408,7 @@ class TestAuditing(unittest.TestCase):
 
         print("--- Repairing project E (with no audit error report provided)")
 
-        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project test_project_e" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project test_project_e --force" % (self.config["HTTPD_USER"], self.config["ROOT"])
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:
