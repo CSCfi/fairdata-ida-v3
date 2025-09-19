@@ -1099,6 +1099,58 @@ class TestAuditing(unittest.TestCase):
         self.assertIsNotNone(errors)
         self.assertTrue("Node does not exist in Nextcloud" in errors)
 
+        print("--- Auditing project A against previous error report file and checking results")
+
+        report_data2 = audit_project(self, "test_project_a", "ERR", errorFile=report_pathname_a)
+
+        print("Verify error file specified")
+        self.assertIsNotNone(report_data2.get('errorFile'))
+        self.assertEqual(report_data2.get('errorFile'), report_pathname_a)
+
+        print("Verify new audit report details agree with previous audit report details")
+        self.assertEqual(report_data.get('auditChecksums'), report_data2.get('auditChecksums'))
+        self.assertEqual(report_data.get('auditTimestamps'), report_data2.get('auditTimestamps'))
+        self.assertEqual(report_data.get('oldest'), report_data2.get('oldest'))
+        self.assertEqual(report_data.get('newest'), report_data2.get('newest'))
+        self.assertEqual(report_data.get('frozenFileCount'), report_data2.get('frozenFileCount'))
+        self.assertEqual(report_data.get('metaxFileCount'), report_data2.get('metaxFileCount'))
+        self.assertEqual(report_data.get('invalidNodeCount'), report_data2.get('invalidNodeCount'))
+        self.assertEqual(report_data.get('errorNodeCount'), report_data2.get('errorNodeCount'))
+        self.assertEqual(report_data.get('errorCount'), report_data2.get('errorCount'))
+
+        # Verify select invalid node error messages for each type of error...
+
+        print("Verify correct error report of Nextcloud folder missing from filesystem")
+        node = nodes.get("frozen/testdata/2017-08/Experiment_1/baseline")
+        self.assertIsNotNone(node)
+        errors = node.get("errors")
+        self.assertIsNotNone(errors)
+        self.assertTrue("Node does not exist in filesystem" in errors)
+        node = nodes.get("staging/testdata/2017-10/Experiment_3/baseline")
+        self.assertIsNotNone(node)
+        errors = node.get("errors")
+        self.assertIsNotNone(errors)
+        self.assertTrue("Node does not exist in filesystem" in errors)
+
+        print("Verify correct error report of Nextcloud file missing from filesystem")
+        node = nodes.get("frozen/testdata/2017-08/Experiment_1/baseline/test01.dat")
+        self.assertIsNotNone(node)
+        errors = node.get("errors")
+        self.assertIsNotNone(errors)
+        self.assertTrue("Node does not exist in filesystem" in errors)
+        node = nodes.get("staging/testdata/2017-10/Experiment_3/baseline/test03.dat")
+        self.assertIsNotNone(node)
+        errors = node.get("errors")
+        self.assertIsNotNone(errors)
+        self.assertTrue("Node does not exist in filesystem" in errors)
+
+        print("Verify correct error report of filesystem file missing from Nextcloud")
+        node = nodes.get("staging/testdata/2017-08/Experiment_1/baseline/test01.dat")
+        self.assertIsNotNone(node)
+        errors = node.get("errors")
+        self.assertIsNotNone(errors)
+        self.assertTrue("Node does not exist in Nextcloud" in errors)
+
         print("--- Auditing staging area of project A and checking results")
 
         report_data = audit_project(self, "test_project_a", "ERR", area="staging")
@@ -2589,14 +2641,15 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(len(metax_file_pid_diff_1v2), 2)
         self.assertEqual(len(metax_file_pid_diff_2v1), 0)
 
-        remove_report(self, report_pathname_a)
-        remove_report(self, report_pathname_b)
-        remove_report(self, report_pathname_c)
-        remove_report(self, report_pathname_d)
+        # --------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------
+        # --------------------------------------------------------------------------------
 
-        # --------------------------------------------------------------------------------
-        # --------------------------------------------------------------------------------
-        # --------------------------------------------------------------------------------
+        print("--- Re-auditing project A against previous error report file and checking results")
+
+        report_data = audit_project(self, "test_project_a", "OK", errorFile=report_pathname_a)
+        self.assertIsNotNone(report_data.get('errorFile'))
+        self.assertEqual(report_data.get('errorFile'), report_pathname_a)
 
         print("--- Re-auditing project A and checking results")
 
@@ -3611,6 +3664,11 @@ class TestAuditing(unittest.TestCase):
 
         print("--- Auditing project E and checking results")
         audit_project(self, "test_project_e", "OK")
+
+        remove_report(self, report_pathname_a)
+        remove_report(self, report_pathname_b)
+        remove_report(self, report_pathname_c)
+        remove_report(self, report_pathname_d)
 
         # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done

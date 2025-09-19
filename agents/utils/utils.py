@@ -26,7 +26,7 @@ import dateutil.parser
 import importlib.util
 import logging
 import logging.handlers
-from datetime import datetime
+from datetime import datetime, timezone
 from copy import deepcopy
 from base64 import b64encode
 from agents.settings import test as test_settings
@@ -79,9 +79,9 @@ def normalize_timestamp(timestamp):
 
     # Sniff the input timestamp value and convert to a datetime instance as needed
     if isinstance(timestamp, str):
-        timestamp = datetime.utcfromtimestamp(dateutil.parser.parse(timestamp).timestamp())
+        timestamp = datetime.fromtimestamp(dateutil.parser.parse(timestamp).timestamp(), tz=timezone.utc)
     elif isinstance(timestamp, float) or isinstance(timestamp, int):
-        timestamp = datetime.utcfromtimestamp(timestamp)
+        timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
     elif not isinstance(timestamp, datetime):
         raise Exception("Invalid timestamp value")
 

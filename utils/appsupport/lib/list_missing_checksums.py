@@ -31,7 +31,7 @@ import requests
 import logging
 import psycopg2
 from sortedcontainers import SortedDict
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning
 from utils import LOG_ENTRY_FORMAT, TIMESTAMP_FORMAT, load_configuration
 
 # Use UTC

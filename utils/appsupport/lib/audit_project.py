@@ -124,9 +124,26 @@ def get_action_file_pathnames(config, action):
 
 
 def get_incomplete_action_file_pathnames(config):
+    logging.debug("get_incomplete_action_file_pathnames")
     pathnames = set()
     for action in get_incomplete_actions(config):
         pathnames.update(get_action_file_pathnames(config, action))
+    return pathnames
+
+
+def get_error_file_report(error_file):
+    logging.debug("get_error_file_report")
+    with open(error_file, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def get_error_file_pathnames(report):
+    logging.debug("get_error_file_pathnames")
+    pathnames = set()
+    if report:
+        invalid_nodes = report.get("invalidNodes")
+        if invalid_nodes:
+            pathnames.update(invalid_nodes.keys())
     return pathnames
 
 
@@ -141,25 +158,37 @@ def main():
 
     try:
 
-        # Arguments: ROOT PROJECT START AFTER BEFORE [ ( --full | [ ( --staging | --frozen ) ] [ --timestamps ] [ --checksums ] ) ]
-
-        argc = len(sys.argv)
-
-        if argc < 5:
-            raise Exception('Invalid number of arguments')
+        for var in [ 'ROOT', 'PROJECT' ]:
+            if not os.getenv(var):
+                raise Exception ("The required environment variable %s is not defined" % var)
 
         # Load service configuration and constants, and add command arguments
         # and global values needed for auditing
 
-        config = load_configuration("%s/config/config.sh" % sys.argv[1])
-        constants = load_configuration("%s/lib/constants.sh" % sys.argv[1])
-
-        #config.DEBUG = True # TEMP DEBUG
+        config = load_configuration("%s/config/config.sh" % os.getenv('ROOT'))
+        constants = load_configuration("%s/lib/constants.sh" % os.getenv('ROOT'))
 
         # If in production, ensure we are not running on the management server
         hostname = socket.getfqdn()
         if config.IDA_ENVIRONMENT == 'PRODUCTION' and hostname == 'idaman.fairdata.fi':
             raise Exception ("Do not run project auditing on %s" % hostname)
+
+        # Initialize logging using UTC timestamps
+
+        #config.DEBUG = True # TEMP DEBUG
+
+        if config.DEBUG:
+            config.LOG_LEVEL = logging.DEBUG
+        else:
+            config.LOG_LEVEL = logging.INFO
+
+        logging.basicConfig(
+            filename=config.LOG,
+            level=config.LOG_LEVEL,
+            format=LOG_ENTRY_FORMAT,
+            datefmt=TIMESTAMP_FORMAT)
+
+        logging.Formatter.converter = time.gmtime
 
         # Copy essential constants to config so they are easily passed to functions
         config.STAGING_FOLDER_SUFFIX = constants.STAGING_FOLDER_SUFFIX
@@ -167,75 +196,68 @@ def main():
         config.IDA_MIGRATION = constants.IDA_MIGRATION
         config.IDA_MIGRATION_TS = constants.IDA_MIGRATION_TS
 
+        # Get audit context 
+        config.START = os.getenv('START', generate_timestamp())
         config.SCRIPT = os.path.basename(sys.argv[0])
         config.PID = os.getpid()
-        config.PROJECT = sys.argv[2]
+        config.PROJECT = os.getenv('PROJECT')
         config.PROJECT_ROOT = "%s/%s%s" % (config.STORAGE_OC_DATA_ROOT, config.PROJECT_USER_PREFIX, config.PROJECT)
         config.PROJECT_CREATED = max([normalize_timestamp(os.path.getmtime(config.PROJECT_ROOT)), config.IDA_MIGRATION])
 
-        config.START = sys.argv[3]
-        config.AFTER = sys.argv[4]
-        config.BEFORE = sys.argv[5]
-
-        config.CHANGED_ONLY = ((config.AFTER > config.IDA_MIGRATION) or (config.BEFORE < config.START))
-
+        # Define default audit options
         config.FULL_AUDIT = False
-        config.AUDIT_STAGING = True
-        config.AUDIT_FROZEN = True
+        config.AUDIT_STAGING = False
+        config.AUDIT_FROZEN = False
         config.AUDIT_TIMESTAMPS = False
         config.AUDIT_CHECKSUMS = False
+        config.ERROR_FILE_PATHNAMES = None
 
         # Exclude all files associated with ongoing actions (neither completed nor cleared)
         config.INCOMPLETE_ACTION_FILE_PATHNAMES = get_incomplete_action_file_pathnames(config)
 
-        if argc > 6:
-            for i in range(6,argc):
-                arg = sys.argv[i]
-                if arg == '--full':
-                    if config.AUDIT_STAGING == False:
-                        raise Exception("Only one of --full or --frozen is allowed")
-                    if config.AUDIT_FROZEN == False:
-                        raise Exception("Only one of --full or --staging is allowed")
-                    config.FULL_AUDIT = True
-                    config.CHANGED_ONLY = False
-                    config.AUDIT_FROZEN = True
-                    config.AUDIT_STAGING = True
-                    config.AUDIT_TIMESTAMPS = True
-                    config.AUDIT_CHECKSUMS = True
-                elif arg == '--staging':
-                    if config.FULL_AUDIT:
-                        raise Exception("Only one of --full or --staging is allowed")
-                    if config.AUDIT_STAGING == False:
-                        raise Exception("Only one of --staging or --frozen is allowed")
-                    config.AUDIT_FROZEN = False
-                elif arg == '--frozen':
-                    if config.FULL_AUDIT:
-                        raise Exception("Only one of --full or --frozen is allowed")
-                    if config.AUDIT_FROZEN == False:
-                        raise Exception("Only one of --staging or --frozen is allowed")
-                    config.AUDIT_STAGING = False
-                elif arg == '--timestamps':
-                    config.AUDIT_TIMESTAMPS = True
-                elif arg == '--checksums':
-                    config.AUDIT_CHECKSUMS = True
-                else:
-                    raise Exception("Unrecognized argument: " % arg)
+        # Extract all pathnames from audit error file, if specified
+        config.ERROR_FILE = os.getenv('ERROR_FILE')
 
-        if config.DEBUG:
-            config.LOG_LEVEL = logging.DEBUG
+        # If re-auditing based on a specified error file, take options from error report
+        if config.ERROR_FILE:
+
+            report = get_error_file_report(config.ERROR_FILE)
+            config.ERROR_FILE_PATHNAMES = get_error_file_pathnames(report)
+            config.AFTER = '1970-01-01T00:00:00Z'
+            config.BEFORE = config.START
+            config.CHANGED_ONLY = False
+            config.AUDIT_STAGING = report.get('auditStaging', True)
+            config.AUDIT_FROZEN = report.get('auditFrozen', True)
+            config.AUDIT_TIMESTAMPS = report.get('auditTimestamps', False)
+            config.AUDIT_CHECKSUMS = report.get('auditChecksums', False)
+
+        # Else derive options from input parameters passed via environment
         else:
-            config.LOG_LEVEL = logging.INFO
 
-        # Convert START ISO timestamp strings to epoch seconds
+            config.AFTER = os.getenv('AFTER', '1970-01-01T00:00:00Z')
+            config.BEFORE = os.getenv('BEFORE', config.START)
+            config.CHANGED_ONLY = ((config.AFTER > config.IDA_MIGRATION) or (config.BEFORE < config.START))
+            config.FULL_AUDIT = os.getenv('FULL_AUDIT') == "true"
+            config.AUDIT_STAGING = os.getenv('AUDIT_STAGING') == "true"
+            config.AUDIT_FROZEN =  os.getenv('AUDIT_FROZEN') == "true"
+            config.AUDIT_TIMESTAMPS = os.getenv('AUDIT_TIMESTAMPS') == "true"
+            config.AUDIT_CHECKSUMS = os.getenv('AUDIT_CHECKSUMS') == "true"
 
-        start_datetime = dateutil.parser.isoparse(config.START)
-        config.START_TS = start_datetime.replace(tzinfo=timezone.utc).timestamp()
+            if config.FULL_AUDIT:
+                config.AUDIT_STAGING = True
+                config.AUDIT_FROZEN = True
+                config.AUDIT_TIMESTAMPS = True
+                config.AUDIT_CHECKSUMS = True
+                config.CHANGED_ONLY = False
+            else:
+                if not config.AUDIT_STAGING and not config.AUDIT_FROZEN:
+                    config.AUDIT_STAGING = True
+                    config.AUDIT_FROZEN = True
 
-        after_datetime = dateutil.parser.isoparse(config.AFTER)
-        config.AFTER_TS = after_datetime.replace(tzinfo=timezone.utc).timestamp()
-
-        before_datetime = dateutil.parser.isoparse(config.BEFORE)
-        config.BEFORE_TS = before_datetime.replace(tzinfo=timezone.utc).timestamp()
+        # Convert ISO timestamp strings to epoch seconds
+        config.START_TS = dateutil.parser.isoparse(config.START).replace(tzinfo=timezone.utc).timestamp()
+        config.AFTER_TS = dateutil.parser.isoparse(config.AFTER).replace(tzinfo=timezone.utc).timestamp()
+        config.BEFORE_TS = dateutil.parser.isoparse(config.BEFORE).replace(tzinfo=timezone.utc).timestamp()
 
         if config.DEBUG:
             sys.stderr.write("--- %s ---\n" % config.SCRIPT)
@@ -250,8 +272,6 @@ def main():
             sys.stderr.write("DBNAME:             %s\n" % config.DBNAME)
             sys.stderr.write("METAX_API:          %s\n" % config.METAX_API)
             sys.stderr.write("METAX_API_VERSION:  %s\n" % str(config.METAX_API_VERSION))
-            sys.stderr.write("ARGS#:              %d\n" % argc)
-            sys.stderr.write("ARGS:               %s\n" % str(sys.argv))
             sys.stderr.write("PID:                %s\n" % config.PID)
             sys.stderr.write("CHANGED_ONLY        %s\n" % config.CHANGED_ONLY)
             sys.stderr.write("AUDIT_STAGING:      %s\n" % config.AUDIT_STAGING)
@@ -262,34 +282,18 @@ def main():
             sys.stderr.write("IDA_MIGRATION_TS:   %s\n" % config.IDA_MIGRATION_TS)
             sys.stderr.write("AFTER:              %s\n" % config.AFTER)
             sys.stderr.write("AFTER_TS:           %d\n" % config.AFTER_TS)
-            sys.stderr.write("AFTER_TS_CHK:       %s\n" % normalize_timestamp(datetime.utcfromtimestamp(config.AFTER_TS)))
+            sys.stderr.write("AFTER_TS_CHK:       %s\n" % normalize_timestamp(datetime.fromtimestamp(config.AFTER_TS, tz=timezone.utc)))
             sys.stderr.write("BEFORE:             %s\n" % config.BEFORE)
             sys.stderr.write("BEFORE_TS:          %d\n" % config.BEFORE_TS)
-            sys.stderr.write("BEFORE_TS_CHK:      %s\n" % normalize_timestamp(datetime.utcfromtimestamp(config.BEFORE_TS)))
+            sys.stderr.write("BEFORE_TS_CHK:      %s\n" % normalize_timestamp(datetime.fromtimestamp(config.BEFORE_TS, tz=timezone.utc)))
             sys.stderr.write("START:              %s\n" % config.START)
             sys.stderr.write("START_TS:           %d\n" % config.START_TS)
-            sys.stderr.write("START_TS_CHK:       %s\n" % normalize_timestamp(datetime.utcfromtimestamp(config.START_TS)))
+            sys.stderr.write("START_TS_CHK:       %s\n" % normalize_timestamp(datetime.fromtimestamp(config.START_TS, tz=timezone.utc)))
+            sys.stderr.write("ERROR FILES:        %d\n" % len(config.ERROR_FILE_PATHNAMES) if config.ERROR_FILE_PATHNAMES is not None else 0)
             sys.stderr.write("INCOMPLETE FILES:   %d\n" % len(config.INCOMPLETE_ACTION_FILE_PATHNAMES))
 
         if (config.AFTER_TS >= config.BEFORE_TS):
             raise Exception("AFTER timestamp must be earlier than AUDIT_BEFORE adjusted timestamp")
-
-        # Initialize logging using UTC timestamps
-
-        if config.DEBUG:
-            config.LOG_LEVEL = logging.DEBUG
-        else:
-            config.LOG_LEVEL = logging.INFO
-
-        config.LOG_LEVEL = logging.DEBUG # TEMP HACK
-
-        logging.basicConfig(
-            filename=config.LOG,
-            level=config.LOG_LEVEL,
-            format=LOG_ENTRY_FORMAT,
-            datefmt=TIMESTAMP_FORMAT)
-
-        logging.Formatter.converter = time.gmtime
 
         # Audit the project according to the configured values, analyze any errors, and output a report
 
@@ -367,7 +371,8 @@ def add_frozen_files(nodes, counts, config):
 
         pathname = "frozen%s" % row[0]
 
-        if pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
+        if (not config.ERROR_FILE_PATHNAMES or pathname in config.ERROR_FILE_PATHNAMES) \
+            and pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
 
             node_details = {
                 'type': 'file',
@@ -476,7 +481,8 @@ def add_metax_files(nodes, counts, config):
             else:
                 pathname = "frozen%s" % file['file_path']
 
-            if pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
+            if (not config.ERROR_FILE_PATHNAMES or pathname in config.ERROR_FILE_PATHNAMES) \
+                and pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
 
                 if config.DEBUG:
                     sys.stderr.write("FILE: %s\n" % json.dumps(file))
@@ -664,7 +670,7 @@ def add_nextcloud_nodes(nodes, counts, config):
 
                     size = row[2]
 
-                    modified = normalize_timestamp(datetime.utcfromtimestamp(row[3]))
+                    modified = normalize_timestamp(datetime.fromtimestamp(row[3], tz=timezone.utc))
 
                     if node_type == 'file':
 
@@ -682,7 +688,7 @@ def add_nextcloud_nodes(nodes, counts, config):
                         if row[5] in NULL_VALUES:
                             uploaded = None
                         else:
-                            uploaded = normalize_timestamp(datetime.utcfromtimestamp(row[5]))
+                            uploaded = normalize_timestamp(datetime.fromtimestamp(row[5], tz=timezone.utc))
 
                         # If there is no upload timestamp, retrieve the latest 'add' timestamp from the changes table
                         # for the project and pathname in staging, if any, as the upload timestamp
@@ -760,7 +766,8 @@ def add_nextcloud_nodes(nodes, counts, config):
         else:
             pathname = "frozen/%s" % pathname[(project_name_len + 2):]
 
-        if pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
+        if (not config.ERROR_FILE_PATHNAMES or pathname in config.ERROR_FILE_PATHNAMES) \
+            and pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
 
             node = nodes.get(pathname)
 
@@ -771,7 +778,7 @@ def add_nextcloud_nodes(nodes, counts, config):
                 if row[1] == 2:
                     node_type = 'folder'
 
-                modified = normalize_timestamp(datetime.utcfromtimestamp(row[3]))
+                modified = normalize_timestamp(datetime.fromtimestamp(row[3], tz=timezone.utc))
 
                 if node_type == 'file':
 
@@ -787,7 +794,7 @@ def add_nextcloud_nodes(nodes, counts, config):
                     if row[5] in NULL_VALUES:
                         uploaded = None
                     else:
-                        uploaded = normalize_timestamp(datetime.utcfromtimestamp(row[5]))
+                        uploaded = normalize_timestamp(datetime.fromtimestamp(row[5], tz=timezone.utc))
 
                     # If there is no upload timestamp, retrieve the latest 'add' timestamp from the changes table
                     # for the project and pathname in staging, if any, as the upload timestamp
@@ -899,7 +906,7 @@ def add_nextcloud_nodes(nodes, counts, config):
 
                     if row:
 
-                        modified = normalize_timestamp(datetime.utcfromtimestamp(row[1]))
+                        modified = normalize_timestamp(datetime.fromtimestamp(row[1], tz=timezone.utc))
                         node_details = {'type': 'folder', 'modified': modified}
 
                         if node:
@@ -978,7 +985,7 @@ def add_filesystem_nodes(nodes, counts, config):
                         if modified < config.BEFORE_TS:
 
                             node_type = 'file'
-                            modified = normalize_timestamp(datetime.utcfromtimestamp(modified))
+                            modified = normalize_timestamp(datetime.fromtimestamp(modified, tz=timezone.utc))
                             size = node_stats.st_size
 
                             if path.is_file():
@@ -1051,11 +1058,12 @@ def add_filesystem_nodes(nodes, counts, config):
                 else:
                     pathname = "frozen/%s" % pathname[(project_name_len + 2):]
 
-                if pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
+                if (not config.ERROR_FILE_PATHNAMES or pathname in config.ERROR_FILE_PATHNAMES) \
+                    and pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
 
                     node_type = 'file'
 
-                    modified = normalize_timestamp(datetime.utcfromtimestamp(modified))
+                    modified = normalize_timestamp(datetime.fromtimestamp(modified, tz=timezone.utc))
 
                     if type == 'd':
                         node_type = 'folder'
@@ -1288,7 +1296,7 @@ def audit_project(config):
 
                             fsstat = os.stat(filesystem_pathname)
                             size = fsstat.st_size
-                            modified = normalize_timestamp(datetime.utcfromtimestamp(fsstat.st_mtime))
+                            modified = normalize_timestamp(datetime.fromtimestamp(fsstat.st_mtime, tz=timezone.utc))
 
                             node['replication'] = {'type': 'file', 'size': size, 'modified': modified}
 
@@ -1383,6 +1391,7 @@ def audit_project(config):
     report['auditFrozen'] = config.AUDIT_FROZEN
     report['auditTimestamps'] = config.AUDIT_TIMESTAMPS
     report['auditChecksums'] = config.AUDIT_CHECKSUMS
+    report['errorFile'] = config.ERROR_FILE
     report['filesystemNodeCount'] = counts['filesystemNodeCount']
     report['nextcloudNodeCount'] = counts['nextcloudNodeCount']
     report['frozenFileCount'] = counts['frozenFileCount']
@@ -1564,6 +1573,7 @@ def output_report(report):
     sys.stdout.write('"project": %s,\n' % json.dumps(report.get('project')))
     sys.stdout.write('"start": %s,\n' % json.dumps(report.get('start')))
     sys.stdout.write('"end": %s,\n' % json.dumps(report.get('end')))
+    sys.stdout.write('"errorFile": %s,\n' % json.dumps(report.get('errorFile')))
     sys.stdout.write('"changedAfter": %s,\n' % json.dumps(report.get('changedAfter')))
     sys.stdout.write('"changedBefore": %s,\n' % json.dumps(report.get('changedBefore')))
     sys.stdout.write('"auditStaging": %s,\n' % json.dumps(report.get('auditStaging')))

@@ -32,7 +32,7 @@ import time
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning
 from sortedcontainers import SortedDict
 from stat import *
 from utils import LOG_ENTRY_FORMAT, TIMESTAMP_FORMAT, NULL_VALUES, load_configuration, normalize_timestamp, \
@@ -367,12 +367,12 @@ def build_file_details(config, rows):
         else:
             pathname = pathname[(project_name_frozen_offset):]
 
-        modified = normalize_timestamp(datetime.utcfromtimestamp(row[2]))
+        modified = normalize_timestamp(datetime.fromtimestamp(row[2], tz=timezone.utc))
 
         if row[3] in NULL_VALUES:
             uploaded = None
         else:
-            uploaded = normalize_timestamp(datetime.utcfromtimestamp(row[3]))
+            uploaded = normalize_timestamp(datetime.fromtimestamp(row[3], tz=timezone.utc))
 
         # If the uploaded timestamp is None, and if we are doing a full audit, retrieve the latest 'add' change event for
         # project and file pathname in staging from the changes table, and if exists and is older than the age limit, use

@@ -473,7 +473,7 @@ def array_difference(arr1, arr2):
     return (in_first_not_second, in_second_not_first)
 
 
-def audit_project(self, project, status, after = None, area = None, timestamps = True, checksums = True, before = None):
+def audit_project(self, project, status, after = None, area = None, timestamps = True, checksums = True, before = None, errorFile = None):
     """
     Audit the specified project, verify that the audit report file was created with the specified
     status, and load and return the audit report as a JSON object, with the audit report pathname
@@ -484,33 +484,31 @@ def audit_project(self, project, status, after = None, area = None, timestamps =
 
     parameters = ""
 
-    if after is None and before is None and area is None and timestamps and checksums:
+    if errorFile:
+        parameters = " --error-file %s" % errorFile
+    elif after is None and before is None and area is None and timestamps and checksums:
         parameters = " --full"
-
     else:
-
         if after:
             parameters = "%s --changed-after %s" % (parameters, after)
-
         if before:
             parameters = "%s --changed-before %s" % (parameters, before)
-
         if area:
             parameters = "%s --%s" % (parameters, area)
             area = " %s" % area
-
         if timestamps:
             parameters = "%s --timestamps" % parameters
-
         if checksums:
             parameters = "%s --checksums" % parameters
+        if errorFile:
+            parameters = "%s --error-file %s" % (parameters, errorFile)
 
     if self.config.get('SEND_TEST_EMAILS') == 'true':
         parameters = "%s --report" % parameters
 
     print ("(auditing project %s%s)" % (project, parameters))
 
-    cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/audit-project %s %s" % (
+    cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/audit-project %s%s" % (
         self.config["HTTPD_USER"],
         self.config["ROOT"],
         project,

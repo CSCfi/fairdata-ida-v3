@@ -29,7 +29,7 @@ import requests
 import logging
 import psycopg2
 import dateutil.parser
-from datetime import datetime
+from datetime import datetime, timezone
 from hashlib import sha256
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -115,9 +115,9 @@ def normalize_timestamp(timestamp):
 
     # Sniff the input timestamp value and convert to a datetime instance as needed
     if isinstance(timestamp, str):
-        timestamp = datetime.utcfromtimestamp(dateutil.parser.parse(timestamp).timestamp())
+        timestamp = datetime.fromtimestamp(dateutil.parser.parse(timestamp).timestamp(), tz=timezone.utc)
     elif isinstance(timestamp, float) or isinstance(timestamp, int):
-        timestamp = datetime.utcfromtimestamp(timestamp)
+        timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
     elif not isinstance(timestamp, datetime):
         raise Exception("Invalid timestamp value")
 

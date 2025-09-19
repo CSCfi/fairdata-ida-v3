@@ -35,7 +35,7 @@ import logging
 import requests
 import psycopg2
 import re
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import InsecureRequestWarning
 from utils import LOG_ENTRY_FORMAT, TIMESTAMP_FORMAT, load_configuration, generate_timestamp, get_project_pathname
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
