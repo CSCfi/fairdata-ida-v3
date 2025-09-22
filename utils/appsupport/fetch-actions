@@ -36,7 +36,29 @@ Usage: $SCRIPT [PROJECT] [STATUS]
        If no status is specified, fetches actions iregardless of status.
 "
 
+#--------------------------------------------------------------------------------
+# Process command line arguments
+
 STATUS="null"
+PROJECT="$1"
+
+case $PROJECT in
+    "pending" | "failed" | "cleared" | "completed" | "incomplete" | "initiating")
+        STATUS="$PROJECT"
+        PROJECT="null"
+        ;;
+esac
+
+if [ "$#" -ge 2 ]; then
+    STATUS="$2"
+    case $STATUS in
+        "pending" | "failed" | "cleared" | "completed" | "incomplete" | "initiating")
+            ;;
+        *)
+            errorExit "Invalid status: ${STATUS}"
+            ;;
+    esac
+fi
 
 #--------------------------------------------------------------------------------
 # Initialize script with common definitions
@@ -49,31 +71,6 @@ then
 else
     echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
     exit 1
-fi
-
-#--------------------------------------------------------------------------------
-# Process command line arguments
-
-if [ "$#" = 1 ]; then
-    PROJECT="$1"
-
-    case $PROJECT in
-        "pending" | "failed" | "cleared" | "completed" | "incomplete" | "initiating")
-            STATUS="$PROJECT"
-            PROJECT="null"
-            ;;
-    esac
-fi
-
-if [ "$#" -ge 2 ]; then
-    STATUS="$2"
-    case $STATUS in
-        "pending" | "failed" | "cleared" | "completed" | "incomplete" | "initiating")
-            ;;
-        *)
-            errorExit "Invalid status: ${STATUS}"
-            ;;
-    esac
 fi
 
 #--------------------------------------------------------------------------------
