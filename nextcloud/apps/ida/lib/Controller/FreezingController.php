@@ -1867,6 +1867,7 @@ class FreezingController extends Controller
                 }
 
                 $retryActionEntity->setStorage(Generate::newTimestamp());
+                $this->actionMapper->update($retryActionEntity);
             }
 
             // Publish new action message to RabbitMQ
