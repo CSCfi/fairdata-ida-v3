@@ -420,6 +420,22 @@ class TestAgents(unittest.TestCase):
         wait_for_pending_actions(self, "test_project_a", test_user_a)
         check_for_failed_actions(self, "test_project_a", test_user_a)
 
+        # The standard wait_for_pending_actions is not 100% reliable for a complex operation like "Repair project"
+        # Below is a "custom wait" function : poll for the existence of the file that the "Repair project" action is supposed to restore
+        # This must be done due to slow GlusterFS cache file synchronization operations between servers, 
+        # in the case that the Repair process has been handled by different servers
+        pathname = "%s/projects/test_project_a/testdata/2017-08/Experiment_1/baseline/test03.dat" % (self.config["DATA_REPLICATION_ROOT"])
+        print(f"Custom wait for replication of: {pathname}")
+        wait_timeout = 120
+        wait_start_time = time.time()
+        while not os.path.exists(pathname):
+            if time.time() - wait_start_time > wait_timeout:
+                # Check for failed actions before failing the test to provide more debug info
+                check_for_failed_actions(self, "test_project_a", test_user_a)
+                self.fail(f"Timed out after {wait_timeout}s waiting for file '{pathname}' to be replicated by the agent.")
+            time.sleep(1) # Check once per second
+        print("Replicated file found. Proceeding...")
+
         response = requests.get("%s/files/action/%s" % (self.config["IDA_API"], action_data["pid"]), auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_set_data = response.json()
