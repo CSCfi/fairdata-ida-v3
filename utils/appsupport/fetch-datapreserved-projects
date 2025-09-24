@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2022 Ministry of Education and Culture, Finland
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,7 @@
 # Initialize script with common definitions
 
 SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT ID"
+USAGE="Usage: $SCRIPT"
 PROJECT="null"
 
 INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
@@ -41,27 +41,17 @@ if [ "$CSC_DATA_DELETION_MICROSERVICE" == "" ]; then
     errorExit "The variable CSC_DATA_DELETION_MICROSERVICE is not defined in the configuration. Aborting." >&2
 fi
 
-WORKFLOW_ID="$1"
-
-if [ -z "$WORKFLOW_ID" ]
-then
-    echo "$USAGE"
-    exit 1
-fi
-
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/workflow?id=$WORKFLOW_ID" 2>$ERR)
+OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&states=datapreserved&open=false" 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     addToLog "$MSG"
-    echo "$MSG"
-    errorExit "Failed to retrieve workflow details."
+    echo "$MSG" >&2
+    errorExit "Failed to retrieve projects from microservice"
 fi
 
-MSG=`echo $OUT | tr "\n" " " `
-addToLog "$MSG"
-echo "$OUT"
+echo "$OUT" | jq --indent 4
 
 addToLog "DONE"

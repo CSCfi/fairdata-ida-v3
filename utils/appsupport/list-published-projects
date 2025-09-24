@@ -43,7 +43,7 @@ OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets?fields=fileset&has_
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    errorExit "Query to Metax failed: $MSG"
+    errorExit "$MSG"
 fi
 
 echo "$OUT" | jq -r '.[] | select(.fileset.storage_service == "ida") | .fileset.csc_project' | sort -u

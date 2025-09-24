@@ -24,7 +24,7 @@
 # Initialize script with common definitions
 
 SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT DATASET_ID [--json]"
+USAGE="Usage: $SCRIPT DATASET_ID"
 PROJECT="null"
 
 INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
@@ -43,21 +43,15 @@ if [ -z "$DATASET_ID" ]; then
     errorExit "Dataset identifier must be specified"
 fi
 
-JSON=$(echo "$*" | grep -- "--json")
-
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets/${DATASET_ID}/files?fields=storage_identifier,pathname&pagination=false")
+OUT=$($ROOT/utils/appsupport/fetch-dataset-files "$DATASET_ID" 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    errorExit "Query to Metax failed: $MSG"
+    errorExit "Failed to fetch dataset files: $MSG"
 fi
 
-if [ "$JSON" ]; then
-    echo "$OUT" | jq --indent 4
-else
-    echo "$OUT" | jq -r 'if type=="array" then .[] | .pathname else empty end' | sort -u
-fi
+echo "$OUT" | jq -r 'if type=="array" then .[] | .pathname else empty end' | sort -u
 
 addToLog "DONE"

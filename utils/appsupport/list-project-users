@@ -24,7 +24,7 @@
 # Initialize script with common definitions
 
 SCRIPT=$(basename $0)
-USAGE="Usage: $SCRIPT PROJECT [--json]"
+USAGE="Usage: $SCRIPT PROJECT"
 
 INIT_FILE=$(dirname $0)/lib/init_appsupport_script.sh
 
@@ -37,8 +37,6 @@ else
 fi
 
 #--------------------------------------------------------------------------------
-
-JSON=$(echo "$*" | grep -- "--json" || true)
 
 if [ ! -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files" ]; then
     errorExit "The project '${PROJECT}' does not exist"
@@ -59,13 +57,6 @@ fi
 
 # --------------------------------------------------------------------------------
 
-if [ "$JSON" ]; then
-    USERS=$(format_token_list_as_json "$USERS" 4)
-    echo "["
-    printf "%s\n" "$USERS"
-    echo "]"
-else
-    echo "$USERS"
-fi
+echo "$USERS"
 
 addToLog "DONE"

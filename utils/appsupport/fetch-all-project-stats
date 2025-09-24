@@ -24,7 +24,7 @@
 # Initialize script with common definitions
 
 SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT [csv]"
+USAGE="Usage: $SCRIPT [--csv]"
 PROJECT="null"
 
 INIT_FILE=`dirname $0`/lib/init_audit_script.sh
@@ -37,18 +37,20 @@ else
     exit 1
 fi
 
+CSV=$(echo "$1" | grep "csv")
+
 #--------------------------------------------------------------------------------
 
 FIRST="true"
 
-if [ "$1" = "csv" ]; then
+if [ "$CSV" ]; then
 
     for PROJECT in `$ROOT/utils/appsupport/list-projects`; do
         if [ "$FIRST" == "true" ]; then
-            $ROOT/utils/appsupport/fetch-project-stats $PROJECT csv 2>/dev/null
+            $ROOT/utils/appsupport/fetch-project-stats $PROJECT --csv 2>/dev/null
             FIRST="false"
         else
-            $ROOT/utils/appsupport/fetch-project-stats $PROJECT csv 2>/dev/null | tail -1
+            $ROOT/utils/appsupport/fetch-project-stats $PROJECT --csv 2>/dev/null | tail -1
         fi
     done
 

@@ -44,17 +44,6 @@ fi
 
 #--------------------------------------------------------------------------------
 
-JSON=$(echo "$*" | grep -- "--json" || true)
-
-# --------------------------------------------------------------------------------
-
-if [ "$JSON" ]; then
-    EXCLUDED_PROJECTS=$(format_token_list_as_json "$OLD_DATA_EXCLUDED_PROJECTS" 4)
-    echo "["
-    printf "%s\n" "$EXCLUDED_PROJECTS"
-    echo "]"
-else
-    echo "$OLD_DATA_EXCLUDED_PROJECTS" | tr -s '[:space:]' '\n' | sed '/^$/d'
-fi
+echo "$OLD_DATA_EXCLUDED_PROJECTS" | tr -s '[:space:]' '\n' | sed '/^$/d'
 
 addToLog "DONE"

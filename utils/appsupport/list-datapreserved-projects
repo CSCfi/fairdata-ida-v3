@@ -24,7 +24,7 @@
 # Initialize script with common definitions
 
 SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT [--json | --local]"
+USAGE="Usage: $SCRIPT [--local]"
 PROJECT="null"
 
 INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
@@ -41,35 +41,25 @@ if [ "$CSC_DATA_DELETION_MICROSERVICE" == "" ]; then
     errorExit "The variable CSC_DATA_DELETION_MICROSERVICE is not defined in the configuration. Aborting." >&2
 fi
 
-JSON=$(echo "$*" | grep -w -- '--json')
 LOCAL=$(echo "$*" | grep -w -- '--local')
 
 #--------------------------------------------------------------------------------
 
 if [ "$LOCAL" ]; then
 
-    if [ "$JSON" ]; then
-        errorExit "The --json parameter cannot be used with the --local parameter" >&2
-    fi
-
-    find -L /mnt/storage_vol01/ida -mindepth 3 -maxdepth 3 -type f -name PRESERVED | sed -e 's/.*\/PSO_//' | sed -e 's/\/files.*$//'
+    find -L /mnt/storage_vol01/ida -mindepth 3 -maxdepth 3 -type f -name PRESERVED | \
+        sed -e 's/.*\/PSO_//' | sed -e 's/\/files.*$//'
 
 else
 
-    OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&states=datapreserved&open=false" 2>$ERR)
+    OUT=$($ROOT/utils/appsupport/fetch-datapreserved-projects 2>$ERR)
 
     if [ -s $ERR ]; then
         MSG=`cat $ERR`
-        addToLog "$MSG"
-        echo "$MSG" >&2
-        errorExit "Failed to retrieve projects from microservice"
+        errorExit "$MSG" 
     fi
 
-    if [ "$JSON" ]; then
-        echo "$OUT" | jq --indent 4 '.'
-    else
-        echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
-    fi
+    echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
 fi
 
 addToLog "DONE"

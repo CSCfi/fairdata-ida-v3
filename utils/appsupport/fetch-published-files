@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2022 Ministry of Education and Culture, Finland
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -21,11 +21,18 @@
 # @license  GNU Affero General Public License, version 3
 # @link     https://www.fairdata.fi/en/ida
 # --------------------------------------------------------------------------------
-# Initialize script with common definitions
 
-SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT"
-PROJECT="null"
+SCRIPT=`basename "$(realpath $0)"`
+
+USAGE="
+Usage: $SCRIPT PROJECT
+       $SCRIPT -h
+
+       PROJECT    the project name
+"
+
+#--------------------------------------------------------------------------------
+# Initialize script with common definitions
 
 INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
 
@@ -37,19 +44,15 @@ else
     exit 1
 fi
 
-if [ "$CSC_DATA_DELETION_MICROSERVICE" == "" ]; then
-    errorExit "The variable CSC_DATA_DELETION_MICROSERVICE is not defined in the configuration. Aborting." >&2
-fi
-
 #--------------------------------------------------------------------------------
 
-OUT=$($ROOT/utils/appsupport/fetch-deletedata-projects 2>$ERR)
+OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/files?csc_project=${PROJECT}&published=true&pagination=false")
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    errorExit "$MSG"
+    errorExit "Query to Metax failed: $MSG"
 fi
 
-echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
+echo "$OUT" | jq --indent 4
 
 addToLog "DONE"

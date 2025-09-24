@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2022 Ministry of Education and Culture, Finland
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -43,13 +43,15 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($ROOT/utils/appsupport/fetch-deletedata-projects 2>$ERR)
+OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&states=datadeleted&open=false" 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    errorExit "$MSG"
+    addToLog "$MSG"
+    echo "$MSG" >&2
+    errorExit "Failed to retrieve projects from microservice"
 fi
 
-echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
+echo "$OUT" | jq --indent 4
 
 addToLog "DONE"

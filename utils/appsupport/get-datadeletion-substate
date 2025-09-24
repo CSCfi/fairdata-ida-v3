@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2022 Ministry of Education and Culture, Finland
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -23,11 +23,9 @@
 # --------------------------------------------------------------------------------
 # Initialize script with common definitions
 
-SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT"
-PROJECT="null"
+SCRIPT=$(basename $0)
 
-INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
+INIT_FILE=$(dirname $0)/lib/init_appsupport_script.sh
 
 if [ -e $INIT_FILE ]
 then
@@ -41,15 +39,39 @@ if [ "$CSC_DATA_DELETION_MICROSERVICE" == "" ]; then
     errorExit "The variable CSC_DATA_DELETION_MICROSERVICE is not defined in the configuration. Aborting." >&2
 fi
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
-OUT=$($ROOT/utils/appsupport/fetch-deletedata-projects 2>$ERR)
+# If the project PRESERVED sentinel file exists, report a substate 'datapreserved'
+# else retrieve its substate from the microservice.
 
-if [ -s $ERR ]; then
-    MSG=`cat $ERR`
-    errorExit "$MSG"
+if [ -f "$PROJECT_PRESERVED" ]; then
+    STATE="datapreserved"
 fi
 
-echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
+# --------------------------------------------------------------------------------
+
+if [ -z "$STATE" ]; then
+
+    OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&projects=${PROJECT}" 2>$ERR)
+
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        addToLog "$MSG"
+    fi
+
+    if [ "$OUT" ]; then
+        STATE=$(echo "$OUT" | jq '.[0] | .state' --raw-output 2>/dev/null)
+    fi
+
+    if [ "$STATE" = "null" ]; then
+        STATE="unknown"
+    fi
+fi
+
+if [ -z "$STATE" ]; then
+    STATE="unknown"
+fi
+
+echo "$STATE"
 
 addToLog "DONE"

@@ -24,7 +24,7 @@
 # Initialize script with common definitions
 
 SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT"
+USAGE="Usage: $SCRIPT ID"
 PROJECT="null"
 
 INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
@@ -41,15 +41,28 @@ if [ "$CSC_DATA_DELETION_MICROSERVICE" == "" ]; then
     errorExit "The variable CSC_DATA_DELETION_MICROSERVICE is not defined in the configuration. Aborting." >&2
 fi
 
+WORKFLOW_ID="$1"
+
+if [ -z "$WORKFLOW_ID" ]
+then
+    echo "$USAGE"
+    exit 1
+fi
+
 #--------------------------------------------------------------------------------
 
-OUT=$($ROOT/utils/appsupport/fetch-deletedata-projects 2>$ERR)
+OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/workflow?id=$WORKFLOW_ID" 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    errorExit "$MSG"
+    addToLog "$MSG"
+    echo "$MSG"
+    errorExit "Failed to retrieve workflow details."
 fi
 
-echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
+MSG=`echo $OUT | tr "\n" " " `
+addToLog "$MSG"
+
+echo "$OUT" | jq --indent 4
 
 addToLog "DONE"

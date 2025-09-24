@@ -33,7 +33,7 @@
 # - the storage volume where the project data resides
 # The first argument must be the ROOT of the IDA code base.
 # The second argument must be the name of a project.
-# The third argument is optional, and if equal to 'csv', the output will be tab
+# The third argument is optional, and if equal to '--csv', the output will be tab
 # delmited; otherwise, the output will be encoded as a JSON object
 # --------------------------------------------------------------------------------
 
@@ -290,7 +290,7 @@ def main():
 
         # Return project stats
 
-        if len(sys.argv) > 3 and sys.argv[3] == "csv":
+        if len(sys.argv) > 3 and sys.argv[3] in ["--csv", "csv"]:
             sys.stdout.write("PROJECT\t")
             sys.stdout.write("QUOTA_BYTES\t")
             sys.stdout.write("TOTAL_FILES\t")

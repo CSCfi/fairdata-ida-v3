@@ -79,7 +79,7 @@ LOOP=1
 
 while true; do
 
-    OUT=$($ROOT/utils/appsupport/fetch-workflow-details $PID 2>$ERR)
+    OUT=$($ROOT/utils/appsupport/fetch-idm-workflow-details $PID 2>$ERR)
 
     if [ -s $ERR ]; then
         MSG=$(cat $ERR | tr '\n' ' ')

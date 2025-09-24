@@ -333,7 +333,7 @@ class TestDataDeletion(unittest.TestCase):
         self.assertEqual("false", output.strip())
 
         print("Verify project A has exactly 3 published datasets")
-        cmd = "%s/list-published-datasets test_project_a --json" % (cmd_base)
+        cmd = "%s/fetch-published-datasets test_project_a" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
         except subprocess.CalledProcessError as error:
@@ -531,7 +531,7 @@ class TestDataDeletion(unittest.TestCase):
         self.assertEqual("44", output.strip())
 
         print("Verify all project A datasets remain active (not deprecated) in Metax")
-        cmd = "%s/list-published-datasets test_project_a --json" % (cmd_base)
+        cmd = "%s/fetch-published-datasets test_project_a" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
         except subprocess.CalledProcessError as error:

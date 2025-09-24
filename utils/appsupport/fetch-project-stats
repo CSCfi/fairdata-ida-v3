@@ -29,7 +29,7 @@
 # --------------------------------------------------------------------------------
 
 SCRIPT=`basename $0`
-USAGE="Usage: $SCRIPT PROJECT [csv]"
+USAGE="Usage: $SCRIPT PROJECT [--csv]"
 
 #--------------------------------------------------------------------------------
 # Initialize script with common definitions
@@ -44,6 +44,8 @@ else
     exit 1
 fi
 
+CSV=$(echo "$2" | grep "csv")
+
 #--------------------------------------------------------------------------------
 
 if [ ! -d "${STORAGE_OC_DATA_ROOT}/${PROJECT_USER_PREFIX}${PROJECT}/files" ]; then
@@ -52,8 +54,8 @@ fi
 
 source $ROOT/venv/bin/activate
 
-if [ "$2" = "csv" ]; then
-    python -u $ROOT/utils/appsupport/lib/fetch_project_stats.py $ROOT $PROJECT csv
+if [ "$CSV" ]; then
+    python -u $ROOT/utils/appsupport/lib/fetch_project_stats.py $ROOT $PROJECT --csv
 else
     python -u $ROOT/utils/appsupport/lib/fetch_project_stats.py $ROOT $PROJECT | jq --indent 4
 fi

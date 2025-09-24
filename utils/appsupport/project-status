@@ -91,7 +91,7 @@ if [ -s $ERR ]; then
     errorExit "Failed to retrieve listing of published datasets"
 fi
 
-PROJECT_STATE=$($ROOT/utils/appsupport/fetch-datadeletion-substate $PROJECT 2>$ERR)
+PROJECT_STATE=$($ROOT/utils/appsupport/get-datadeletion-substate $PROJECT 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=$(cat $ERR)

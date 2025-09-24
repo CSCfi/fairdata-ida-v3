@@ -3261,16 +3261,17 @@ class FreezingController extends Controller
 
         $this->logger->debug('cloneFiles:' . ' failedActionPid=' . $failedActionPid . ' retryActionPid=' . $retryActionPid);
 
-        $timestamp = Generate::newTimestamp();
+        if ($failedAction->getPids()) {
 
-        foreach ($this->fileMapper->findActionFiles($failedActionPid) as $fileEntity) {
+            $timestamp = Generate::newTimestamp();
 
-            if ($failedAction->getPids()) {
+            foreach ($this->fileMapper->findActionFiles($failedActionPid) as $fileEntity) {
+
                 $this->cloneFile($fileEntity, $retryActionPid);
-            }
 
-            $fileEntity->setCleared($timestamp);
-            $this->fileMapper->update($fileEntity);
+                $fileEntity->setCleared($timestamp);
+                $this->fileMapper->update($fileEntity);
+            }
         }
     }
 

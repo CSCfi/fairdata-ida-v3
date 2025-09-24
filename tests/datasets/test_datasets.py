@@ -633,15 +633,25 @@ class TestDatasets(unittest.TestCase):
         #   output includes dataset_6_pid
         #   output for test_project_b includes 0 datasets
 
-        print("    list-published-datasets")
+        print("    fetch-published-datasets")
 
-        cmd = "%s/list-published-datasets test_project_a --json" % (cmd_base)
+        cmd = "%s/fetch-published-datasets test_project_a" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         datasets = json.loads(output)
         self.assertEqual(6, len(datasets))
+
+        cmd = "%s/fetch-published-datasets test_project_b" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(0, len(datasets))
+
+        print("    list-published-datasets")
 
         cmd = "%s/list-published-datasets test_project_a" % (cmd_base)
         try:
@@ -654,14 +664,6 @@ class TestDatasets(unittest.TestCase):
         self.assertIn(dataset_4_pid, output)
         self.assertIn(dataset_5_pid, output)
         self.assertIn(dataset_6_pid, output)
-
-        cmd = "%s/list-published-datasets test_project_b --json" % (cmd_base)
-        try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-        except subprocess.CalledProcessError as error:
-            self.fail(error.output.decode(sys.stdout.encoding))
-        datasets = json.loads(output)
-        self.assertEqual(0, len(datasets))
 
         cmd = "%s/list-published-datasets test_project_b" % (cmd_base)
         try:
@@ -678,15 +680,25 @@ class TestDatasets(unittest.TestCase):
         #       /testdata/2017-10/Experiment_4/test01.dat
         #   output for test_project_b includes 0 files
 
-        print("    list-published-files")
+        print("    fetch-published-files")
 
-        cmd = "%s/list-published-files test_project_a --json" % (cmd_base)
+        cmd = "%s/fetch-published-files test_project_a" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         datasets = json.loads(output)
         self.assertEqual(51, len(datasets))
+
+        cmd = "%s/fetch-published-files test_project_b" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        datasets = json.loads(output)
+        self.assertEqual(0, len(datasets))
+
+        print("    list-published-files")
 
         cmd = "%s/list-published-files test_project_a" % (cmd_base)
         try:
@@ -697,14 +709,6 @@ class TestDatasets(unittest.TestCase):
         self.assertIn("/testdata/2017-08/Experiment_2/test01.dat", output)
         self.assertIn("/testdata/2017-10/Experiment_3/test01.dat", output)
         self.assertIn("/testdata/2017-10/Experiment_4/test01.dat", output)
-
-        cmd = "%s/list-published-files test_project_b --json" % (cmd_base)
-        try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-        except subprocess.CalledProcessError as error:
-            self.fail(error.output.decode(sys.stdout.encoding))
-        datasets = json.loads(output)
-        self.assertEqual(0, len(datasets))
 
         cmd = "%s/list-published-files test_project_b" % (cmd_base)
         try:
@@ -733,15 +737,17 @@ class TestDatasets(unittest.TestCase):
         #   output for dataset_5_pid includes 13 files
         #   output for dataset_6_pid includes 13 files
 
-        print("    list-dataset-files")
+        print("    fetch-dataset-files")
 
-        cmd = "%s/list-dataset-files %s --json" % (cmd_base, dataset_1_pid)
+        cmd = "%s/fetch-dataset-files %s" % (cmd_base, dataset_1_pid)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         datasets = json.loads(output)
         self.assertEqual(13, len(datasets))
+
+        print("    list-dataset-files")
 
         cmd = "%s/list-dataset-files %s" % (cmd_base, dataset_1_pid)
         try:

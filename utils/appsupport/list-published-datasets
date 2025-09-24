@@ -25,14 +25,11 @@
 SCRIPT=`basename "$(realpath $0)"`
 
 USAGE="
-Usage: $SCRIPT PROJECT [--json]
+Usage: $SCRIPT PROJECT
        $SCRIPT -h
 
        PROJECT    the project name
-       --json     output dataset details as JSON
 "
-
-JSON=$(echo "$*" | grep -- "--json")
 
 #--------------------------------------------------------------------------------
 # Initialize script with common definitions
@@ -49,17 +46,13 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets?csc_projects=${PROJECT}&fields=id,title&has_files=true&state=published&deprecated=false&pagination=false")
+OUT=$($ROOT/utils/appsupport/fetch-published-datasets "$PROJECT" 2>$ERR)
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
-    errorExit "Query to Metax failed: $MSG"
+    errorExit "Failed to fetch published datasets: $MSG"
 fi
 
-if [ "$JSON" ]; then
-    echo "$OUT" | jq --indent 4
-else
-    echo "$OUT" | jq -r 'if type=="array" then .[] | .id else empty end' | sort -u
-fi
+echo "$OUT" | jq -r 'if type=="array" then .[] | .id else empty end' | sort -u
 
 addToLog "DONE"

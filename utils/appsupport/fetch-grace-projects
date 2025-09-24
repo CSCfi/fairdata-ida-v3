@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------
 # This file is part of the Fairdata IDA research data storage service.
 #
-# Copyright (C) 2022 Ministry of Education and Culture, Finland
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -23,9 +23,11 @@
 # --------------------------------------------------------------------------------
 # Initialize script with common definitions
 
-SCRIPT=$(basename $0)
+SCRIPT=`basename $0`
+USAGE="Usage: $SCRIPT"
+PROJECT="null"
 
-INIT_FILE=$(dirname $0)/lib/init_appsupport_script.sh
+INIT_FILE=`dirname $0`/lib/init_appsupport_script.sh
 
 if [ -e $INIT_FILE ]
 then
@@ -39,39 +41,17 @@ if [ "$CSC_DATA_DELETION_MICROSERVICE" == "" ]; then
     errorExit "The variable CSC_DATA_DELETION_MICROSERVICE is not defined in the configuration. Aborting." >&2
 fi
 
-# --------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
 
-# If the project PRESERVED sentinel file exists, report a substate 'datapreserved'
-# else retrieve its substate from the microservice.
+OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&states=grace&open=false" 2>$ERR)
 
-if [ -f "$PROJECT_PRESERVED" ]; then
-    STATE="datapreserved"
+if [ -s $ERR ]; then
+    MSG=`cat $ERR`
+    addToLog "$MSG"
+    echo "$MSG" >&2
+    errorExit "Failed to retrieve projects from microservice"
 fi
 
-# --------------------------------------------------------------------------------
-
-if [ -z "$STATE" ]; then
-
-    OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&projects=${PROJECT}" 2>$ERR)
-
-    if [ -s $ERR ]; then
-        MSG=$(cat $ERR | tr '\n' ' ')
-        addToLog "$MSG"
-    fi
-
-    if [ "$OUT" ]; then
-        STATE=$(echo "$OUT" | jq '.[0] | .state' --raw-output 2>/dev/null)
-    fi
-
-    if [ "$STATE" = "null" ]; then
-        STATE="unknown"
-    fi
-fi
-
-if [ -z "$STATE" ]; then
-    STATE="unknown"
-fi
-
-echo "$STATE"
+echo "$OUT" | jq --indent 4
 
 addToLog "DONE"

@@ -93,7 +93,7 @@ MESSAGE="${MESSAGE}
 
 #--------------------------------------------------------------------------------
 
-RECIPIENTS=`$ROOT/utils/appsupport/fetch-project-emails "$PROJECT" 2>/dev/null`
+RECIPIENTS=`$ROOT/utils/appsupport/get-project-emails "$PROJECT" 2>/dev/null`
 
 if [ "$RECIPIENTS" = "" ]; then
     echo "Warning: The project ${PROJECT} has no users!"
