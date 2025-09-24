@@ -59,7 +59,7 @@ PID="$1"
 #--------------------------------------------------------------------------------
 
 if [ $METAX_API_VERSION -ge 3 ]; then
-    OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "${METAX_API}/files?storage_service=ida&storage_identifier=${PID}&fields=id&limit=1" 2>$ERR)
+    OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "${METAX_API}/files?storage_service=ida&storage_identifier=${PID}&limit=1" 2>$ERR)
 else
     URL="${METAX_API}/files/${PID}"
     OUT=$($CURL_GET $METAX_CREDENTIALS "${URL}" 2>$ERR)
