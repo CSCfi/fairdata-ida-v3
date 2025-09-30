@@ -199,7 +199,7 @@ class TestAuditing(unittest.TestCase):
 
         print("--- Repairing project A")
 
-        cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_a)
+        cmd = "sudo -u %s DEBUG=false %s/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_a)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:

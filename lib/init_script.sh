@@ -37,22 +37,12 @@ done
 #--------------------------------------------------------------------------------
 # Load service constants and configuration settings
 
-SCRIPT_PATHNAME="$(realpath $0)"
-PARENT_FOLDER=$(dirname "$SCRIPT_PATHNAME")
-PARENT_BASENAME=$(basename "$PARENT_FOLDER")
+INIT_SCRIPT_PATHNAME=$(realpath "${BASH_SOURCE[0]}")
+INIT_SCRIPT_DIR=$(dirname "$INIT_SCRIPT_PATHNAME")
+INIT_SCRIPT=$(basename "$INIT_SCRIPT_PATHNAME")
+ROOT=$(dirname "$INIT_SCRIPT_DIR")
 
-if [ "$SCRIPT" == "" ]; then
-    SCRIPT=$(basename $SCRIPT_PATHNAME)
-else
-    SCRIPT=$(basename $SCRIPT)
-fi
-
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=$(dirname "$PARENT_FOLDER")
-    PARENT_BASENAME=$(basename "$PARENT_FOLDER")
-done
-
-CONSTANTS_FILE="$PARENT_FOLDER/lib/constants.sh"
+CONSTANTS_FILE="$ROOT/lib/constants.sh"
 
 if [ -e $CONSTANTS_FILE ]
 then
@@ -62,7 +52,7 @@ else
     exit 1
 fi
 
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE="$ROOT/config/config.sh"
 
 # Allow environment setting to override configuration for debug output
 if [ "$DEBUG" != "" ]; then

@@ -187,7 +187,7 @@ class TestDatasets(unittest.TestCase):
 
         frozen_area_root = "%s/PSO_test_project_a/files/test_project_a" % (self.config["STORAGE_OC_DATA_ROOT"])
         staging_area_root = "%s/PSO_test_project_a/files/test_project_a%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
-        cmd_base="sudo -u %s SIMULATE_AGENTS=true DEBUG=false %s/utils/appsupport/execute-batch-action" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd_base="sudo -u %s SIMULATE_AGENTS=true DEBUG=false %s/appsupport/execute-batch-action" % (self.config["HTTPD_USER"], self.config["ROOT"])
 
         print("Batch freezing a folder with more than max allowed files")
         cmd = "%s test_project_a freeze /testdata/MaxFiles >/dev/null" % (cmd_base)
@@ -588,7 +588,7 @@ class TestDatasets(unittest.TestCase):
 
         print("Test appsupport scripts...")
 
-        cmd_base = "sudo -u apache %s/utils/appsupport" % (self.config['ROOT'])
+        cmd_base = "sudo -u apache %s/appsupport" % (self.config['ROOT'])
 
         # list-published-projects
         #   output includes test_project_a

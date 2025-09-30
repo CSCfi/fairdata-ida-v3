@@ -508,7 +508,7 @@ def audit_project(self, project, status, after = None, area = None, timestamps =
 
     print ("(auditing project %s%s)" % (project, parameters))
 
-    cmd = "sudo -u %s DEBUG=false %s/utils/appsupport/audit-project %s%s" % (
+    cmd = "sudo -u %s DEBUG=false %s/appsupport/audit-project %s%s" % (
         self.config["HTTPD_USER"],
         self.config["ROOT"],
         project,

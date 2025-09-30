@@ -75,7 +75,7 @@ export PGPASSWORD="$DBPASSWORD"
 if [ "$*" ]; then
     PROJECTS="$*"
 else
-    PROJECTS=`sudo -u apache $ROOT/utils/appsupport/list-projects`
+    PROJECTS=`sudo -u apache $ROOT/appsupport/list-projects`
 fi
 
 if [ "$IDA_MIGRATION" = "" ]; then

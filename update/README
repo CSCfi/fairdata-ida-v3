@@ -91,7 +91,7 @@ On ida241 ONLY:
    current running version of IDA
 >> Create the housekeeping directory IDA_UPDATE_ROOT as defined above
 >> Execute sudo -u apache php /var/ida/nextcloud/cron.php    
->> Execute sudo -u apache /var/ida/utils/appsupport/generate-missing-checksums
+>> Execute sudo -u apache /var/ida/appsupport/generate-missing-checksums
 >> Execute /var/ida/update/rescan-cleanup
    NOTE: Execution of the rescan-cleanup script will take approximately a full day to run!
 *****************************************************************************************************************
