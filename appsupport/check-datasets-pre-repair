@@ -96,7 +96,7 @@ if [ "$DEBUG" = "true" ]; then
     echo "Checking for dataset intersections with frozen file PIDs..."
 fi
 
-OUT=$(cat "$PID_LIST" | DEBUG="false" $ROOT/appsupport/check-datasets-from-metax $JSON 2>"$ERR")
+cat "$PID_LIST" | DEBUG="false" $ROOT/appsupport/check-datasets-from-metax $JSON 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
@@ -104,11 +104,11 @@ if [ -s $ERR ]; then
     errorExit "Failed to check for dataset intersections from Metax"
 fi
 
-if [ "$OUT" ]; then
+if [ -s $OUT ]; then
     if [ "$DEBUG" = "true" ]; then
         echo "The following datasets will be deprecated:"
     fi
-    echo "$OUT"
+    cat $OUT
 else
     if [ "$DEBUG" = "true" ]; then
         echo "No datasets will be affected"

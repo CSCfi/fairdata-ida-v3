@@ -69,7 +69,7 @@ fi
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     addToLog "$MSG"
-    errorExit "Failed to retrieve file details in Metax"
+    errorExit "Failed to retrieve dataset details in Metax"
 fi
 
 echo "$OUT" | jq --indent 4

@@ -63,7 +63,7 @@ if [ -z "$ID" ]; then
     errorExit "Failed to retrieve frozen file id in Metax for PID $PID"
 fi
 
-OUT=$($CURL_DELETE -H "$METAX_AUTH_HEADER" "${METAX_API}/files/${ID}" 2>$ERR)
+$CURL_DELETE -H "$METAX_AUTH_HEADER" "${METAX_API}/files/${ID}" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
@@ -72,7 +72,7 @@ if [ -s $ERR ]; then
 fi
 
 if [ "$DEBUG" = "true" ]; then
-    echo "$OUT" | jq --indent 4
+    cat $OUT | jq --indent 4
 fi
 
 echoAndLog "Frozen file with PID $PID marked as removed in Metax"

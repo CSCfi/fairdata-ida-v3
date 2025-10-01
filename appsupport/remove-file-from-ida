@@ -53,7 +53,7 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_DELETE $PROJECT_USER_CREDENTIALS -H "$IDA_MODE_HEADER" "${IDA_API}/files/${PID}" 2>$ERR)
+$CURL_DELETE $PROJECT_USER_CREDENTIALS -H "$IDA_MODE_HEADER" "${IDA_API}/files/${PID}" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
@@ -62,7 +62,7 @@ if [ -s $ERR ]; then
 fi
 
 if [ "$DEBUG" = "true" ]; then
-    echo "$OUT" | jq --indent 4
+    cat $OUT | jq --indent 4
 fi
 
 echoAndLog "Frozen file with PID $PID marked as removed in IDA"

@@ -45,13 +45,13 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets/${DATASET_ID}/files?pagination=false")
+$CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets/${DATASET_ID}/files?pagination=false" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     errorExit "Query to Metax failed: $MSG"
 fi
 
-echo "$OUT" | jq --indent 4
+cat $OUT | jq --indent 4
 
 addToLog "DONE"

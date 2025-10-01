@@ -65,7 +65,7 @@ ENCODED_PATHNAME=$(urlEncode "${PATHNAME}")
 
 URL="${IDA_API}/datasets?project=${PROJECT}&pathname=${ENCODED_PATHNAME}&token=${BATCH_ACTION_TOKEN}"
 
-OUT=$($CURL_POST $PROJECT_USER_CREDENTIALS -H "$IDA_MODE_HEADER" "$URL" 2>$ERR)
+$CURL_POST $PROJECT_USER_CREDENTIALS -H "$IDA_MODE_HEADER" "$URL" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
@@ -74,9 +74,9 @@ if [ -s $ERR ]; then
 fi
 
 if [ "$JSON" ]; then
-    echo "$OUT" | jq --indent 4
+    cat $OUT | jq --indent 4
 else
-    echo "$OUT" | jq -r '.[].pid' | sort -u
+    cat $OUT | jq -r '.[].pid' | sort -u
 fi
 
 addToLog "DONE"

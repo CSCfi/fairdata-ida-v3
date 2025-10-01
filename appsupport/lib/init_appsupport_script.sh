@@ -196,9 +196,11 @@ fi
 
 #--------------------------------------------------------------------------------
 
+OUT="/var/tmp/ida_${SCRIPT}_$$.out"
 ERR="/var/tmp/ida_${SCRIPT}_$$.err"
 
 cleanup() {
+    rm -f $OUT 2>/dev/null
     rm -f $ERR 2>/dev/null
 }
 

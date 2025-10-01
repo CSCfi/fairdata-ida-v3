@@ -45,13 +45,13 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($ROOT/appsupport/fetch-dataset-files "$DATASET_ID" 2>$ERR)
+$ROOT/appsupport/fetch-dataset-files "$DATASET_ID" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     errorExit "Failed to fetch dataset files: $MSG"
 fi
 
-echo "$OUT" | jq -r 'if type=="array" then .[] | .pathname else empty end' | sort -u
+cat $OUT | jq -r 'if type=="array" then .[] | .pathname else empty end' | sort -u
 
 addToLog "DONE"

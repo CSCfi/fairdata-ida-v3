@@ -51,7 +51,7 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/workflow?id=$WORKFLOW_ID" 2>$ERR)
+$CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/workflow?id=$WORKFLOW_ID" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
@@ -60,9 +60,9 @@ if [ -s $ERR ]; then
     errorExit "Failed to retrieve workflow details."
 fi
 
-MSG=`echo $OUT | tr "\n" " " `
+MSG=$(cat $OUT | tr '\n' ' ')
 addToLog "$MSG"
 
-echo "$OUT" | jq --indent 4
+cat $OUT | jq --indent 4
 
 addToLog "DONE"

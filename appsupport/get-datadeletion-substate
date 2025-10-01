@@ -52,15 +52,15 @@ fi
 
 if [ -z "$STATE" ]; then
 
-    OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&projects=${PROJECT}" 2>$ERR)
+    $CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&projects=${PROJECT}" 2>$ERR >$OUT
 
     if [ -s $ERR ]; then
         MSG=$(cat $ERR | tr '\n' ' ')
         addToLog "$MSG"
     fi
 
-    if [ "$OUT" ]; then
-        STATE=$(echo "$OUT" | jq '.[0] | .state' --raw-output 2>/dev/null)
+    if [ -s $OUT ]; then
+        STATE=$(cat $OUT | jq '.[0] | .state' --raw-output 2>/dev/null)
     fi
 
     if [ "$STATE" = "null" ]; then

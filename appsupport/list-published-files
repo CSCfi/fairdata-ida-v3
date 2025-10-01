@@ -46,13 +46,13 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($ROOT/appsupport/fetch-published-files "$PROJECT" 2>$ERR)
+$ROOT/appsupport/fetch-published-files "$PROJECT" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     errorExit "Failed to fetch published files: $MSG"
 fi
 
-echo "$OUT" | jq -r 'if type=="array" then .[] | .pathname else empty end' | sort -u
+cat $OUT | jq -r 'if type=="array" then .[] | .pathname else empty end' | sort -u
 
 addToLog "DONE"

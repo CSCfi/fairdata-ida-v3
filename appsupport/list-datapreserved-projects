@@ -52,14 +52,14 @@ if [ "$LOCAL" ]; then
 
 else
 
-    OUT=$($ROOT/appsupport/fetch-datapreserved-projects 2>$ERR)
+    $ROOT/appsupport/fetch-datapreserved-projects 2>$ERR >$OUT
 
     if [ -s $ERR ]; then
         MSG=`cat $ERR`
         errorExit "$MSG" 
     fi
 
-    echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
+    cat $OUT | jq '.[] | .number' --raw-output | sort -u
 fi
 
 addToLog "DONE"

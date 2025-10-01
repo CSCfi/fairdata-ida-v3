@@ -94,7 +94,7 @@ if [ "$2" != "--force" ]; then
 
     echo "Verifying project ${PROJECT} has CSC Data Deletion Process state 'deletedata' and is active for IDA..."
 
-    OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?projects=$PROJECT" 2>$ERR)
+    $CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?projects=$PROJECT" 2>$ERR >$OUT
 
     if [ -s $ERR ]; then
         MSG=$(cat $ERR | tr '\n' ' ')
@@ -102,14 +102,14 @@ if [ "$2" != "--force" ]; then
         errorExit "Failed to retrieve details of project $PROJECT from microservice. Aborting."
     fi
 
-    PROJECT_STATE=$(echo "$OUT" | jq '.[0].state' --raw-output 2>/dev/null)
+    PROJECT_STATE=$(cat $OUT | jq '.[0].state' --raw-output 2>/dev/null)
 
     if [ "$PROJECT_STATE" != "deletedata" ]
     then
         errorExit "Project $PROJECT does not have a data deletion process state of 'deletedata'. Aborting."
     fi
 
-    PROJECT_IDA=$(echo "$OUT" | jq '.[0].services[] | select(. == "IDA")' --raw-output 2>/dev/null)
+    PROJECT_IDA=$(cat $OUT | jq '.[0].services[] | select(. == "IDA")' --raw-output 2>/dev/null)
 
     if [ "$PROJECT_IDA" != "IDA" ]
     then

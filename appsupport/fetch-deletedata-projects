@@ -43,7 +43,7 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&states=deletedata&open=false" 2>$ERR)
+$CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&states=deletedata&open=false" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
@@ -52,6 +52,6 @@ if [ -s $ERR ]; then
     errorExit "Failed to retrieve projects from microservice"
 fi
 
-echo "$OUT" | jq --indent 4
+cat $OUT | jq --indent 4
 
 addToLog "DONE"

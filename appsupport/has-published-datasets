@@ -35,13 +35,13 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets?csc_projects=${PROJECT}&fields=id&has_files=true&state=published&deprecated=false&pagination=true&limit=1")
+$CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets?csc_projects=${PROJECT}&fields=id&has_files=true&state=published&deprecated=false&pagination=true&limit=1" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     errorExit "Query to Metax failed: $MSG"
 fi
 
-echo "$OUT" | jq -r 'if .count > 0 then "true" else "false" end'
+cat $OUT | jq -r 'if .count > 0 then "true" else "false" end'
 
 addToLog "DONE"

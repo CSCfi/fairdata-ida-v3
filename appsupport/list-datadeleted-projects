@@ -43,13 +43,13 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($ROOT/appsupport/fetch-datadeleted-projects 2>$ERR)
+$ROOT/appsupport/fetch-datadeleted-projects 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     errorExit "$MSG"
 fi
 
-echo "$OUT" | jq '.[] | .number' --raw-output | sort -u
+cat $OUT | jq '.[] | .number' --raw-output | sort -u
 
 addToLog "DONE"

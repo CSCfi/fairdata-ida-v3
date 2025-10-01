@@ -78,7 +78,7 @@ fi
 
 URL="${METAX_API}/files/datasets?storage_service=ida&relations=${RELATIONS}"
 
-OUT=$($CURL_POST -H "$METAX_AUTH_HEADER" -H "Content-Type: application/json" "$URL" --data-binary @"$PID_LIST_JSON" 2>"$ERR")
+$CURL_POST -H "$METAX_AUTH_HEADER" -H "Content-Type: application/json" "$URL" --data-binary @"$PID_LIST_JSON" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
@@ -87,10 +87,9 @@ if [ -s $ERR ]; then
 fi
 
 if [ "$JSON" ]; then
-    echo "$OUT" | \
-        jq --indent 4
+    cat $OUT | jq --indent 4
 else
-    echo "$OUT" | \
+    cat $OUT | \
         jq -r '
             if type == "string" then
                 fromjson

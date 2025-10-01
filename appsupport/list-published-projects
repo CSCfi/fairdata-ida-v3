@@ -39,13 +39,13 @@ fi
 
 #--------------------------------------------------------------------------------
 
-OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets?fields=fileset&has_files=true&state=published&deprecated=false&pagination=false")
+$CURL_GET -H "$METAX_AUTH_HEADER" "$METAX_API/datasets?fields=fileset&has_files=true&state=published&deprecated=false&pagination=false" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`
     errorExit "$MSG"
 fi
 
-echo "$OUT" | jq -r '.[] | select(.fileset.storage_service == "ida") | .fileset.csc_project' | sort -u
+cat $OUT | jq -r '.[] | select(.fileset.storage_service == "ida") | .fileset.csc_project' | sort -u
 
 addToLog "DONE"

@@ -59,10 +59,10 @@ PID="$1"
 #--------------------------------------------------------------------------------
 
 if [ $METAX_API_VERSION -ge 3 ]; then
-    OUT=$($CURL_GET -H "$METAX_AUTH_HEADER" "${METAX_API}/files?storage_service=ida&storage_identifier=${PID}&limit=1" 2>$ERR)
+    $CURL_GET -H "$METAX_AUTH_HEADER" "${METAX_API}/files?storage_service=ida&storage_identifier=${PID}&limit=1" 2>$ERR >$OUT
 else
     URL="${METAX_API}/files/${PID}"
-    OUT=$($CURL_GET $METAX_CREDENTIALS "${URL}" 2>$ERR)
+    $CURL_GET $METAX_CREDENTIALS "${URL}" 2>$ERR >$OUT
 fi
 
 if [ -s $ERR ]; then
@@ -72,9 +72,9 @@ if [ -s $ERR ]; then
 fi
 
 if [ $METAX_API_VERSION -ge 3 ]; then
-    echo "$OUT" | jq '.results[0] // empty' --indent 4
+    cat $OUT | jq '.results[0] // empty' --indent 4
 else
-    echo "$OUT" | jq --indent 4
+    cat $OUT | jq --indent 4
 fi
 
 addToLog "DONE"
