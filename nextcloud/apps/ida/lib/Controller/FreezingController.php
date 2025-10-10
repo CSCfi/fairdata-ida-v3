@@ -1359,6 +1359,19 @@ class FreezingController extends Controller
                 return API::conflictErrorResponse('The requested action conflicts with an existing file in the staging area.');
             }
 
+            // Ensure no files intersect with any dataset that has an ongoing preservation process
+
+            $datasets = $this->checkDatasets($nextcloudFiles);
+
+            foreach ($datasets as $d) {
+                if ($d->pas == true) {
+                    $this->actionMapper->deleteAction($actionEntity->getPid());
+                    Access::unlockProject($project);
+
+                    return API::conflictErrorResponse('Forbidden: The requested action would affect one or more datasets which are part of an ongoing preservation process');
+                }
+            }
+
             // Record file details within scope of action
 
             $this->registerFiles('unfreeze', $project, $nextcloudFiles, $actionEntity->getPid(), $actionEntity->getInitiated());
@@ -1567,6 +1580,19 @@ class FreezingController extends Controller
                     Access::unlockProject($project);
 
                     return API::conflictErrorResponse('The requested action conflicts with an ongoing action in the specified project.');
+                }
+
+                // Ensure no files intersect with any dataset that has an ongoing preservation process
+
+                $datasets = $this->checkDatasets($nextcloudFiles);
+
+                foreach ($datasets as $d) {
+                    if ($d->pas == true) {
+                        $this->actionMapper->deleteAction($actionEntity->getPid());
+                        Access::unlockProject($project);
+    
+                        return API::conflictErrorResponse('Forbidden: The requested action would affect one or more datasets which are part of an ongoing preservation process');
+                    }
                 }
 
                 // Record details of files within scope of action

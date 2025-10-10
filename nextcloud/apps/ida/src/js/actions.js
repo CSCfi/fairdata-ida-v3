@@ -304,6 +304,10 @@ function executeAction(action, node, datasetsChecked = false) {
             const affectedDatasets = checkDatasets(nodeId, project, pathname);
             const affectedDatasetsCount = affectedDatasets.length;
             if (affectedDatasetsCount > 0) {
+                // Disallow action if any datasets are part of an ongoing preservation process
+                if (affectedDatasets.some(d => d.pas === true)) {
+                    throw new Error('Forbidden: The requested action would affect one or more datasets which are part of an ongoing preservation process');
+                }
                 showDatasetDeprecationWarning(affectedDatasets, () => {
                     executeAction(action, node, true);
                 });
