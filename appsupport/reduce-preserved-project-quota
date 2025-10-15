@@ -1,0 +1,99 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+# --------------------------------------------------------------------------------
+# This script will reduce the IDA quota of a preserved project to the smallest
+# 1 GB increment above the currently consumed project data volume, after pruning.
+# --------------------------------------------------------------------------------
+
+SCRIPT=$(basename $0)
+
+USAGE="
+Usage: $SCRIPT PROJECT
+       $SCRIPT -h
+
+       PROJECT = the project name
+"
+
+#--------------------------------------------------------------------------------
+# Initialize script with common definitions
+
+INIT_FILE=$(dirname $0)/lib/init_appsupport_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+#--------------------------------------------------------------------------------
+echo "Verifying project ${PROJECT} exists ..."
+
+if [ ! -d $PROJECT_STORAGE_OC_DATA_ROOT ]; then
+    errorExit "The specified project ${PROJECT} does not exist"
+fi
+
+#--------------------------------------------------------------------------------
+
+echo "Checking if project ${PROJECT} is preserved ..."
+
+PROJECT_ALREADY_PRESERVED="false"
+
+if [ -f $PROJECT_PRESERVED ]; then
+    PROJECT_ALREADY_PRESERVED="true"
+fi
+
+if [ "$PROJECT_ALREADY_PRESERVED" == "false" ]; then
+    errorExit "The specified project ${PROJECT} is not preserved"
+fi
+
+#--------------------------------------------------------------------------------
+
+BYTES_CONSUMED=$(du -sb "$PROJECT_ROOT" 2>/dev/null | awk '{print $1}')
+
+if [[ -z "$BYTES_CONSUMED" || "$BYTES_CONSUMED" -le 0 ]]; then
+    NEW_QUOTA="1" # Minimum 1 GiB
+else
+    GIB_BYTES=$((1024**3))
+    # Calculate ceiling division: round up to nearest 1 GiB
+    NEW_QUOTA=$(( (bytes + GIB_BYTES - 1) / GIB_BYTES ))
+fi
+
+if [ -z "$NEW_QUOTA" ]; then
+    errorExit "Failed to calculate new minimum quota"
+fi
+
+if [[ "$NEW_QUOTA" -le 0 ]]; then
+    NEW_QUOTA="1" # Minimum 1 GiB
+fi
+
+echo "$NEW_QUOTA"
+
+echoAndLog "Updating quota for project $PROJECT to $NEW_QUOTA GiB"
+
+$ROOT/admin/ida_project MODIFY $PROJECT $NEW_QUOTA
+
+#--------------------------------------------------------------------------------
+
+addToLog "DONE"

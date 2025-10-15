@@ -45,31 +45,41 @@ fi
 # else retrieve its substate from the microservice.
 
 if [ -f "$PROJECT_PRESERVED" ]; then
+
     STATE="datapreserved"
-fi
 
-# --------------------------------------------------------------------------------
+else
 
-if [ -z "$STATE" ]; then
-
-    $CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&projects=${PROJECT}" 2>$ERR >$OUT
+    $CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?services=IDA&state=none&projects=${PROJECT}" 2>$ERR >$OUT
 
     if [ -s $ERR ]; then
         MSG=$(cat $ERR | tr '\n' ' ')
         addToLog "$MSG"
     fi
 
+
     if [ -s $OUT ]; then
         STATE=$(cat $OUT | jq '.[0] | .state' --raw-output 2>/dev/null)
+        OPEN=$(cat $OUT | jq '.[0] | .open' --raw-output 2>/dev/null)
+    fi
+
+    if [ "$STATE" = "none" ]; then
+        STATE=""
     fi
 
     if [ "$STATE" = "null" ]; then
-        STATE="unknown"
+        STATE=""
     fi
 fi
 
 if [ -z "$STATE" ]; then
-    STATE="unknown"
+    if [ "$OPEN" = "true" ]; then
+        STATE="open"
+    elif [ "$OPEN" = "false" ]; then
+        STATE="closed"
+    else
+        STATE="unknown"
+    fi
 fi
 
 echo "$STATE"

@@ -456,7 +456,7 @@ class TestDataDeletion(unittest.TestCase):
 
         # ---
 
-        print("Preserve project A and verify preserved files, and correct email message sent")
+        print("Preserve project A and verify preserved files, and verify correct email message sent")
         cmd = "%s/preserve-project test_project_a --force" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
@@ -465,6 +465,7 @@ class TestDataDeletion(unittest.TestCase):
         self.assertIn("You are a member of the CSC project test_project_a, which has had rights to use the IDA service.", output)
         self.assertIn("All unpublished project data has been DELETED from the IDA service.", output)
         self.assertIn("All published project data (included in one or more published datasets which are openly available, under embargo, or accessible to logged-in users through Etsin) will REMAIN in the IDA service to ensure long-term accessibility of the published datasets, until otherwise agreed with the organization's IDA contact person.", output)
+        self.assertIn("Updating quota for project test_project_a to 1 GiB", output)
         self.assertNotIn("All project data has been DELETED from the IDA service.", output)
 
         print("Verify project A still exists in IDA/Nextcloud")
@@ -559,16 +560,6 @@ class TestDataDeletion(unittest.TestCase):
         print("Verify PRESERVED sentinel file exists in data storage root of project A")
         self.assertTrue(os.path.exists("%s/PRESERVED" % data_root_project_a))
 
-        print("Attempt to preserve already preserved project A")
-        cmd = "%s/preserve-project test_project_a --force" % (cmd_base)
-        failed = False
-        try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-        except subprocess.CalledProcessError as error:
-            self.assertIn("The specified project test_project_a is already preserved", error.output.decode(sys.stdout.encoding))
-            failed = True
-        self.assertTrue(failed, output)
-
         print("Verify project A status includes datapreserved state and published dataset listing")
         cmd = "%s/project-status test_project_a --json" % (cmd_base)
         try:
@@ -580,9 +571,55 @@ class TestDataDeletion(unittest.TestCase):
         datasets = status.get("publishedDatasets", [])
         self.assertEqual(3, len(datasets))
 
+        print("(emptying trash for test_project_a)")
+        cmd = "rm -fr %s 2>/dev/null" % (trash_root_project_a)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertFalse(os.path.exists(trash_root_project_a))
+
+        print("Preserve already preserved project A with no change to datasets and verify no email and no new files added to trash")
+        cmd = "%s/preserve-project test_project_a --force" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("The specified project test_project_a is already preserved, checking if additional pruning is required ...", output)
+        self.assertNotIn("The specified project test_project_a has no published datasets and should be deleted, not preserved", output)
+        self.assertNotIn("Marking pruned frozen files as removed in IDA and Metax ...", output)
+        self.assertIn("Project test_project_a preserved with additional pruning, unpublished project data copied to trash subfolder", output)
+        self.assertNotIn("Sending email to project users ...", output)
+        self.assertTrue(os.path.exists(trash_root_project_a))
+        cmd = "find %s -type f | wc -l" % trash_root_project_a
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertEqual("0", output.strip())
+
+        print("Preserve already preserved project A after removal of a dataset and verify no email and newly unpublished files moved to trash")
+        response = requests.delete("%s/datasets/%s" % (self.config['METAX_API'], dataset_1_pid), headers=self.metax_headers, json=dataset_data)
+        self.assertEqual(response.status_code, 204, response.text)
+        cmd = "%s/preserve-project test_project_a --force" % (cmd_base)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertNotIn("You are a member of the CSC project test_project_a, which has had rights to use the IDA service.", output)
+        self.assertTrue(os.path.exists(trash_root_project_a))
+        self.assertTrue(os.path.exists(frozen_area_trash_root_project_a))
+        self.assertFalse(os.path.exists(staging_area_trash_root_project_a))
+        cmd = "find %s -type f | wc -l" % trash_root_project_a
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertEqual("13", output.strip())
+
         # ---
 
-        print("Force delete project B and verify no preserved files, and correct email message sent")
+        print("Force delete project B and verify no preserved files, and verify correct email message sent")
         cmd = "%s/delete-project test_project_b --force" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
@@ -616,7 +653,7 @@ class TestDataDeletion(unittest.TestCase):
 
         # ---
 
-        print("Force delete project C and verify no preserved files, and correct email message sent")
+        print("Force delete project C and verify no preserved files, and verify correct email message sent")
         cmd = "%s/delete-project test_project_c --force" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
@@ -650,7 +687,15 @@ class TestDataDeletion(unittest.TestCase):
 
         # ---
 
-        print("Force delete project A and verify no preserved files, and correct email message sent")
+        print("(emptying trash for test_project_a)")
+        cmd = "rm -fr %s 2>/dev/null" % (trash_root_project_a)
+        try:
+            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertFalse(os.path.exists(trash_root_project_a))
+
+        print("Force delete project A and verify no preserved files, and verify correct email message sent")
         cmd = "%s/delete-project test_project_a --force" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
@@ -680,7 +725,7 @@ class TestDataDeletion(unittest.TestCase):
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
-        self.assertEqual("104", output.strip())
+        self.assertEqual("35", output.strip())
 
         print("Verify project A is not included in the list of datapreserved projects")
         cmd = "%s/list-datapreserved-projects --local" % (cmd_base)

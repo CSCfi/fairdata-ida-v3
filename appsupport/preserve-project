@@ -56,7 +56,7 @@ export EMAIL_RECIPIENTS
 export ECHO_TEST_EMAILS
 
 #--------------------------------------------------------------------------------
-echo "Verifying project ${PROJECT} exists..."
+echo "Verifying project ${PROJECT} exists ..."
 
 if [ ! -d $PROJECT_STORAGE_OC_DATA_ROOT ]; then
     errorExit "The specified project ${PROJECT} does not exist"
@@ -64,92 +64,102 @@ fi
 
 #--------------------------------------------------------------------------------
 
-echo "Verifying project ${PROJECT} is not already preserved..."
+echo "Checking if project ${PROJECT} is already preserved ..."
+
+PROJECT_ALREADY_PRESERVED="false"
 
 if [ -f $PROJECT_PRESERVED ]; then
-    errorExit "The specified project ${PROJECT} is already preserved"
+    PROJECT_ALREADY_PRESERVED="true"
+fi
+
+if [ "$PROJECT_ALREADY_PRESERVED" ]; then
+    echoAndLog "The specified project ${PROJECT} is already preserved, checking if additional pruning is required ..."
 fi
 
 #--------------------------------------------------------------------------------
 
-echo "Verifying project ${PROJECT} is suspended..."
+if [ "$PROJECT_ALREADY_PRESERVED" == "false" ]; then
+
+    echo "Verifying project ${PROJECT} is suspended ..."
     
-SUSPENDED=$($CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" "$IDA_API/actions?status=suspend" 2>$ERR | \
-           tr '\n' ' ' | tr '{' '\n' | grep "\"action\": *\"suspend*\"" | grep "\"project\": *\"$PROJECT\"" | \
-           sed -e 's/^.*"initiated": *"//' | sed -e 's/".*$//' | sort -u | tail -1)
-
-if [ -s $ERR ]; then
-    MSG=$(cat $ERR | tr '\n' ' ')
-    addToLog "$MSG"
-    errorExit "Failed to retrieve pending actions for project ${PROJECT}!"
-fi
-
-if [ "$SUSPENDED" = "" ]; then
-    errorExit "The specified project ${PROJECT} is not suspended"
-fi
-
-#--------------------------------------------------------------------------------
-
-if [ "$2" != "--force" ]; then
-
-    echo "Verifying project ${PROJECT} has CSC Data Deletion Process state 'deletedata' and is active for IDA..."
-
-    $CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?projects=$PROJECT" 2>$ERR >$OUT
-
+    SUSPENDED=$($CURL_GET $ADMIN_CREDENTIALS -H "$IDA_MODE_HEADER" "$IDA_API/actions?status=suspend" 2>$ERR | \
+               tr '\n' ' ' | tr '{' '\n' | grep "\"action\": *\"suspend*\"" | grep "\"project\": *\"$PROJECT\"" | \
+               sed -e 's/^.*"initiated": *"//' | sed -e 's/".*$//' | sort -u | tail -1)
+    
     if [ -s $ERR ]; then
         MSG=$(cat $ERR | tr '\n' ' ')
         addToLog "$MSG"
-        errorExit "Failed to retrieve details of project $PROJECT from microservice. Aborting."
+        errorExit "Failed to retrieve pending actions for project ${PROJECT}!"
     fi
 
-    PROJECT_STATE=$(cat $OUT | jq '.[0].state' --raw-output 2>/dev/null)
-
-    if [ "$PROJECT_STATE" != "deletedata" ]
-    then
-        errorExit "Project $PROJECT does not have a data deletion process state of 'deletedata'. Aborting."
+    if [ "$SUSPENDED" = "" ]; then
+        errorExit "The specified project ${PROJECT} is not suspended"
     fi
 
-    PROJECT_IDA=$(cat $OUT | jq '.[0].services[] | select(. == "IDA")' --raw-output 2>/dev/null)
+    if [ "$2" != "--force" ]; then
 
-    if [ "$PROJECT_IDA" != "IDA" ]
-    then
-        errorExit "Project $PROJECT is not active in the IDA service. Aborting."
-    fi
-
-    echo "Verifying project ${PROJECT} is past the quarantine (grace) period..."
-
-    NOW=$(date -u +"%s")
-    SECONDS=$(date -u -d "$SUSPENDED" +"%s")
-    ELAPSED=$(expr $NOW - $SECONDS)
-
-    if [ "$DEBUG" = "true" ]; then
-        echo ""
-        echo "Project suspended: $SUSPENDED"
-        echo "Project suspended: $SECONDS seconds"
-        echo "Current time:      $NOW seconds"
-        echo "Elapsed time:      $ELAPSED seconds"
-        echo "Quarantine period: $QUARANTINE_PERIOD seconds"
-        echo ""
-    fi
-
-    if [ $ELAPSED -lt $QUARANTINE_PERIOD ]; then
-        errorExit "The specified project ${PROJECT} is still within the quarantine period and cannot be preserved"
-    fi
-
-    echo "Verifying project ${PROJECT} has published datasets..."
-
-    HAS_PUBLISHED_DATASETS=$($ROOT/appsupport/has-published-datasets "$PROJECT")
-
-    if [ "$HAS_PUBLISHED_DATASETS" != "true" ]; then
-        errorExit "The specified project ${PROJECT} has no published datasets and should be deleted, not preserved"
+        echo "Verifying project ${PROJECT} has CSC Data Deletion Process state 'deletedata' and is active for IDA ..."
+    
+        $CURL_GET "$CSC_DATA_DELETION_MICROSERVICE/projects?projects=$PROJECT" 2>$ERR >$OUT
+    
+        if [ -s $ERR ]; then
+            MSG=$(cat $ERR | tr '\n' ' ')
+            addToLog "$MSG"
+            errorExit "Failed to retrieve details of project $PROJECT from microservice. Aborting."
+        fi
+    
+        PROJECT_STATE=$(cat $OUT | jq '.[0].state' --raw-output 2>/dev/null)
+    
+        if [ "$PROJECT_STATE" != "deletedata" ]
+        then
+            errorExit "Project $PROJECT does not have a data deletion process state of 'deletedata'. Aborting."
+        fi
+    
+        PROJECT_IDA=$(cat $OUT | jq '.[0].services[] | select(. == "IDA")' --raw-output 2>/dev/null)
+    
+        if [ "$PROJECT_IDA" != "IDA" ]
+        then
+            errorExit "Project $PROJECT is not active in the IDA service. Aborting."
+        fi
+    
+        echo "Verifying project ${PROJECT} is past the quarantine (grace) period ..."
+    
+        NOW=$(date -u +"%s")
+        SECONDS=$(date -u -d "$SUSPENDED" +"%s")
+        ELAPSED=$(expr $NOW - $SECONDS)
+    
+        if [ "$DEBUG" = "true" ]; then
+            echo ""
+            echo "Project suspended: $SUSPENDED"
+            echo "Project suspended: $SECONDS seconds"
+            echo "Current time:      $NOW seconds"
+            echo "Elapsed time:      $ELAPSED seconds"
+            echo "Quarantine period: $QUARANTINE_PERIOD seconds"
+            echo ""
+        fi
+    
+        if [ $ELAPSED -lt $QUARANTINE_PERIOD ]; then
+            errorExit "The specified project ${PROJECT} is still within the quarantine period and cannot be preserved."
+        fi
     fi
 fi
 
 #--------------------------------------------------------------------------------
 
-echo "Creating project trash subfolder..."
+echo "Verifying project ${PROJECT} has published datasets ..."
 
-mkdir -p $PROJECT_TRASH_DATA_ROOT 2>&1 >/dev/null
+HAS_PUBLISHED_DATASETS=$($ROOT/appsupport/has-published-datasets "$PROJECT")
+
+if [ "$HAS_PUBLISHED_DATASETS" != "true" ]; then
+    errorExit "The specified project ${PROJECT} has no published datasets and should be deleted, not preserved"
+fi
+
+#--------------------------------------------------------------------------------
+
+if [ ! -d $PROJECT_TRASH_DATA_ROOT ]; then
+    echo "Creating project trash subfolder ..."
+    mkdir -p $PROJECT_TRASH_DATA_ROOT 2>&1 >/dev/null
+fi
 
 if [ ! -d $PROJECT_TRASH_DATA_ROOT ]; then
     errorExit "Failed to create project trash subfolder ${PROJECT_TRASH_DATA_ROOT}"
@@ -157,19 +167,19 @@ fi
 
 #--------------------------------------------------------------------------------
 
-echo "Generating listing of published project datasets..."
+echo "Generating listing of published project datasets ..."
 
 $ROOT/appsupport/list-published-datasets $PROJECT > "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets"
 
 #--------------------------------------------------------------------------------
 
-echo "Generating listing of published project files..."
+echo "Generating listing of published project files ..."
 
 $ROOT/appsupport/list-published-files $PROJECT > "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files"
 
 #--------------------------------------------------------------------------------
 
-echo "Moving project files from staging area to project trash..."
+echo "Moving any project files from staging area to project trash ..."
 
 (
     set -euo pipefail
@@ -185,12 +195,12 @@ echo "Moving project files from staging area to project trash..."
         mv -f "$STAGING_PATHNAME" "$TRASH_PATHNAME"
     done < <(cd "$PROJECT_STAGING_ROOT"; find . -type f -printf '/%P\n' || true)
 )
-
+    
 # Remove any residual empty directories in the staging area (but not the staging area root directory)
-
+    
 find "$PROJECT_STAGING_ROOT" -mindepth 1 -type d -empty -delete
 
-echo "Moving unpublished project files from frozen area to project trash..."
+echo "Moving any unpublished project files from frozen area to project trash ..."
 
 (
     set -euo pipefail
@@ -215,7 +225,7 @@ find "$PROJECT_FROZEN_ROOT" -mindepth 1 -type d -empty -delete
 
 #--------------------------------------------------------------------------------
 
-echo "Marking unpublished frozen files as removed in IDA and Metax..."
+echo "Marking all pruned frozen files as removed in IDA and Metax ..."
 
 # NOTE: We ignore errors if any PID doesn't correspond to a frozen file, as the desired
 # end result is still achieved, that any unpublished frozen file known to IDA and/or 
@@ -237,85 +247,99 @@ done < <($ROOT/appsupport/fetch-project-inventory $PROJECT --frozen --unpublishe
 
 #--------------------------------------------------------------------------------
 
-echo "Cleaning up Nextcloud file cache..."
+echo "Cleaning up Nextcloud file cache ..."
 
 $ROOT/appsupport/rescan-project "$PROJECT"
 
 #--------------------------------------------------------------------------------
 
-MESSAGE="Project ${PROJECT} preserved. Unpublished project data copied to trash subfolder ${PROJECT_TRASH_DATA_ROOT}"
+if [ "$PROJECT_ALREADY_PRESERVED" == "false" ]; then
+    MESSAGE="Project ${PROJECT} preserved. Unpublished project data copied to trash subfolder ${PROJECT_TRASH_DATA_ROOT}"
+else
+    MESSAGE="Project ${PROJECT} preserved with additional pruning, unpublished project data copied to trash subfolder ${PROJECT_TRASH_DATA_ROOT}"
+fi
+
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-echo "$TIMESTAMP $MESSAGE" > "${PROJECT_STORAGE_OC_DATA_ROOT}/PRESERVED"
+echo "$TIMESTAMP $MESSAGE" >> "${PROJECT_STORAGE_OC_DATA_ROOT}/PRESERVED"
 
 echoAndLog "$MESSAGE"
 
 #--------------------------------------------------------------------------------
 
-echo "Reporting data preserved for project..."
+if [ "$PROJECT_ALREADY_PRESERVED" == "false" ]; then
 
-$ROOT/appsupport/report-datapreserved $PROJECT 2>$ERR
+    echo "Reporting data preserved for project ..."
 
-if [ -s $ERR ]; then
-    MSG=$(cat $ERR | tr '\n' ' ')
-    addToLog "$MSG"
-    SUBJECT="Failed to report data preserved for project ${PROJECT}!"
-    MESSAGE="
-${SUBJECT}
+    $ROOT/appsupport/report-datapreserved $PROJECT 2>$ERR
 
-${MSG}
-"
-    echoAndLog "Error: ${SUBJECT} (ignored)"
-    $ROOT/appsupport/email-appsupport "$SUBJECT" "$MESSAGE" 2>$ERR
     if [ -s $ERR ]; then
         MSG=$(cat $ERR | tr '\n' ' ')
-        echoAndLog "$MSG"
+        addToLog "$MSG"
+        SUBJECT="Failed to report data preserved for project ${PROJECT}!"
+        MESSAGE="
+    ${SUBJECT}
+    
+    ${MSG}
+    "
+        echoAndLog "Error: ${SUBJECT} (ignored)"
+        $ROOT/appsupport/email-appsupport "$SUBJECT" "$MESSAGE" 2>$ERR
+        if [ -s $ERR ]; then
+            MSG=$(cat $ERR | tr '\n' ' ')
+            echoAndLog "$MSG"
+        fi
+    fi
+
+    #--------------------------------------------------------------------------------
+
+    echo "Sending email to project users ..."
+    
+    SUBJECT="Project ${PROJECT} has been removed from the IDA service" 
+    
+    MESSAGE="
+    You are a member of the CSC project ${PROJECT}, which has had rights to use the IDA service.
+    
+    The project has been REMOVED from the IDA service in accordance with the official CSC Data Deletion Policy (https://docs.csc.fi/accounts/how-to-manage-your-project/#project-closure).
+    
+    All unpublished project data has been DELETED from the IDA service.
+    
+    All published project data (included in one or more published datasets which are openly available, under embargo, or accessible to logged-in users through Etsin) will REMAIN in the IDA service to ensure long-term accessibility of the published datasets, until otherwise agreed with the organization's IDA contact person.
+    
+    If you wish to have any published project data deleted, or have any questions about the retention of published project data, please contact your home organization’s IDA contact person (https://wiki.eduuni.fi/x/FWmLGw).
+    
+    If you have any other questions, please contact the CSC Service Desk (servicedesk@csc.fi).
+    "
+
+    $ROOT/appsupport/email-project-users "$PROJECT" "$SUBJECT" "$MESSAGE" 2>$ERR
+
+    if [ -s $ERR ]; then
+        MSG=$(cat $ERR | tr '\n' ' ')
+        addToLog "$MSG"
+        errorExit "Failed to email project ${PROJECT} users!"
     fi
 fi
 
 #--------------------------------------------------------------------------------
 
-echo "Sending email to project users..."
+echo "Reducing IDA quota for preserved project after pruning ..."
 
-SUBJECT="Project ${PROJECT} has been removed from the IDA service" 
-
-MESSAGE="
-You are a member of the CSC project ${PROJECT}, which has had rights to use the IDA service.
-
-The project has been REMOVED from the IDA service in accordance with the official CSC Data Deletion Policy (https://docs.csc.fi/accounts/how-to-manage-your-project/#project-closure).
-
-All unpublished project data has been DELETED from the IDA service.
-
-All published project data (included in one or more published datasets which are openly available, under embargo, or accessible to logged-in users through Etsin) will REMAIN in the IDA service to ensure long-term accessibility of the published datasets, until otherwise agreed with the organization's IDA contact person.
-
-If you wish to have any published project data deleted, or have any questions about the retention of published project data, please contact your home organization’s IDA contact person (https://wiki.eduuni.fi/x/FWmLGw).
-
-If you have any other questions, please contact the CSC Service Desk (servicedesk@csc.fi).
-"
-
-$ROOT/appsupport/email-project-users "$PROJECT" "$SUBJECT" "$MESSAGE" 2>$ERR
-
-if [ -s $ERR ]; then
-    MSG=$(cat $ERR | tr '\n' ' ')
-    addToLog "$MSG"
-    errorExit "Failed to email project ${PROJECT} users!"
-fi
+$ROOT/appsupport/reduce-preserved-project-quota $PROJECT
 
 #--------------------------------------------------------------------------------
 
-echo "Generating listing of published project datasets after pruning..."
+echo "Generating listing of published project datasets after pruning ..."
 
 $ROOT/appsupport/list-published-datasets $PROJECT > "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets.check"
 
 #--------------------------------------------------------------------------------
 
-echo "Generating listing of published project files after pruning..."
+echo "Generating listing of published project files after pruning ..."
 
 $ROOT/appsupport/list-published-files $PROJECT > "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files.check"
 
 #--------------------------------------------------------------------------------
 
-echo "Verifying all published data remains unchanged..."
+echo "Verifying all published data remains unchanged ..."
 
 DIFF1=$(diff -U0 --suppress-common-lines "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets" "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets.check" | wc -l)
 DIFF2=$(diff -U0 --suppress-common-lines "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files" "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files.check" | wc -l)
@@ -341,5 +365,7 @@ rm -f "${PROJECT_STORAGE_OC_DATA_ROOT}/published-datasets.check" 2>/dev/null
 rm -f "${PROJECT_STORAGE_OC_DATA_ROOT}/published-files.check" 2>/dev/null
 
 #--------------------------------------------------------------------------------
+
+echo "Project $PROJECT has been preserved."
 
 addToLog "DONE"

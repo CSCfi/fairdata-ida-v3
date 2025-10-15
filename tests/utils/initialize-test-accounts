@@ -374,7 +374,7 @@ echo "Creating projects..."
 for PROJECT in $PROJECTS; do
     STEP="   Creating $PROJECT"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$ROOT/admin/ida_project ADD $PROJECT 1 2>&1`
+    OUT=`$ROOT/admin/ida_project ADD $PROJECT 100 2>&1`
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
         exit 1
