@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#--------------------------------------------------------------------------------
+
+# Only use the core os versions of commands + pipx/poetry local bin
+
+PATH="/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin"
+export PATH
+
+#--------------------------------------------------------------------------------
+
+function portable_realpath() {
+    if [[ "$OSTYPE" = "darwin"* ]]; then
+        [[ $1 = /* ]] && echo "$1" || echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    else
+        realpath "$1"
+    fi
+}
+
+SCRIPT_ROOT=`dirname "$(portable_realpath $0)"`
+VENV_ROOT=`dirname "$SCRIPT_ROOT"`
+
+cd $VENV_ROOT
+
+source $VENV_ROOT/venv/bin/activate
+
+cat requirements.txt | sed -e 's/;.*$//' | xargs poetry add 
+poetry lock
+

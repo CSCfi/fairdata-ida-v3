@@ -53,8 +53,8 @@ time.tzset()
 
 def hr_to_bytes(value_string):
 
-    value = float(re.sub('[^0-9\.]', '', value_string))
-    unit = re.sub('[^a-zA-Z]', '', value_string).upper()
+    value = float(re.sub(r'[^0-9\.]', '', value_string))
+    unit = re.sub(r'[^a-zA-Z]', '', value_string).upper()
 
     # We only actually convert from B/KiB/MiB/GiB/TiB/PiB but accept both KB/MB/GB/TB/PB
     # and K/M/G/T/P as unit aliases per Nextcloud and common user (erroneous) practice

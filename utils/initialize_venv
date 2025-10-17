@@ -22,45 +22,31 @@
 # @link     https://www.fairdata.fi/en/ida
 # --------------------------------------------------------------------------------
 
-SCRIPT_PATHNAME="$(realpath $0)"
-PARENT_FOLDER=`dirname "$SCRIPT_PATHNAME"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+# Only use the core os versions of commands
+    
+PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH
 
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
+# Ensure the required version of python exists
 
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+PYTHON=$(which python3.12)
 
-if [ -e $CONFIG_FILE ]
-then
-    . $CONFIG_FILE
-else
-    echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
+if [ ! -x "$PYTHON" ]; then
+    echo "Could not find python executable" >&2
     exit 1
 fi
+
+SCRIPT_PATHNAME="$(realpath $0)"
+UTILS=`dirname "$SCRIPT"`
+ROOT=`dirname "$UTILS"`
+
+source $ROOT/config/config.sh
 
 #--------------------------------------------------------------------------------
 
 ID=`id -u -n`
 if [ "$ID" != "root" ]; then
     echo "You must execute this script as root"
-    exit 1
-fi
-
-if [ -z "$ROOT" ]; then
-    echo "The variable ROOT is not defined in the configuration!" >&2
-    exit 1
-fi
-
-if [ -z "$PYTHON" ]; then
-    echo "The variable PYTHON is not defined in the configuration!" >&2
-    exit 1
-fi
-
-if [ ! -x $PYTHON ]; then
-    echo "$PYTHON does not exist!" >&2
     exit 1
 fi
 
@@ -73,3 +59,6 @@ source $ROOT/venv/bin/activate
 pip install --upgrade pip
 pip install 'wheel>=0.34.2' --force-reinstall
 pip install -r $ROOT/requirements.txt
+
+chown -R $HTTPD_USER:$HTTPD_USER $ROOT/venv
+
