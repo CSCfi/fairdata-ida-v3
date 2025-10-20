@@ -23,9 +23,7 @@
 #--------------------------------------------------------------------------------
 # Verify needed utilities are available
 
-PATH="/opt/fairdata/python3/bin:$PATH"
-
-for NEEDS_PROG in curl php python3 realpath jq
+for NEEDS_PROG in curl php python3.12 realpath jq
 do
     PROG_LOCATION=$(/usr/bin/which $NEEDS_PROG 2>/dev/null)
     if [ ! -e "$PROG_LOCATION" ]; then

@@ -86,8 +86,6 @@ METAX_PASS="DEFINE_ME"
 #METAX_API="https://DEFINE_ME/v3"
 #METAX_PASS="DEFINE_ME"
 
-PYTHON="/usr/local/fd/python3/bin/python"
-
 IDA_API="https://LOCAL_SERVER_FQDN/apps/ida/api"
 FILE_API="https://LOCAL_SERVER_FQDN/remote.php/webdav"
 SHARE_API="https://LOCAL_SERVER_FQDN/ocs/v1.php/apps/files_sharing/api/v1/shares"

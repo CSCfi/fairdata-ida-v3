@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-PYTHON        = python3
+PYTHON        = python3.12
 SPHINXOPTS	  =
 SPHINXBUILD   = sphinx-build
 SOURCEDIR     = .

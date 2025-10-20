@@ -1,0 +1,274 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+# --------------------------------------------------------------------------------
+# This script scans the staging area of the specified project for viruses.
+# --------------------------------------------------------------------------------
+
+SCRIPT=`basename "$(realpath $0)"`
+
+USAGE="
+Usage: $SCRIPT PROJECT [--scope PATHNAME] [--changed-after DATE[TIME]] [--changed-before DATE[TIME]] [--report [EMAIL]]
+       $SCRIPT -h
+
+       Where:
+
+       PROJECT           the project to be scanned
+       --scope           scanning will be limited to a particular scope
+       PATHNAME          relative pathname within the staging area
+       --changed-after   scanning will be limited to files modified after the specified date[time]
+       --changed-before  scanning will be limited to files modified before the specified date[time]
+       DATE[TIME]        an ISO date or datetime string /YYYY-MM-DD(Thh:mm:ssZ])?/
+       --report          scanning results will be emailed if any warnings are reported
+       EMAIL             the email address where virus warning reports should be sent (defaults to configured recipient list)
+"
+
+# --------------------------------------------------------------------------------
+
+INIT_FILE=`dirname "$(realpath $0)"`/lib/init_appsupport_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    sleep 1 # ensure a unique START timestamp for each scan
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting."
+    exit 1
+fi
+
+SNAIL=`mail --version 2>/dev/null | grep -- 's-nail' 2>/dev/null`
+
+if [ ! -d "$PROJECT_STORAGE_OC_DATA_ROOT" ]; then
+    errorExit "The specified project ${PROJECT} does not exist"
+fi
+
+CLAMSCAN=$(which clamscan 2>/dev/null)
+
+if [ ! "$CLAMSCAN" ]; then
+    errorExit "The clamscan command was not found"
+fi
+
+CLAMSCAN_OPTIONS="--infected --no-summary --quiet"
+
+#--------------------------------------------------------------------------------
+# Process command line arguments...
+
+shift # got PROJECT from first argument via init_appsupport_script.sh
+
+while [ "$1" ]; do
+
+    case "$1" in
+        "--scope")
+            if [ -z "$2" ]; then
+                echo "Missing relative pathname argument" >&2
+                exit 1
+            fi
+            SCOPE="$2"
+            shift
+            ;;
+        "--changed-after")
+            if [ -z "$2" ]; then
+                echo "Missing date[time] argument" >&2
+                exit 1
+            fi
+            if [[ "$2" =~ ^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}Z$ ]]; then
+                AFTER="$2"
+            elif [[ "$2" =~ ^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}$ ]]; then
+                AFTER="$2""T00:00:00Z"
+            else
+                echo "Invalid date[time]: $2" >&2
+                exit 1
+            fi
+            shift
+            ;;
+        "--changed-before")
+            if [ -z "$2" ]; then
+                echo "Missing date[time] argument" >&2
+                exit 1
+            fi
+            if [[ "$2" =~ ^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}Z$ ]]; then
+                BEFORE="$2"
+            elif [[ "$2" =~ ^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}$ ]]; then
+                BEFORE="$2""T00:00:00Z"
+            else
+                echo "Invalid date[time]: $2" >&2
+                exit 1
+            fi
+            shift
+            ;;
+        "--report")
+            SEND_REPORT="true"
+            ;;
+        *)
+            if [ "$SEND_REPORT" ] && [ -z "$RECIPIENTS" ]; then
+                RECIPIENTS="$1"
+            else
+                echo "Invalid argument: $1" >&2
+                exit 1
+            fi
+            ;;
+    esac
+
+    shift
+
+done
+
+if [ "$SEND_REPORT" ]; then
+    if [ -z "$RECIPIENTS" ]; then
+        RECIPIENTS="$EMAIL_RECIPIENTS"
+    fi
+fi
+
+# If after timestamp not specified, use the unix epoch
+if [ -z "$AFTER" ]; then
+    AFTER="1970-01-01T00:00:00Z"
+fi
+
+# If before timestamp not specified, use the start time
+if [ -z "$BEFORE" ]; then
+    BEFORE="$START"
+fi
+
+if [[ "$AFTER" == "$START" || "$AFTER" > "$START" ]]; then
+    errorExit "Specified after timestamp $AFTER must be in the past"
+fi
+
+if [ "$BEFORE" != "$START" ]; then
+    if [[ "$AFTER" == "$BEFORE" || "$AFTER" > "$BEFORE" ]]; then
+        errorExit "Specified after timestamp $AFTER must be earlier than the specified before timestamp $BEFORE"
+    fi
+fi
+
+#--------------------------------------------------------------------------------
+
+LOG_ROOT=`dirname "$(realpath $LOG)"`
+YEAR=`date -u +"%Y"`
+MONTH=`date -u +"%m"`
+REPORT_ROOT="${LOG_ROOT}/virusscans"
+REPORT_FILE="${LOG_ROOT}/virusscans/${YEAR}/${MONTH}/${START}_${PROJECT}.warnings"
+FILES="/var/tmp/$$.files"
+OUTPUT="/var/tmp/$$.out"
+
+SCAN_PATHNAME="${PROJECT_STAGING_ROOT}${SCOPE}"
+
+trap 'rm -f -- "$OUTPUT" $FILES' EXIT
+
+#--------------------------------------------------------------------------------
+
+if [ "$DEBUG" = "true" ]; then
+    echo "ROOT:             $ROOT"
+    echo "PROJECT:          $PROJECT"
+    echo "SCOPE:            $SCOPE"
+    echo "START:            $START"
+    echo "AFTER:            $AFTER"
+    echo "BEFORE:           $BEFORE"
+    echo "OUTPUT:           $OUTPUT"
+    echo "REPORT_FILE:      $REPORT_FILE"
+    echo "SEND_REPORT:      $SEND_REPORT"
+    echo "RECIPIENTS:       $RECIPIENTS"
+    echo "SCAN_PATHNAME:    $SCAN_PATHNAME"
+fi
+
+#--------------------------------------------------------------------------------
+
+if [ ! -e "$SCAN_PATHNAME" ]; then
+    errorExit "The pathname $SCAN_PATHNAME does not exist"
+fi
+
+AFTER="${AFTER%Z}"
+BEFORE="${BEFORE%Z}"
+
+echoAndLog "Scanning for viruses in $SCAN_PATHNAME ..."
+if [ -f "$SCAN_PATHNAME" ]; then
+    echo "$SCAN_PATHNAME" > "$FILES"
+else
+    find "$SCAN_PATHNAME" -type f -newermt "$AFTER" ! -newermt "$BEFORE" > "$FILES"
+fi
+
+if [ ! -s "$FILES" ]; then
+    echoAndLog "No files to scan"
+    rm $FILES 2>/dev/null
+    exit 0
+else
+    FILECOUNT=$(cat "$FILES" | wc -l)
+    if [ "$FILECOUNT" -eq 1 ]; then
+        echoAndLog "Found 1 file to scan"
+    else
+        echoAndLog "Found $FILECOUNT files to scan"
+    fi
+fi
+
+echo "Scanning ..."
+
+$CLAMSCAN $CLAMSCAN_OPTIONS --file-list="$FILES" 2>"$OUTPUT" >/dev/null
+
+if [ -s "$OUTPUT" ]; then
+    mkdir -p $(dirname $REPORT_FILE) 2>/dev/null
+    cat $OUTPUT > $REPORT_FILE
+    if [ "$?" -ne 0 ]; then
+        errorExit "Failed to create virus scan warning file $REPORT_FILE"
+    fi
+    echoAndLog "Virus warnings were reported in $REPORT_FILE"
+else
+    echoAndLog "No virus warnings were reported"
+    rm $OUTPUT 2>/dev/null
+fi
+
+# Send email if specified
+
+if [ "$SEND_REPORT" = "true" ] && [ "$EMAIL_SENDER" ] && [ "$RECIPIENTS" ]; then
+
+    HOSTNAME=`hostname`
+
+    SUBJECT="Virus scan warning report for project $PROJECT"
+
+    if [ "$IDA_ENVIRONMENT" != "PRODUCTION" ]; then
+        SUBJECT="${IDA_ENVIRONMENT} (${HOSTNAME}) ${SUBJECT}"
+    fi
+
+    if [ "$SNAIL" ]; then
+        # Convert comma delimited recipient lists to space delimited
+        RECIPIENTS=`echo "$RECIPIENTS" | sed -e 's/,/ /g'`
+        COMMAND="mail -s \"$SUBJECT\" -r $EMAIL_SENDER $RECIPIENTS"
+    else
+        COMMAND="mail -s \"${SUBJECT}\" -r ${EMAIL_SENDER} -S \"replyto=${EMAIL_SENDER}\" ${RECIPIENTS}"
+    fi
+
+    if [ "$DEBUG" = "true" ]; then
+        echo "EMAIL_SENDER:     ${EMAIL_SENDER}"
+        echo "EMAIL_RECIPIENTS: ${EMAIL_RECIPIENTS}"
+        echo "SUBJECT:          ${SUBJECT}"
+        echo "COMMAND:          ${COMMAND}"
+    fi
+
+    cat "$REPORT_FILE" | eval "$COMMAND" 2>$ERR
+
+    if [ -s $ERR ]; then
+        MSG=`cat $ERR`
+        addToLog "$MSG"
+        errorExit "Failed to send virus scan email for project $PROJECT"
+    fi
+fi
+
+rm $OUTPUT 2>/dev/null
+
+addToLog "DONE"

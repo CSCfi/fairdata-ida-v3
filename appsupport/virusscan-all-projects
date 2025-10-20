@@ -1,0 +1,77 @@
+#!/bin/bash
+# --------------------------------------------------------------------------------
+# This file is part of the Fairdata IDA research data storage service.
+#
+# Copyright (C) 2025 Ministry of Education and Culture, Finland
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License,
+# or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+# @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
+# @license  GNU Affero General Public License, version 3
+# @link     https://www.fairdata.fi/en/ida
+# --------------------------------------------------------------------------------
+# This script scans all existing projects in the IDA service for viruses.
+# --------------------------------------------------------------------------------
+
+SCRIPT=`basename "$(realpath $0)"`
+
+USAGE="
+Usage: $SCRIPT [--changed-after DATE[TIME]] [--changed-before DATE[TIME]] [--report [EMAIL]]
+       $SCRIPT -h
+
+       --changed-after   scanning will be limited to files modified after the specified date[time]
+       --changed-before  scanning will be limited to files modified before the specified date[time]
+       DATE[TIME]        an ISO date or datetime string /YYYY-MM-DD(Thh:mm:ssZ])?/
+       --report          scanning results will be emailed if any warnings are reported
+       EMAIL             the email address where virus warning reports should be sent (defaults to configured recipient list)
+"
+
+PROJECT="null"
+SCRIPT_ARGS="$*"
+
+# --------------------------------------------------------------------------------
+# Initialize script with common definitions
+
+INIT_FILE=`dirname "$(realpath $0)"`/lib/init_audit_script.sh
+
+if [ -e $INIT_FILE ]
+then
+    . $INIT_FILE
+else
+    echo "The initialization file $INIT_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
+
+# --------------------------------------------------------------------------------
+
+PROJECTS=`$ROOT/appsupport/list-projects`
+INTERNAL_PROJECTS=""
+
+if [ "$IDA_ENVIRONMENT" = "PRODUCTION" ]; then
+    INTERNAL_PROJECTS=`DEBUG=false $ROOT/appsupport/list-internal-projects | tr '\n' ' '`
+fi
+
+if [ "$DEBUG" = "true" ]; then
+    echo "SCRIPT_ARGS: $SCRIPT_ARGS"
+    echo "INTERNAL:    $INTERNAL_PROJECTS"
+fi
+
+for PROJECT in $PROJECTS; do
+    INTERNAL=`echo " $INTERNAL_PROJECTS " | grep " $PROJECT "`
+    if [ "$INTERNAL" = "" ]; then
+        $ROOT/appsupport/virusscan-project $PROJECT $SCRIPT_ARGS
+    fi
+done
+
+addToLog "DONE"
