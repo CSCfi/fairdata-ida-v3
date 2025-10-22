@@ -37,7 +37,7 @@ Usage: $SCRIPT PROJECT [--uploaded-before DATE[TIME]] [--unpublished-only] [--fr
        --scope             limit to files within a particular scope (requires either --frozen or --staging)
        PATHNAME            relative pathname within the frozen or staging area
 
-The optional paramters --uploaded-before and --unpublished-only, used together, can be used to identify projects
+The optional parameters --uploaded-before and --unpublished-only, used together, can be used to identify projects
 which have unpublished files older than a specified time, and construct a list of file pathnames for removal
 "
 

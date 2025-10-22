@@ -22,7 +22,7 @@
 # @link https://research.csc.fi/
 #--------------------------------------------------------------------------------
 
-RELEASE_CHECKSUM="a548f5fada1cefd6a72f62f810135c0afa35dd97ee43b8865cd2446e9dfe2afb"
+RELEASE_CHECKSUM="6d775b685bc7c422dbc804c07d01eac0ad8a56ccac1a9e435c198aa550faad1c"
 
 #--------------------------------------------------------------------------------
 # Only use the core os versions of commands
@@ -60,14 +60,14 @@ fi
 
 USAGE="
 Usage: ida [-h]
-       ida upload    [-v|V] [-D] [-F] [-c config] [-i ignore] [-t host] [-p project]      target_pathname local_pathname
-       ida copy      [-v|V] [-D]      [-c config]             [-t host] [-p project] [-f] target_pathname new_target_pathname
-       ida move      [-v|V] [-D]      [-c config]             [-t host] [-p project]      target_pathname new_target_pathname
-       ida delete    [-v|V] [-D]      [-c config]             [-t host] [-p project]      target_pathname
-       ida download  [-v|V]           [-c config]             [-t host] [-p project] [-f] target_pathname local_pathname
-       ida validate  [-v|V]           [-c config]             [-t host] [-p project] [-f] target_pathname local_pathname
-       ida info      [-v|V]      [-j] [-c config]             [-t host] [-p project] [-f] target_pathname
-       ida inventory [-v|V]           [-c config]             [-t host] [-p project]
+       ida upload    [-v|V] [-D] [-F] [-c config] [-i ignore] [-t host] [-p project]       target_pathname local_pathname
+       ida copy      [-v|V] [-D]      [-c config]             [-t host] [-p project] [-f]  target_pathname new_target_pathname
+       ida move      [-v|V] [-D]      [-c config]             [-t host] [-p project]       target_pathname new_target_pathname
+       ida delete    [-v|V] [-D]      [-c config]             [-t host] [-p project]       target_pathname
+       ida download  [-v|V]           [-c config]             [-t host] [-p project] [-f]  target_pathname local_pathname
+       ida validate  [-v|V]           [-c config]             [-t host] [-p project] [-f]  target_pathname local_pathname
+       ida info      [-v|V]      [-j] [-c config]             [-t host] [-p project] [-f]  target_pathname
+       ida inventory [-v|V]           [-c config]             [-t host] [-p project] [-f] [target_pathname]
 
        -h : show this guide
        -p : project name
@@ -1352,15 +1352,34 @@ function execute_ida_info {
 
 function execute_ida_inventory {
 
+    if [ "$IDA_FROZEN" = "true" ]; then
+        AREA="frozen"
+    else
+        AREA="staging"
+    fi
+
     if [ "$IDA_VERBOSE" = "true" ]; then
-        echo "Retrieving inventory for project $PROJECT" >&2
+        echo "Retrieving inventory for project $IDA_PROJECT for $AREA scope $TARGET_PATHNAME" >&2
+    fi
+
+    SCOPE_ARG=""
+    AREA_ARG=""
+
+    if [ "$TARGET_PATHNAME" != "" ]; then
+        if [ "$TARGET_PATHNAME" = "/" ]; then
+            ENCODED_TARGET_PATHNAME=$(url_encode "$TARGET_PATHNAME")
+        else
+            ENCODED_TARGET_PATHNAME=$(url_encode "/$TARGET_PATHNAME")
+        fi
+        SCOPE_ARG="?scope=$ENCODED_TARGET_PATHNAME"
+        AREA_ARG="&area=$AREA"
     fi
 
     if [ "$IDA_DEBUG" = "true" ]; then
-        echo "curl $IDA_CURL_OPS -H '$IDA_MODE_HEADER' \"${IDA_HOST}${IDA_API}/inventory/${IDA_PROJECT}\" 2>&1 <<< \"$IDA_DEBUG_CREDENTIALS\"" >&2
+        echo "curl $IDA_CURL_OPS -H '$IDA_MODE_HEADER' \"${IDA_HOST}${IDA_API}/inventory/${IDA_PROJECT}${SCOPE_ARG}${AREA_ARG}\" 2>&1 <<< \"$IDA_DEBUG_CREDENTIALS\"" >&2
     fi
 
-    curl $IDA_CURL_OPS -H "$IDA_MODE_HEADER" "${IDA_HOST}${IDA_API}/inventory/${IDA_PROJECT}" 2>&1 <<< "$IDA_CREDENTIALS"
+    curl $IDA_CURL_OPS -H "$IDA_MODE_HEADER" "${IDA_HOST}${IDA_API}/inventory/${IDA_PROJECT}${SCOPE_ARG}${AREA_ARG}" 2>&1 <<< "$IDA_CREDENTIALS"
 }
 
 #--------------------------------------------------------------------------------
@@ -1459,7 +1478,7 @@ while [ "$1" != "" ]; do
             shift;
             ;;
         -f)
-            if [ "$IDA_ACTION" != "download" -a "$IDA_ACTION" != "info" -a "$IDA_ACTION" != "copy" -a "$IDA_ACTION" != "validate" ]; then
+            if [ "$IDA_ACTION" != "download" -a "$IDA_ACTION" != "info" -a "$IDA_ACTION" != "copy" -a "$IDA_ACTION" != "validate" -a "$IDA_ACTION" != "inventory" ]; then
                 echo "Error: The -f option is not allowed for the specified action" >&2
                 exit 1;
             fi
@@ -1789,12 +1808,18 @@ IDA_WEBDAV="${IDA_WEBDAV}/${IDA_USERNAME}"
 
 TARGET_PATHNAME="$IDA_PATHNAME_1"
 
-# Strip any initial or final forward slash and/or spaces from target pathname...
-TARGET_PATHNAME=$(echo "$TARGET_PATHNAME" | sed -e 's/^ *\/ *//' | sed -e 's/ *\/ *$//')
+if [ "$IDA_ACTION" = "inventory" -a "$TARGET_PATHNAME" = "/" ]; then
+    :
+else
+    # Strip any initial or final forward slash and/or spaces from target pathname...
+    TARGET_PATHNAME=$(echo "$TARGET_PATHNAME" | sed -e 's/^ *\/ *//' | sed -e 's/ *\/ *$//')
+fi
 
 if [ "${TARGET_PATHNAME}" = "" ]; then
-    if [ "$IDA_ACTION" = "validate" -o "$IDA_ACTION" = "info" -o "$IDA_ACTION" = "inventory" ]; then
+    if [ "$IDA_ACTION" = "validate" -o "$IDA_ACTION" = "info" ]; then
         TARGET_PATHNAME="/"
+    elif [ "$IDA_ACTION" = "inventory" ]; then
+        :
     else
         echo "Error: Target pathname invalid or missing" >&2
         exit 1

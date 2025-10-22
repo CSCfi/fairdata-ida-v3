@@ -290,7 +290,7 @@ return [
             //     project = the name of the project
             // Optional parameters
             //    area = either 'frozen' or 'staging'
-            //    pathname = the relative pathname of the scope to include (ignored if area not defined)
+            //    scope = the relative pathname of the scope to include (ignored if area not defined)
         ],
 
         [

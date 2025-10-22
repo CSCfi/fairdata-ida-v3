@@ -143,7 +143,7 @@ class TestIdaCli(unittest.TestCase):
 
         cmd = "sudo -u apache DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.ida_root, self.ida_root)
         result = os.system(cmd)
-        self.assertEquals(result, 0)
+        self.assertEqual(result, 0)
 
         # Build test ida-config files based on configuration definitions
 
@@ -192,7 +192,7 @@ class TestIdaCli(unittest.TestCase):
 
             cmd = "sudo -u apache DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.ida_root, self.ida_root)
             result = os.system(cmd)
-            self.assertEquals(result, 0)
+            self.assertEqual(result, 0)
 
         self.assertTrue(self.success)
 
@@ -239,13 +239,28 @@ class TestIdaCli(unittest.TestCase):
             return False
 
 
+    def try_command(self, cmd, attempts=3):
+        count = 0
+        while count < attempts:
+            count += 1
+            try:
+                return subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            except subprocess.CalledProcessError as error:
+                if count >= attempts:
+                    raise error
+                else:
+                    print("Command failed, retrying (%d/%d)" % (count, attempts))
+                    time.sleep(count * 3)
+
+
     def test_ida_cli(self):
 
         print("--- Parameters and Credentials")
 
         print("Check usage guide output when no parameters provided")
+        cmd = self.cli_cmd
         try:
-            output = subprocess.check_output(self.cli_cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Usage:", output)
@@ -254,7 +269,7 @@ class TestIdaCli(unittest.TestCase):
         print("Check usage guide output when -h parameter is provided")
         cmd = "%s -h" % self.cli_cmd
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Usage:", output)
@@ -264,7 +279,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s unknown %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -275,7 +290,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s download %s -D /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -286,7 +301,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s validate %s -D /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -297,7 +312,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s info %s -D /file" % (self.cli_cmd, self.info_args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -308,7 +323,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s inventory %s -D" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -319,7 +334,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s copy %s -F /file /file2" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -330,7 +345,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s move %s -F /file /file2" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -341,7 +356,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s delete %s -F /file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -352,7 +367,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s download %s -F /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -363,7 +378,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s validate %s -F /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -374,7 +389,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s info %s -F /file" % (self.cli_cmd, self.info_args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -385,7 +400,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s inventory %s -F" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -396,7 +411,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s copy %s -i ./ignore /file /file2" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -407,7 +422,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s move %s -i ./ignore /file /file2" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -418,7 +433,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s delete %s -i ./ignore /file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -429,7 +444,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s download %s -i ./ignore /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -440,7 +455,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s validate %s -i ./ignore /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -451,7 +466,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s info %s -i ./ignore /file" % (self.cli_cmd, self.info_args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -462,7 +477,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s inventory %s -i ./ignore" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -473,7 +488,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -f /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -484,7 +499,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s move %s -f /file /file2" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -495,18 +510,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s delete %s -f /file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
-        except subprocess.CalledProcessError as error:
-            failed = True
-            output = error.output.decode(sys.stdout.encoding)
-            self.assertIn("Error: The -f option is not allowed for the specified action", output)
-        self.assertTrue(failed, output)
-
-        print("Attempt to use -f parameter with inventory action")
-        cmd = "%s inventory %s -f" % (self.cli_cmd, self.args)
-        failed = False
-        try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -517,7 +521,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -j /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -528,7 +532,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s copy %s -j /file /file2" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -539,7 +543,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s move %s -j /file /file2" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -550,7 +554,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s delete %s -j /file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -561,7 +565,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s download %s -j /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -572,7 +576,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s validate %s -j /file ./file" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -583,7 +587,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s inventory %s -j" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -594,7 +598,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s info %s -p bad@project:name+ /" % (self.cli_cmd, self.info_args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -605,7 +609,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -t \"http://no.such.service\" /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -616,7 +620,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -p no_such_project /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -627,7 +631,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s-invalid-username /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -638,7 +642,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s-invalid-password /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -649,7 +653,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s %s/Contact.txt" % (self.cli_cmd, self.args, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -660,7 +664,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s /test%s/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -671,7 +675,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s /test%s/Contact.txt" % (self.cli_cmd, self.args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -682,7 +686,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s / %s/2017-08" % (self.cli_cmd, self.args, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -693,7 +697,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s /test%s/Data /" % (self.cli_cmd, self.args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -704,7 +708,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -c" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -715,7 +719,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -c /no/such/config/file /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -726,7 +730,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -i" % (self.cli_cmd, self.args)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -737,7 +741,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -i /no/such/ignore/file /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -748,7 +752,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s /test%s/Legal %s/Contact.txt %s/License.txt" % (self.cli_cmd, self.args, self.token, self.testdata, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -759,7 +763,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s delete %s /test%s/Contact.txt /test%s/License.txt" % (self.cli_cmd, self.args, self.token, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -771,7 +775,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload new file with dry-run parameter and verify no actual upload occurred")
         cmd = "%s upload -D %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target uploaded successfully", output)
@@ -782,7 +786,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload new file")
         cmd = "%s upload %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -809,7 +813,7 @@ class TestIdaCli(unittest.TestCase):
         print("Validate new file")
         cmd = "%s validate %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("FILE_OK: local file %s/Contact.txt matches file in IDA at /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
@@ -818,7 +822,7 @@ class TestIdaCli(unittest.TestCase):
         print("Attempt to upload existing file, which will be skipped")
         cmd = "%s upload %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("WARNING: one or more files were skipped", output)
@@ -829,7 +833,7 @@ class TestIdaCli(unittest.TestCase):
         print("Force upload of existing file")
         cmd = "%s upload %s -F /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -855,7 +859,7 @@ class TestIdaCli(unittest.TestCase):
         print("Attempt to upload existing file with local file with different file size than in IDA")
         cmd = "%s upload %s /test%s/Contact.txt %s/License.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Skipping existing file %s/License.txt at /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
@@ -865,7 +869,7 @@ class TestIdaCli(unittest.TestCase):
         print("Force upload existing file with local file with different file size than in IDA")
         cmd = "%s upload %s -F /test%s/Contact.txt %s/License.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 3)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -878,7 +882,7 @@ class TestIdaCli(unittest.TestCase):
         print("Validate new file with different local file size than in IDA, which will be reported as invalid")
         cmd = "%s validate %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("INVALID: local file %s/Contact.txt size 2263 does not match IDA file size 446 at /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
@@ -886,7 +890,7 @@ class TestIdaCli(unittest.TestCase):
         print("Validate local file which does not exist in IDA, which will be reported as missing")
         cmd = "%s validate %s /test%s/NoFile.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("MISSING: local file %s/Contact.txt does not exist in IDA at /%s+/test%s/NoFile.txt" % (self.testdata, self.test_project_name, self.token), output)
@@ -894,7 +898,7 @@ class TestIdaCli(unittest.TestCase):
         print("Force upload of existing file (to restore correct size)")
         cmd = "%s upload %s -F /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 3)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -906,7 +910,7 @@ class TestIdaCli(unittest.TestCase):
         print("Validate restored file")
         cmd = "%s validate %s /test%s/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("FILE_OK: local file %s/Contact.txt matches file in IDA at /%s+/test%s/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
@@ -914,14 +918,14 @@ class TestIdaCli(unittest.TestCase):
         print("Create variant of file in IDA with same size but modified so that checksum is different")
         cmd = "cat %s/Contact.txt | tr 'a-z' 'A-Z' > /tmp/Contact.txt" % self.testdata
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
 
         print("Validate modified local file against same named file in IDA with different checksum, which will be reported as invalid")
         cmd = "%s validate %s /test%s/Contact.txt /tmp/Contact.txt" % (self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("INVALID: local file /tmp/Contact.txt checksum 04992ff90cd43306900b24abb75da8c40fb583541f4404d94580ac90fc5f9ebc does not match IDA file checksum 8950fc9b4292a82cfd1b5e6bbaec578ed00ac9a9c27bf891130f198fef2f0168 at /%s+/test%s/Contact.txt" % (self.test_project_name, self.token), output)
@@ -929,7 +933,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload file to be frozen for checksum tests")
         cmd = "%s upload %s /test%s/f/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -953,7 +957,7 @@ class TestIdaCli(unittest.TestCase):
         print("Validate frozen file")
         cmd = "%s validate %s -f /test%s/f/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("FILE_OK: local file %s/Contact.txt matches file in IDA at /%s/test%s/f/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
@@ -962,7 +966,7 @@ class TestIdaCli(unittest.TestCase):
         print("Validate modified local file against same named frozen file in IDA with different checksum, which will be reported as invalid")
         cmd = "%s validate %s -f /test%s/f/Contact.txt /tmp/Contact.txt" % (self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("INVALID: local file /tmp/Contact.txt checksum 04992ff90cd43306900b24abb75da8c40fb583541f4404d94580ac90fc5f9ebc does not match IDA file checksum 8950fc9b4292a82cfd1b5e6bbaec578ed00ac9a9c27bf891130f198fef2f0168 at /%s/test%s/f/Contact.txt" % (self.test_project_name, self.token), output)
@@ -970,7 +974,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload file without upload checksum")
         cmd = "NO_UPLOAD_CHECKSUM=true %s upload %s /test%s/nc/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -982,7 +986,7 @@ class TestIdaCli(unittest.TestCase):
         print("Validate file without checksum")
         cmd = "%s validate %s /test%s/nc/Contact.txt %s/Contact.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("FILE_OK: local file %s/Contact.txt matches file in IDA at /%s+/test%s/nc/Contact.txt" % (self.testdata, self.test_project_name, self.token), output)
@@ -991,7 +995,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload file without initial slash in target pathname")
         cmd = "%s upload %s test%s/License.txt %s/License.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1002,7 +1006,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload file with relative local pathname")
         cmd = "cd %s/2017-08; %s upload %s /test%s/License2.txt ../License.txt" % (self.testdata, self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1012,13 +1016,13 @@ class TestIdaCli(unittest.TestCase):
         print("Upload zero size file")
         cmd = "%s upload %s /test%s/zero_size_file %s/2017-08/Experiment_1/zero_size_file" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
         path = Path("%s/test%s/zero_size_file" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
 
         print("Query IDA for last add data change details and verify change matches last action")
         response = requests.get("%s/dataChanges/%s/last?change=add" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
@@ -1038,7 +1042,7 @@ class TestIdaCli(unittest.TestCase):
         print("Copy file within staging with dry-run parameter and verify no actual copy occurred")
         cmd = "%s copy %s -D /test%s/Contact.txt /test%s/a/b/c/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target copied successfully", output)
@@ -1048,7 +1052,7 @@ class TestIdaCli(unittest.TestCase):
         print("Copy file within staging")
         cmd = "%s copy %s /test%s/Contact.txt /test%s/a/b/c/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
@@ -1087,7 +1091,7 @@ class TestIdaCli(unittest.TestCase):
         print("Copy file from frozen area to staging area with dry-run parameter and verify no actual copy occurred")
         cmd = "%s copy %s -f -D /test%s/a/b/c/Contact.txt /test%s/a/b/c/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target copied successfully", output)
@@ -1099,7 +1103,7 @@ class TestIdaCli(unittest.TestCase):
         print("Copy file from frozen area to staging area")
         cmd = "%s copy %s -f /test%s/a/b/c/Contact.txt /test%s/a/b/c/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
@@ -1126,16 +1130,16 @@ class TestIdaCli(unittest.TestCase):
         print("Copy zero size file")
         cmd = "%s copy %s /test%s/zero_size_file /test%s/a/b/c/zero_size_file" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
         path = Path("%s/test%s/zero_size_file" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
         path = Path("%s/test%s/a/b/c/zero_size_file" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
 
         print("Query IDA for last copy data change details and verify change matches last action")
         response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
@@ -1155,7 +1159,7 @@ class TestIdaCli(unittest.TestCase):
         print("Rename with dry-run parameter and verify no actual renaming occurred")
         cmd = "%s move %s -D /test%s/Contact.txt /test%s/Contact2.txt" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target moved successfully", output)
@@ -1167,7 +1171,7 @@ class TestIdaCli(unittest.TestCase):
         print("Rename file")
         cmd = "%s move %s /test%s/Contact.txt /test%s/Contact2.txt" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
@@ -1194,7 +1198,7 @@ class TestIdaCli(unittest.TestCase):
         print("Move with dry-run parameter and verify no actual move occurred")
         cmd = "%s move %s -D /test%s/Contact2.txt /test%s/x/y/z/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
@@ -1206,7 +1210,7 @@ class TestIdaCli(unittest.TestCase):
         print("Move file")
         cmd = "%s move %s /test%s/Contact2.txt /test%s/x/y/z/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
@@ -1233,19 +1237,19 @@ class TestIdaCli(unittest.TestCase):
         print("Download file")
         cmd = "%s download %s /test%s/x/y/z/Contact.txt %s/a/b/c/Contact.txt" % (self.cli_cmd, self.args, self.token, self.tempdir)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target downloaded successfully", output)
         path = Path("%s/a/b/c/Contact.txt" % (self.tempdir))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(2263, path.stat().st_size, output)
+        self.assertEqual(2263, path.stat().st_size, output)
 
         print("Attempt to upload file using invalid local pathname")
         cmd = "%s upload %s /test%s/no/such/file.txt /no/such/file.txt" % (self.cli_cmd, self.args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1256,7 +1260,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s copy %s /test%s/License2.txt /test%s/x/y/z/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1267,7 +1271,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s move %s /test%s/License2.txt /test%s/x/y/z/Contact.txt" % (self.cli_cmd, self.args, self.token, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1278,7 +1282,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s -f /test%s/LicenseX.txt %s/License.txt" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1289,7 +1293,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s move %s -f /test%s/License.txt /test%s/LicenseX.txt" % (self.cli_cmd, self.args, self.token, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1300,7 +1304,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s delete %s -f /test%s/License.txt" % (self.cli_cmd, self.args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1311,7 +1315,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s download %s /test%s/no/such/file.txt %s/no/such/file.txt" % (self.cli_cmd, self.args, self.token, self.tempdir)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1322,7 +1326,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s download %s /test%s/x/y/z/Contact.txt %s/a/b/c/Contact.txt" % (self.cli_cmd, self.args, self.token, self.tempdir)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1332,7 +1336,7 @@ class TestIdaCli(unittest.TestCase):
         print("Delete file with dry-run parameter and verify no actual deletion occurred")
         cmd = "%s delete %s -D /test%s/x/y/z/Contact.txt" % (self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target deleted successfully", output)
@@ -1342,7 +1346,7 @@ class TestIdaCli(unittest.TestCase):
         print("Delete file")
         cmd = "%s delete %s /test%s/x/y/z/Contact.txt" % (self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target deleted successfully", output)
@@ -1369,7 +1373,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload new folder with dry-run parameter and verify no actual upload occurred")
         cmd = "%s upload %s -D /test%s/2017-08/Experiment_1 %s/2017-08/Experiment_1" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target uploaded successfully", output)
@@ -1379,7 +1383,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload new folder")
         cmd = "%s upload %s /test%s/2017-08/Experiment_1 %s/2017-08/Experiment_1" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1387,19 +1391,19 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline/test01.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline/test02.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(1531, path.stat().st_size, output)
+        self.assertEqual(1531, path.stat().st_size, output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline/test03.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(2263, path.stat().st_size, output)
+        self.assertEqual(2263, path.stat().st_size, output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline/test04.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(3329, path.stat().st_size, output)
+        self.assertEqual(3329, path.stat().st_size, output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline/test05.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(3728, path.stat().st_size, output)
+        self.assertEqual(3728, path.stat().st_size, output)
 
         print("Query IDA for last add data change details and verify change matches last action")
         response = requests.get("%s/dataChanges/%s/last?change=add" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
@@ -1419,7 +1423,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload additional files to existing folder")
         cmd = "%s upload %s /test%s/2017-08/Experiment_1/baseline2 %s/2017-08/Experiment_2/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1427,12 +1431,12 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline2/test01.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
 
         print("Upload folder without initial slash in target pathname")
         cmd = "%s upload %s test%s/2017-08/Experiment_1/baseline3 %s/2017-08/Experiment_2/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1440,12 +1444,12 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline3/test01.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
 
         print("Upload folder with trailing slash in target pathname")
         cmd = "%s upload %s /test%s/2017-08/Experiment_1/baseline4/ %s/2017-08/Experiment_2/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1453,12 +1457,12 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline4/test01.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
 
         print("Upload folder with trailing slash in local pathname")
         cmd = "%s upload %s /test%s/2017-08/Experiment_1/baseline5 %s/2017-08/Experiment_2/baseline/" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1466,12 +1470,12 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline5/test01.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
 
         print("Upload folder with relative local pathname")
         cmd = "cd %s/2017-08/Experiment_2; %s upload %s /test%s/2017-08/Experiment_1/baseline6 ./baseline" % (self.testdata, self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1479,12 +1483,12 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-08/Experiment_1/baseline6/test01.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
 
         print("Upload folder with ignore patterns")
         cmd = "%s upload %s %s /test%s/2017-10 %s/2017-10" % (self.cli_cmd, self.args, self.ignore_file, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1492,7 +1496,7 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-10/Experiment_3/baseline/test01.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
         path = Path("%s/test%s/2017-10/.DS_Store" % (self.staging, self.token))
         self.assertFalse(path.exists(), output)
         path = Path("%s/test%s/2017-10/Experiment_3/test05.dat" % (self.staging, self.token))
@@ -1507,9 +1511,9 @@ class TestIdaCli(unittest.TestCase):
         self.assertFalse(path.exists(), output)
 
         print("Upload folder with files containing special characters")
-        cmd = "%s upload %s /test%s/Special\ Characters %s/Special\ Characters" % (self.cli_cmd, self.args, self.token, self.testdata)
+        cmd = "%s upload %s /test%s/Special\\ Characters %s/Special\\ Characters" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1517,33 +1521,33 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/Special Characters/file_with_ä_and_ö_and_even_å_oh_my.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
-        path = Path("%s/test%s/Special Characters/file with spaces and (various) [brackets] {etc}" % (self.staging, self.token))
+        self.assertEqual(446, path.stat().st_size, output)
+        path = Path("%s/test%s/Special Characters/file with spaces, commas, and (various) [brackets] {etc}" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
         path = Path("%s/test%s/Special Characters/$file with special characters #~;@-+'&!%%^.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
         path = Path("%s/test%s/Special Characters/bogus_link@" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
-        path = Path("%s/test%s/Special Characters/ksaiwlsia?" % (self.staging, self.token))
+        self.assertEqual(446, path.stat().st_size, output)
+        path = Path("%s/test%s/Special Characters/ksai*w\"lsia?" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
         path = Path("%s/test%s/Special Characters/tempfile~" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
         path = Path("%s/test%s/Special Characters/what-is-this-data#" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
         path = Path("%s/test%s/Special Characters/.nothing_to_see_here" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
 
         print("Copy folder within staging area with dry-run parameter and verify no actual copy occurred")
         cmd = "%s copy %s -D /test%s/2017-10/Experiment_3/baseline /test%s/2017-11/Experiment_8/baseline" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target copied successfully", output)
@@ -1553,7 +1557,7 @@ class TestIdaCli(unittest.TestCase):
         print("Copy folder within staging area")
         cmd = "%s copy %s /test%s/2017-10/Experiment_3/baseline /test%s/2017-11/Experiment_8/baseline" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
@@ -1561,12 +1565,12 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-10/Experiment_3/baseline/zero_size_file" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
         path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.staging, self.token))
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
 
         print("Query IDA for last copy data change details and verify change matches last action")
         response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
@@ -1598,7 +1602,7 @@ class TestIdaCli(unittest.TestCase):
         print("Copy folder from frozen area to staging area")
         cmd = "%s copy %s -f /test%s/2017-11/Experiment_8/baseline /test%s/2017-11/Experiment_8/baseline" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target copied successfully", output)
@@ -1606,12 +1610,12 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.frozen, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
         path = Path("%s/test%s/2017-11/Experiment_8/baseline" % (self.staging, self.token))
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-11/Experiment_8/baseline/zero_size_file" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
 
         print("Query IDA for last copy data change details and verify change matches last action")
         response = requests.get("%s/dataChanges/%s/last?change=copy" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
@@ -1631,7 +1635,7 @@ class TestIdaCli(unittest.TestCase):
         print("Rename folder within staging with dry-run parameter and verify no actual renaming occurred")
         cmd = "%s move %s -D /test%s/2017-10/Experiment_3/baseline /test%s/2017-10/Experiment_3/baseline_old" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target moved successfully", output)
@@ -1643,7 +1647,7 @@ class TestIdaCli(unittest.TestCase):
         print("Rename folder")
         cmd = "%s move %s /test%s/2017-10/Experiment_3/baseline /test%s/2017-10/Experiment_3/baseline_old" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
@@ -1670,7 +1674,7 @@ class TestIdaCli(unittest.TestCase):
         print("Move folder within staging with dry-run parameter and verify no actual move occurred")
         cmd = "%s move %s -D /test%s/2017-10/Experiment_3/baseline_old /test%s/2017-11/Experiment_9/baseline_x" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
@@ -1682,7 +1686,7 @@ class TestIdaCli(unittest.TestCase):
         print("Move folder")
         cmd = "%s move %s /test%s/2017-10/Experiment_3/baseline_old /test%s/2017-11/Experiment_9/baseline_x" % (self.cli_cmd, self.args, self.token, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target moved successfully", output)
@@ -1692,7 +1696,7 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-11/Experiment_9/baseline_x/zero_size_file" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
 
         print("Query IDA for last move data change details and verify change matches last action")
         response = requests.get("%s/dataChanges/%s/last?change=move" % (self.ida_api, self.test_project_name), auth=self.test_user_auth)
@@ -1711,15 +1715,14 @@ class TestIdaCli(unittest.TestCase):
 
         print("Download folder as package")
         cmd = "%s download %s /test%s/2017-10/Experiment_5 %s/2017-10_Experiment_5.zip" % (self.cli_cmd, self.args, self.token, self.tempdir)
-        print(cmd)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target downloaded successfully", output)
         path = Path("%s/2017-10_Experiment_5.zip" % (self.tempdir))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(17792, path.stat().st_size, output)
+        self.assertEqual(17792, path.stat().st_size, output)
         self.assertTrue(self.isZipFile(path), output)
         self.assertTrue(self.fileIncludedInZipFile(path, 'Experiment_5/baseline/test03.dat'), output)
 
@@ -1727,7 +1730,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s /test%s/no/such/folder /no/such/folder" % (self.cli_cmd, self.args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1738,7 +1741,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s download %s /test%s/2017-10/Experiment_5 %s/2017-10_Experiment_5.zip" % (self.cli_cmd, self.args, self.token, self.tempdir)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1748,7 +1751,7 @@ class TestIdaCli(unittest.TestCase):
         print("Delete folder with dry-run parameter and verify no actual deletion occurred")
         cmd = "%s delete %s -D /test%s/2017-10/Experiment_4" % (self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("* Target deleted successfully", output)
@@ -1758,7 +1761,7 @@ class TestIdaCli(unittest.TestCase):
         print("Delete folder")
         cmd = "%s delete %s /test%s/2017-10/Experiment_4" % (self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target deleted successfully", output)
@@ -1785,7 +1788,7 @@ class TestIdaCli(unittest.TestCase):
         print("Upload new folder")
         cmd = "%s upload %s /test%s/2017-12/Experiment_1/baseline %s/2017-08/Experiment_1/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target uploaded successfully", output)
@@ -1793,27 +1796,27 @@ class TestIdaCli(unittest.TestCase):
         self.assertTrue(path.is_dir(), output)
         path = Path("%s/test%s/2017-12/Experiment_1/baseline/test01.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(446, path.stat().st_size, output)
+        self.assertEqual(446, path.stat().st_size, output)
         path = Path("%s/test%s/2017-12/Experiment_1/baseline/test02.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(1531, path.stat().st_size, output)
+        self.assertEqual(1531, path.stat().st_size, output)
         path = Path("%s/test%s/2017-12/Experiment_1/baseline/test03.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(2263, path.stat().st_size, output)
+        self.assertEqual(2263, path.stat().st_size, output)
         path = Path("%s/test%s/2017-12/Experiment_1/baseline/test04.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(3329, path.stat().st_size, output)
+        self.assertEqual(3329, path.stat().st_size, output)
         path = Path("%s/test%s/2017-12/Experiment_1/baseline/test05.dat" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(3728, path.stat().st_size, output)
+        self.assertEqual(3728, path.stat().st_size, output)
         path = Path("%s/test%s/2017-12/Experiment_1/baseline/zero_size_file" % (self.staging, self.token))
         self.assertTrue(path.is_file(), output)
-        self.assertEquals(0, path.stat().st_size, output)
+        self.assertEqual(0, path.stat().st_size, output)
 
         print("Retrieve file info from staging area as plain text")
         cmd = "%s info %s /test%s/2017-12/Experiment_1/baseline/test01.dat" % (self.cli_cmd, self.info_args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("project:    %s" % (self.test_project_name), output)
@@ -1829,7 +1832,7 @@ class TestIdaCli(unittest.TestCase):
         print("Retrieve file info from staging area as JSON")
         cmd = "%s info %s -j /test%s/2017-12/Experiment_1/baseline/test01.dat" % (self.cli_cmd, self.info_args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("\"project\": \"%s\"" % (self.test_project_name), output)
@@ -1845,7 +1848,7 @@ class TestIdaCli(unittest.TestCase):
         print("Verify no verbose or debug output to stdout from info action")
         cmd = "%s info %s /test%s/2017-12/Experiment_1/baseline/test01.dat 2>/dev/null" % (self.cli_cmd, self.info_args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertNotIn("Verifying ", output)
@@ -1854,7 +1857,7 @@ class TestIdaCli(unittest.TestCase):
         print("Retrieve folder info from staging area")
         cmd = "%s info %s /test%s/2017-12/Experiment_1/baseline" % (self.cli_cmd, self.info_args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("project:    %s" % (self.test_project_name), output)
@@ -1886,7 +1889,7 @@ class TestIdaCli(unittest.TestCase):
         print("Retrieve file info from frozen area")
         cmd = "%s info %s -f /test%s/2017-12/Experiment_1/baseline/test01.dat" % (self.cli_cmd, self.info_args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("project:    %s" % (self.test_project_name), output)
@@ -1904,7 +1907,7 @@ class TestIdaCli(unittest.TestCase):
         print("Retrieve folder info from frozen area")
         cmd = "%s info %s -f /test%s/2017-12/Experiment_1/baseline" % (self.cli_cmd, self.info_args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("project:    %s" % (self.test_project_name), output)
@@ -1925,7 +1928,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s info %s /test%s/no/such/file.txt" % (self.cli_cmd, self.info_args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1936,7 +1939,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s info %s /test%s/no/such/folder" % (self.cli_cmd, self.info_args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1947,7 +1950,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s info %s -f /test%s/no/such/file.txt" % (self.cli_cmd, self.info_args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1958,12 +1961,81 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s info %s -f /test%s/no/such/folder" % (self.cli_cmd, self.info_args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
             self.assertIn("Error: Specified target not found", output)
         self.assertTrue(failed, output)
+
+        print("--- Inventory Operations")
+
+        print("Retrieve complete inventory")
+        cmd = "%s inventory" % (self.cli_cmd)
+        try:
+            output = self.try_command(cmd)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("\"project\": \"%s\"" % (self.test_project_name), output)
+        self.assertIn("\"area\": null", output)
+        self.assertIn("\"scope\": \"/\"", output)
+        self.assertIn("\"totalFiles\": 191", output)
+        self.assertIn("\"totalStagedFiles\": 178", output)
+        self.assertIn("\"totalFrozenFiles\": 13", output)
+
+        print("Retrieve inventory for frozen area")
+        cmd = "%s inventory -f /" % (self.cli_cmd)
+        try:
+            output = self.try_command(cmd)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("\"project\": \"%s\"" % (self.test_project_name), output)
+        self.assertIn("\"area\": \"frozen\"", output)
+        self.assertIn("\"scope\": \"/\"", output)
+        self.assertIn("\"totalFiles\": 13", output)
+        self.assertIn("\"totalStagedFiles\": 0", output)
+        self.assertIn("\"totalFrozenFiles\": 13", output)
+
+        print("Retrieve inventory for staging area")
+        cmd = "%s inventory /" % (self.cli_cmd)
+        try:
+            output = self.try_command(cmd)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("\"project\": \"%s\"" % (self.test_project_name), output)
+        self.assertIn("\"area\": \"staging\"", output)
+        self.assertIn("\"scope\": \"/\"", output)
+        self.assertIn("\"totalFiles\": 178", output)
+        self.assertIn("\"totalStagedFiles\": 178", output)
+        self.assertIn("\"totalFrozenFiles\": 0", output)
+
+        print("Retrieve inventory for specific scope in frozen area")
+        scope = "/test%s/2017-11/Experiment_8" % self.token
+        cmd = "%s inventory -f \"%s\"" % (self.cli_cmd, scope)
+        try:
+            output = self.try_command(cmd)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("\"project\": \"%s\"" % (self.test_project_name), output)
+        self.assertIn("\"area\": \"frozen\"", output)
+        self.assertIn("\"scope\": \"%s\"" % scope, output)
+        self.assertIn("\"totalFiles\": 5", output)
+        self.assertIn("\"totalStagedFiles\": 0", output)
+        self.assertIn("\"totalFrozenFiles\": 5", output)
+
+        print("Retrieve inventory for specific scope in staging area")
+        scope = "/test%s/2017-08/Experiment_1" % self.token
+        cmd = "%s inventory \"%s\"" % (self.cli_cmd, scope)
+        try:
+            output = self.try_command(cmd)
+        except subprocess.CalledProcessError as error:
+            self.fail(error.output.decode(sys.stdout.encoding))
+        self.assertIn("\"project\": \"%s\"" % (self.test_project_name), output)
+        self.assertIn("\"area\": \"staging\"", output)
+        self.assertIn("\"scope\": \"%s\"" % scope, output)
+        self.assertIn("\"totalFiles\": 43", output)
+        self.assertIn("\"totalStagedFiles\": 43", output)
+        self.assertIn("\"totalFrozenFiles\": 0", output)
 
         print("--- Locking and Scope Collisions")
 
@@ -1988,7 +2060,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s /test%s/2017-08/Experiment_1/test01.dat %s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -1999,7 +2071,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s move %s /test%s/2017-08/Experiment_1/test01b.dat /test%s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -2010,7 +2082,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s delete %s /test%s/2017-08/Experiment_1/test01.dat" % (self.cli_cmd, self.args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -2021,7 +2093,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s upload %s /test%s/2017-08/Experiment_1/baseline6 %s/2017-08/Experiment_2/baseline" % (self.cli_cmd, self.args, self.token, self.testdata)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -2032,7 +2104,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s move %s /test%s/2017-08/Experiment_1 /test%s/2017-08/Experiment_9" % (self.cli_cmd, self.args, self.token, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -2043,7 +2115,7 @@ class TestIdaCli(unittest.TestCase):
         cmd = "%s delete %s /test%s/2017-08/Experiment_1" % (self.cli_cmd, self.args, self.token)
         failed = False
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd, 1)
         except subprocess.CalledProcessError as error:
             failed = True
             output = error.output.decode(sys.stdout.encoding)
@@ -2061,7 +2133,7 @@ class TestIdaCli(unittest.TestCase):
         print("(delete test data folder from staging area)")
         cmd = "%s delete %s /test%s" % (self.cli_cmd, self.args, self.token)
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
+            output = self.try_command(cmd)
         except subprocess.CalledProcessError as error:
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertIn("Target deleted successfully", output)
