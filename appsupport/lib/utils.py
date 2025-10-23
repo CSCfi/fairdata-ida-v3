@@ -61,14 +61,6 @@ def load_configuration(filesystem_pathname):
         from importlib.machinery import SourceFileLoader
         config = SourceFileLoader(module_name, filesystem_pathname).load_module()
 
-    # Define Metax version if Metax URL defined
-
-    if config.METAX_API:
-        if '/rest/' in config.METAX_API:
-            config.METAX_API_VERSION = 1
-        else:
-            config.METAX_API_VERSION = 3
-
     # Allow environment setting to override configuration or defaults for debug output
 
     if os.environ.get('DEBUG'):

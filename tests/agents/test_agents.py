@@ -98,11 +98,7 @@ class TestAgents(unittest.TestCase):
         else:
             ida_headers = { 'X-SIMULATE-AGENTS': 'true' }
 
-        # If Metax v3 or later, define authentication header
-        if self.config["METAX_API_VERSION"] >= 3:
-            metax_headers = { "Authorization": "Token %s" % self.config["METAX_PASS"] }
-        else:
-            metax_user = (self.config["METAX_USER"], self.config["METAX_PASS"])
+        metax_headers = { "Authorization": "Token %s" % self.config["METAX_PASS"] }
 
         print("--- Freeze Action Postprocessing")
 
@@ -147,35 +143,20 @@ class TestAgents(unittest.TestCase):
 
         if self.config["METAX_AVAILABLE"] == 1:
             print("Verify frozen file details accessible from METAX")
-            if self.config["METAX_API_VERSION"] >= 3:
-                url = "%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_pid)
-                response = requests.get(url, headers=metax_headers)
-            else:
-                response = requests.get("%s/files/%s" % (self.config["METAX_API"], file_pid), auth=metax_user)
+            url = "%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_pid)
+            response = requests.get(url, headers=metax_headers)
             self.assertEqual(response.status_code, 200)
-            if self.config["METAX_API_VERSION"] >= 3:
-                metax_file_data = response.json()[0]
-                self.assertEqual(file_data["pid"], metax_file_data["storage_identifier"])
-                self.assertEqual(file_data["project"], metax_file_data["csc_project"])
-                self.assertEqual(file_data["pathname"], metax_file_data["pathname"])
-                self.assertEqual(file_data["checksum"], metax_file_data["checksum"])
-                self.assertEqual(file_data["size"], metax_file_data["size"])
-                self.assertEqual(metax_file_data["storage_service"], "ida")
-                self.assertIsNotNone(metax_file_data.get("frozen", None))
-                self.assertIsNotNone(metax_file_data.get("modified", None))
-                self.assertEqual(metax_file_data["user"], "test_user_a")
-                self.assertFalse(metax_file_data.get("removed"), False)
-            else:
-                metax_file_data = response.json()
-                self.assertEqual(file_data["pid"], metax_file_data["identifier"])
-                self.assertEqual(file_data["project"], metax_file_data["project_identifier"])
-                self.assertEqual(file_data["pathname"], metax_file_data["file_path"])
-                self.assertEqual(file_data["checksum"], 'sha256:%s' % metax_file_data["checksum"]["value"])
-                self.assertEqual(file_data["size"], metax_file_data["byte_size"])
-                self.assertIsNotNone(metax_file_data.get("file_frozen", None))
-                self.assertIsNotNone(metax_file_data.get("file_modified", None))
-                self.assertEqual(metax_file_data["service_created"], "ida")
-                self.assertFalse(metax_file_data.get("removed"), False)
+            metax_file_data = response.json()[0]
+            self.assertEqual(file_data["pid"], metax_file_data["storage_identifier"])
+            self.assertEqual(file_data["project"], metax_file_data["csc_project"])
+            self.assertEqual(file_data["pathname"], metax_file_data["pathname"])
+            self.assertEqual(file_data["checksum"], metax_file_data["checksum"])
+            self.assertEqual(file_data["size"], metax_file_data["size"])
+            self.assertEqual(metax_file_data["storage_service"], "ida")
+            self.assertIsNotNone(metax_file_data.get("frozen", None))
+            self.assertIsNotNone(metax_file_data.get("modified", None))
+            self.assertEqual(metax_file_data["user"], "test_user_a")
+            self.assertFalse(metax_file_data.get("removed"), False)
 
         # --------------------------------------------------------------------------------
 
@@ -218,13 +199,9 @@ class TestAgents(unittest.TestCase):
 
         if self.config["METAX_AVAILABLE"] == 1:
             print("Verify unfrozen file marked as removed in METAX")
-            if self.config["METAX_API_VERSION"] >= 3:
-                response = requests.get("%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_pid), headers=metax_headers)
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(len(response.json()), 0)
-            else:
-                response = requests.get("%s/files/%s" % (self.config["METAX_API"], file_pid), auth=metax_user)
-                self.assertEqual(response.status_code, 404)
+            response = requests.get("%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_pid), headers=metax_headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.json()), 0)
 
         # --------------------------------------------------------------------------------
 
@@ -265,13 +242,9 @@ class TestAgents(unittest.TestCase):
 
         if self.config["METAX_AVAILABLE"] == 1:
             print("Verify deleted file marked as removed in METAX")
-            if self.config["METAX_API_VERSION"] >= 3:
-                response = requests.get("%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_pid), headers=metax_headers)
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(len(response.json()), 0)
-            else:
-                response = requests.get("%s/files/%s" % (self.config["METAX_API"], file_pid), auth=metax_user)
-                self.assertEqual(response.status_code, 404)
+            response = requests.get("%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_pid), headers=metax_headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.json()), 0)
 
         # --------------------------------------------------------------------------------
 
@@ -284,12 +257,8 @@ class TestAgents(unittest.TestCase):
         check_for_failed_actions(self, "test_project_a", test_user_a)
 
         if self.config["METAX_AVAILABLE"] == 1:
-            if self.config["METAX_API_VERSION"] >= 3:
-                url = "%s/files?csc_project=test_project_a&storage_service=ida&limit=100" % self.config["METAX_API"]
-                response = requests.get(url, headers=metax_headers)
-            else:
-                url = "%s/files?fields=identifier&storage_service=urn:nbn:fi:att:file-storage-ida&ordering=id&project_identifier=test_project_a&limit=100" % self.config["METAX_API"]
-                response = requests.get(url, auth=metax_user)
+            url = "%s/files?csc_project=test_project_a&storage_service=ida&limit=100" % self.config["METAX_API"]
+            response = requests.get(url, headers=metax_headers)
             self.assertEqual(response.status_code, 200)
             file_data = response.json()
             self.assertEqual(file_data["count"], 11)
@@ -339,37 +308,19 @@ class TestAgents(unittest.TestCase):
         if self.config["METAX_AVAILABLE"] == 1:
 
             print("Update frozen file 3 record to set size to 999 and checksum to equivalent of 'sha256:abcdef' in METAX")
-            if self.config["METAX_API_VERSION"] >= 3:
-                data = [{
-                    #"project": "test_project_a",
-                    "storage_service": "ida",
-                    "storage_identifier": file_3_data["pid"],
-                    "size": 999,
-                    "checksum": "sha256:abcdef"
-                }]
-                response = requests.post("%s/files/patch-many" % self.config["METAX_API"], headers=metax_headers, json=data)
-            else:
-                data = {"byte_size": 999, "checksum": { "algorithm": "SHA-256", "value": "abcdef"} }
-                response = requests.patch("%s/files/%s" % (self.config["METAX_API"], file_3_data["pid"]), json=data, auth=metax_user)
+            data = [{
+                #"project": "test_project_a",
+                "storage_service": "ida",
+                "storage_identifier": file_3_data["pid"],
+                "size": 999,
+                "checksum": "sha256:abcdef"
+            }]
+            response = requests.post("%s/files/patch-many" % self.config["METAX_API"], headers=metax_headers, json=data)
             self.assertEqual(response.status_code, 200)
             #print(str(response.text))
-            if self.config["METAX_API_VERSION"] >= 3:
-                metax_file_data = response.json()["success"][0]["object"]
-                self.assertEqual(metax_file_data["size"], 999)
-                self.assertEqual(metax_file_data["checksum"], "sha256:abcdef")
-            else:
-                metax_file_data = response.json()
-                self.assertEqual(metax_file_data["byte_size"], 999)
-                self.assertEqual(metax_file_data["checksum"]["algorithm"], "SHA-256")
-                self.assertEqual(metax_file_data["checksum"]["value"], "abcdef")
-
-            if self.config["METAX_API_VERSION"] < 3:
-                print("Update frozen file 3 record to simulate legacy metadata stored in METAX")
-                data = { "file_characteristics_extension": { "foo": "bar" } }
-                response = requests.patch("%s/files/%s" % (self.config["METAX_API"], file_3_data["pid"]), json=data, auth=metax_user)
-                self.assertEqual(response.status_code, 200)
-                metax_file_data = response.json()
-                self.assertEqual(metax_file_data["file_characteristics_extension"]["foo"], "bar")
+            metax_file_data = response.json()["success"][0]["object"]
+            self.assertEqual(metax_file_data["size"], 999)
+            self.assertEqual(metax_file_data["checksum"], "sha256:abcdef")
 
         print("Physically delete replication of file 3")
         pathname = "%s/projects/test_project_a/testdata/2017-08/Experiment_1/baseline/test03.dat" % (self.config["DATA_REPLICATION_ROOT"])
@@ -476,24 +427,11 @@ class TestAgents(unittest.TestCase):
         if self.config["METAX_AVAILABLE"] == 1:
 
             print("Verify file details from post-repair frozen file 3 are repaired in METAX")
-            if self.config["METAX_API_VERSION"] >= 3:
-                response = requests.get("%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_data["pid"]), headers=metax_headers)
-            else:
-                response = requests.get("%s/files/%s" % (self.config["METAX_API"], file_data["pid"]), auth=metax_user)
+            response = requests.get("%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_data["pid"]), headers=metax_headers)
             self.assertEqual(response.status_code, 200)
-            if self.config["METAX_API_VERSION"] >= 3:
-                metax_file_data = response.json()[0]
-                self.assertEqual(metax_file_data["size"], 2263)
-                self.assertEqual(metax_file_data["checksum"], "sha256:8950fc9b4292a82cfd1b5e6bbaec578ed00ac9a9c27bf891130f198fef2f0168")
-            else:
-                metax_file_data = response.json()
-                self.assertEqual(metax_file_data["byte_size"], 2263)
-                self.assertEqual(metax_file_data["checksum"]["algorithm"], "SHA-256")
-                self.assertEqual(metax_file_data["checksum"]["value"], "8950fc9b4292a82cfd1b5e6bbaec578ed00ac9a9c27bf891130f198fef2f0168")
-
-            if self.config["METAX_API_VERSION"] < 3:
-                print("Verify simulated legacy metadata of post-repair frozen file 3 remains in METAX")
-                self.assertEqual(metax_file_data["file_characteristics_extension"]["foo"], "bar")
+            metax_file_data = response.json()[0]
+            self.assertEqual(metax_file_data["size"], 2263)
+            self.assertEqual(metax_file_data["checksum"], "sha256:8950fc9b4292a82cfd1b5e6bbaec578ed00ac9a9c27bf891130f198fef2f0168")
 
         print("Verify file details from post-repair file manually moved to frozen space are defined in IDA")
         data = {"project": "test_project_a", "pathname": "/testdata/2017-08/Experiment_2/baseline/test01.dat"}
@@ -515,23 +453,16 @@ class TestAgents(unittest.TestCase):
         if self.config["METAX_AVAILABLE"] == 1:
 
             print("Verify correct number of frozen files active in METAX")
-            if self.config["METAX_API_VERSION"] >= 3:
-                url = "%s/files?csc_project=test_project_a&storage_service=ida&limit=100" % self.config["METAX_API"]
-                response = requests.get(url, headers=metax_headers)
-            else:
-                response = requests.get(url, auth=metax_user)
+            url = "%s/files?csc_project=test_project_a&storage_service=ida&limit=100" % self.config["METAX_API"]
+            response = requests.get(url, headers=metax_headers)
             self.assertEqual(response.status_code, 200)
             file_data = response.json()
             self.assertEqual(file_data["count"], 23)
 
             print("Verify manually removed frozen file marked as removed in METAX")
-            if self.config["METAX_API_VERSION"] >= 3:
-                response = requests.get("%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_4_data["pid"]), headers=metax_headers)
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(len(response.json()), 0)
-            else:
-                response = requests.get("%s/files/%s" % (self.config["METAX_API"], file_4_data["pid"]), auth=metax_user)
-                self.assertEqual(response.status_code, 404)
+            response = requests.get("%s/files?storage_service=ida&storage_identifier=%s&pagination=false" % (self.config["METAX_API"], file_4_data["pid"]), headers=metax_headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(len(response.json()), 0)
 
         print("Verify file details from already frozen file 5 remain unchanged")
         data = {"project": "test_project_a", "pathname": "/testdata/2017-08/Experiment_1/test05.dat"}

@@ -55,10 +55,7 @@ class TestDataDeletion(unittest.TestCase):
 
         self.assertEqual(self.config["METAX_AVAILABLE"], 1)
 
-        if self.config["METAX_API_VERSION"] >= 3:
-            self.metax_headers = { 'Authorization': 'Token %s' % self.config["METAX_PASS"] }
-        else:
-            self.metax_user = (self.config["METAX_USER"], self.config["METAX_PASS"])
+        self.metax_headers = { 'Authorization': 'Token %s' % self.config["METAX_PASS"] }
 
         flush_datasets(self)
 
@@ -245,7 +242,7 @@ class TestDataDeletion(unittest.TestCase):
         check_for_failed_actions(self, "test_project_a", test_user_a)
 
         print("Creating Dataset 1 for project A containing all files in scope /testdata/2017-08/Experiment_1")
-        dataset_data = DATASET_TEMPLATE_V3
+        dataset_data = DATASET_TEMPLATE
         dataset_data['title'] = DATASET_TITLES[0]
         dataset_data['fileset'] = {
             "storage_service": "ida",
@@ -263,7 +260,7 @@ class TestDataDeletion(unittest.TestCase):
         dataset_1_pid = dataset_1['id']
 
         print("Creating Dataset 2 for project A containing all files in scope /testdata/2017-08/Experiment_2")
-        dataset_data = DATASET_TEMPLATE_V3
+        dataset_data = DATASET_TEMPLATE
         dataset_data['title'] = DATASET_TITLES[1]
         dataset_data['fileset'] = {
             "storage_service": "ida",
@@ -281,7 +278,7 @@ class TestDataDeletion(unittest.TestCase):
         dataset_2_pid = dataset_2['id']
 
         print("Creating Dataset 3 for project A containing all files in scope /testdata/2017-10/Experiment_3")
-        dataset_data = DATASET_TEMPLATE_V3
+        dataset_data = DATASET_TEMPLATE
         dataset_data['title'] = DATASET_TITLES[2]
         dataset_data['fileset'] = {
             "storage_service": "ida",

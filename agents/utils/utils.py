@@ -188,11 +188,6 @@ def load_variables_from_uida_conf_files():
         'MAX_FILE_COUNT':  service_constants.MAX_FILE_COUNT
     }
 
-    if '/rest/' in server_conf.METAX_API:
-        uida_conf_vars['METAX_API_VERSION'] = 1
-    else:
-        uida_conf_vars['METAX_API_VERSION'] = 3
-
     try:
         uida_conf_vars['RABBIT_PROTOCOL'] = server_conf.RABBIT_PROTOCOL
     except:
@@ -200,9 +195,6 @@ def load_variables_from_uida_conf_files():
 
     if hasattr(server_conf, 'METAX_USER'):
         uida_conf_vars['METAX_USER'] = server_conf.METAX_USER
-
-    if hasattr(server_conf, 'METAX_FILE_STORAGE_ID'):
-        uida_conf_vars['METAX_FILE_STORAGE_ID'] = server_conf.METAX_FILE_STORAGE_ID
 
     if hasattr(server_conf, 'DMF_SERVER'):
         uida_conf_vars['DMF_SERVER'] = server_conf.DMF_SERVER

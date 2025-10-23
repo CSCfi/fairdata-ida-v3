@@ -40,7 +40,7 @@ time.tzset()
 
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%SZ' # ISO 8601 UTC
 
-DATASET_TEMPLATE_V3 = {
+DATASET_TEMPLATE = {
     "generate_pid_on_publish": "URN",
     "data_catalog": "urn:nbn:fi:att:data-catalog-ida",
     "metadata_owner": {
@@ -77,37 +77,6 @@ DATASET_TEMPLATE_V3 = {
         "en": "Test Dataset"
     },
     "state": "published"
-}
-
-DATASET_TEMPLATE_V1 = {
-    "data_catalog": "urn:nbn:fi:att:data-catalog-ida",
-    "metadata_provider_user": "test_user_a",
-    "metadata_provider_org": "test_organization_a",
-    "research_dataset": {
-        "access_rights": {
-            "access_type": {
-                "identifier": "http://uri.suomi.fi/codelist/fairdata/access_type/code/open"
-            }
-        },
-        "creator": [
-            {
-                "@type": "Person",
-                "member_of": {
-                    "@type": "Organization",
-                    "name": {
-                        "en": "Test Organization A"
-                    }
-                },
-                "name": "Test User A"
-            }
-        ],
-        "description": {
-            "en": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-        },
-        "title": {
-            "en": "Test Dataset"
-        }
-    }
 }
 
 DATASET_TITLES = [
@@ -202,11 +171,6 @@ def load_configuration():
 
     if hasattr(server_configuration, 'METAX_RPC'):
         config['METAX_RPC'] = server_configuration.METAX_RPC
-
-    if '/rest/' in server_configuration.METAX_API:
-        config['METAX_API_VERSION'] = 1
-    else:
-        config['METAX_API_VERSION'] = 3
 
     if hasattr(server_configuration, 'TEST_PAS_CONTRACT_ID'):
         config['TEST_PAS_CONTRACT_ID'] = server_configuration.TEST_PAS_CONTRACT_ID
@@ -381,10 +345,7 @@ def flush_datasets(self):
     dataset_pids = get_dataset_pids(self)
     for pid in dataset_pids:
         print ("   %s" % pid)
-        if self.config["METAX_API_VERSION"] >= 3:
-            requests.delete("%s/datasets/%s" % (self.config['METAX_API'], pid), headers=self.metax_headers)
-        else:
-            requests.delete("%s/datasets/%s" % (self.config['METAX_API'], pid), auth=self.metax_user)
+        requests.delete("%s/datasets/%s" % (self.config['METAX_API'], pid), headers=self.metax_headers)
 
 
 def get_dataset_pids(self):
@@ -425,12 +386,8 @@ def get_metax_file_pids(self, project):
 
     metax_file_pids = []
 
-    if self.config['METAX_API_VERSION'] >= 3:
-        headers = { "Authorization": "Token %s" % self.config['METAX_PASS'] }
-        url = "%s/files?csc_project=%s&storage_service=ida&limit=9999" % (self.config["METAX_API"], project)
-    else:
-        headers = { "Authorization": make_ba_http_header(self.config['METAX_USER'], self.config['METAX_PASS']) }
-        url = "%s/files?fields=identifier&file_storage=urn:nbn:fi:att:file-storage-ida&ordering=id&project_identifier=%s&limit=9999" % (self.config["METAX_API"], project)
+    headers = { "Authorization": "Token %s" % self.config['METAX_PASS'] }
+    url = "%s/files?csc_project=%s&storage_service=ida&limit=9999" % (self.config["METAX_API"], project)
 
     #print("HEADER: %s URL %s" % (json.dumps(headers), url)) # TEMP DEBUG
 
@@ -439,10 +396,7 @@ def get_metax_file_pids(self, project):
     if response.status_code == 200:
         file_data = response.json()
         for record in file_data['results']:
-            if self.config['METAX_API_VERSION'] >= 3:
-                metax_file_pids.append(record['storage_identifier'])
-            else:
-                metax_file_pids.append(record['identifier'])
+            metax_file_pids.append(record['storage_identifier'])
 
     return sorted(metax_file_pids)
 

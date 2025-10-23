@@ -199,10 +199,7 @@ class TestAuditing(unittest.TestCase):
             print("(not sending test emails)")
 
         # If Metax v3 or later, define authentication header
-        if self.config["METAX_API_VERSION"] >= 3:
-            self.metax_headers = { 'Authorization': 'Token %s' % self.config["METAX_PASS"] }
-        else:
-            self.metax_user = (self.config["METAX_USER"], self.config["METAX_PASS"])
+        self.metax_headers = { 'Authorization': 'Token %s' % self.config["METAX_PASS"] }
 
         # ensure we start with a fresh setup of projects, user accounts, and data
         cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts" % (self.config["HTTPD_USER"], self.config["ROOT"])
@@ -363,33 +360,23 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(len(experiment_1_files), 6)
 
         print("Creating Dataset for test_project_a containing all files in scope /testdata/2017-08/Experiment_1")
-        if self.config["METAX_API_VERSION"] >= 3:
-            dataset_data = DATASET_TEMPLATE_V3
-            dataset_data['title'] = DATASET_TITLES[0]
-            dataset_data['fileset'] = {
-                "storage_service": "ida",
-                "csc_project": "test_project_a",
-                "directory_actions": [
-                    {
-                        "action": "add",
-                        "pathname": "/testdata/2017-08/Experiment_1/"
-                    }
-                ]
-            }
-            response = requests.post("%s/datasets" % self.config['METAX_API'], headers=self.metax_headers, json=dataset_data)
-        else:
-            dataset_data = DATASET_TEMPLATE_V1
-            dataset_data['research_dataset']['title'] = DATASET_TITLES[0]
-            dataset_data['research_dataset']['files'] = build_dataset_files(self, experiment_1_files)
-            response = requests.post("%s/datasets" % self.config['METAX_API'], json=dataset_data, auth=self.metax_user)
+        dataset_data = DATASET_TEMPLATE
+        dataset_data['title'] = DATASET_TITLES[0]
+        dataset_data['fileset'] = {
+            "storage_service": "ida",
+            "csc_project": "test_project_a",
+            "directory_actions": [
+                {
+                    "action": "add",
+                    "pathname": "/testdata/2017-08/Experiment_1/"
+                }
+            ]
+        }
+        response = requests.post("%s/datasets" % self.config['METAX_API'], headers=self.metax_headers, json=dataset_data)
         self.assertEqual(response.status_code, 201, response.text)
         dataset = response.json()
-        if self.config["METAX_API_VERSION"] >= 3:
-            dataset_pid = dataset['id']
-            dataset_urn = dataset['persistent_identifier']
-        else:
-            dataset_pid = dataset['identifier']
-            dataset_urn = dataset['research_dataset']['preferred_identifier']
+        dataset_pid = dataset['id']
+        dataset_urn = dataset['persistent_identifier']
 
         print("(retrieving frozen file PID lists for project A from IDA and Metax after freezing)")
         frozen_file_pids_2 = get_frozen_file_pids(self, 'test_project_a', test_user_a)
@@ -777,11 +764,8 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         file_data = response.json()
         pid = file_data["pid"]
-        if self.config["METAX_API_VERSION"] >= 3:
-            data = [{ "storage_service": "ida", "storage_identifier": pid }]
-            response = requests.post("%s/files/delete-many" % self.config["METAX_API"], json=data, headers=self.metax_headers)
-        else:
-            response = requests.delete("%s/files/%s" % (self.config["METAX_API"], pid), auth=self.metax_user)
+        data = [{ "storage_service": "ida", "storage_identifier": pid }]
+        response = requests.post("%s/files/delete-many" % self.config["METAX_API"], json=data, headers=self.metax_headers)
         self.assertEqual(response.status_code, 200)
 
         pathname = "/testdata/2017-08/Experiment_1/baseline/test03.dat"
@@ -3085,12 +3069,8 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         file_data = response.json()
         pid = file_data["pid"]
-        if self.config["METAX_API_VERSION"] >= 3:
-            data = [{ "storage_service": "ida", "storage_identifier": pid, "checksum": invalid_checksum_uri }]
-            response = requests.post("%s/files/patch-many" % self.config["METAX_API"], headers=self.metax_headers, json=data)
-        else:
-            data = { "checksum": { "algorithm": "SHA-256", "value": invalid_checksum, "checked": self.config['START'] } }
-            response = requests.patch("%s/files/%s" % (self.config["METAX_API"], pid), auth=self.metax_user, json=data)
+        data = [{ "storage_service": "ida", "storage_identifier": pid, "checksum": invalid_checksum_uri }]
+        response = requests.post("%s/files/patch-many" % self.config["METAX_API"], headers=self.metax_headers, json=data)
         self.assertEqual(response.status_code, 200)
 
         print("(changing checksum in Nextcloud of staging file /testdata/2017-08/Experiment_2/test04.dat)")
@@ -3115,12 +3095,8 @@ class TestAuditing(unittest.TestCase):
         self.assertEqual(cur.rowcount, 1, "Failed to update IDA file modification timestamp")
 
         print("(changing modified timestamp in Metax of frozen file /testdata/2017-08/Experiment_2/baseline/test03.dat)")
-        if self.config["METAX_API_VERSION"] >= 3:
-            data = [{ "storage_service": "ida", "storage_identifier": pid, "modified": invalid_timestamp }]
-            response = requests.post("%s/files/patch-many" % self.config["METAX_API"], headers=self.metax_headers, json=data)
-        else:
-            data = { "file_modified": invalid_timestamp }
-            response = requests.patch("%s/files/%s" % (self.config["METAX_API"], pid), auth=self.metax_user, json=data)
+        data = [{ "storage_service": "ida", "storage_identifier": pid, "modified": invalid_timestamp }]
+        response = requests.post("%s/files/patch-many" % self.config["METAX_API"], headers=self.metax_headers, json=data)
         self.assertEqual(response.status_code, 200)
 
         print("(changing modified timestamp in Nextcloud of staging file /testdata/2017-08/Experiment_2/test04.dat)")
@@ -3209,25 +3185,18 @@ class TestAuditing(unittest.TestCase):
 
         print("(retrieving files for Project B from Metax)")
 
-        if self.config["METAX_API_VERSION"] >= 3:
-            url = "%s/files?storage_service=ida&storage_identifier=%s" % (self.config["METAX_API"], pid)
-            response = requests.get(url, headers=self.metax_headers)
-        else:
-            response = requests.get("%s/files/%s" % (self.config["METAX_API"], pid), auth=self.metax_user)
+        url = "%s/files?storage_service=ida&storage_identifier=%s" % (self.config["METAX_API"], pid)
+        response = requests.get(url, headers=self.metax_headers)
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIsNotNone(data)
-        if self.config["METAX_API_VERSION"] >= 3:
-            self.assertEqual(data.get('count'), 1)
-            results = data.get('results')
-            self.assertIsNotNone(results)
-            file = results[0]
-            self.assertIsNotNone(file)
-            self.assertEqual(file['checksum'], invalid_checksum_uri)
-            self.assertEqual(normalize_timestamp(file['modified']), invalid_timestamp)
-        else:
-            self.assertEqual(data['checksum']['value'], invalid_checksum, json.dumps(file))
-            self.assertEqual(normalize_timestamp(data['file_modified']), invalid_timestamp, json.dumps(file))
+        self.assertEqual(data.get('count'), 1)
+        results = data.get('results')
+        self.assertIsNotNone(results)
+        file = results[0]
+        self.assertIsNotNone(file)
+        self.assertEqual(file['checksum'], invalid_checksum_uri)
+        self.assertEqual(normalize_timestamp(file['modified']), invalid_timestamp)
 
         print("--- Auditing project B with neither checksum nor timestamp options and verifying no errors reported")
 
@@ -3373,24 +3342,17 @@ class TestAuditing(unittest.TestCase):
         self.assertIsNotNone(modified)
         self.assertNotEqual(modified, invalid_timestamp)
 
-        if self.config["METAX_API_VERSION"] >= 3:
-            response = requests.get("%s/files?storage_service=ida&storage_identifier=%s" % (self.config["METAX_API"], pid), headers=self.metax_headers)
-        else:
-            response = requests.get("%s/files/%s" % (self.config["METAX_API"], pid), auth=self.metax_user)
+        response = requests.get("%s/files?storage_service=ida&storage_identifier=%s" % (self.config["METAX_API"], pid), headers=self.metax_headers)
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIsNotNone(data)
-        if self.config["METAX_API_VERSION"] >= 3:
-            self.assertEqual(data.get('count'), 1)
-            results = data.get('results')
-            self.assertIsNotNone(results)
-            file = results[0]
-            self.assertIsNotNone(file)
-            self.assertNotEqual(file['checksum'], invalid_checksum_uri)
-            self.assertNotEqual(normalize_timestamp(file['modified']), invalid_timestamp)
-        else:
-            self.assertNotEqual(data['checksum']['value'], invalid_checksum)
-            self.assertNotEqual(normalize_timestamp(data['file_modified']), invalid_timestamp)
+        self.assertEqual(data.get('count'), 1)
+        results = data.get('results')
+        self.assertIsNotNone(results)
+        file = results[0]
+        self.assertIsNotNone(file)
+        self.assertNotEqual(file['checksum'], invalid_checksum_uri)
+        self.assertNotEqual(normalize_timestamp(file['modified']), invalid_timestamp)
 
         # --------------------------------------------------------------------------------
         # --------------------------------------------------------------------------------

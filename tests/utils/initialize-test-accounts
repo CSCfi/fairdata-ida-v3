@@ -92,11 +92,7 @@ fi
 
 #--------------------------------------------------------------------------------
 
-if [ $METAX_API_VERSION -ge 3 ]; then
-    METAX_AUTH_HEADER="Authorization: Token ${METAX_PASS}"
-else
-    METAX_CREDENTIALS="-u ${METAX_USER}:${METAX_PASS}"
-fi
+METAX_AUTH_HEADER="Authorization: Token ${METAX_PASS}"
 
 IDA_CREDENTIALS="-u $NC_ADMIN_USER:$NC_ADMIN_PASS"
 
@@ -173,11 +169,7 @@ if [ "$METAX_AVAILABLE" = "1" ]; then
     for PROJECT in $PROJECTS; do
         STEP="   Flushing $PROJECT"
         printf "%${PADDING}s" "$STEP"
-        if [ $METAX_API_VERSION -ge 3 ]; then
-            OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/files?csc_project=$PROJECT&storage_service=ida&flush=true" 2>&1`
-        else
-            OUT=`$CURL_POST $METAX_CREDENTIALS "$METAX_RPC/files/flush_project?project_identifier=$PROJECT" 2>&1`
-        fi
+        OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/files?csc_project=$PROJECT&storage_service=ida&flush=true" 2>&1`
         if [ "$?" -ne 0 ]; then
             OUT=`echo "$OUT" | head -1`
             NOT_FOUND=`echo "$OUT" | grep '404 Not Found'`
@@ -196,12 +188,8 @@ if [ "$METAX_AVAILABLE" = "1" ]; then
     for USER in $USERS; do
         STEP="   Flushing $USER"
         printf "%${PADDING}s" "$STEP"
-        if [ $METAX_API_VERSION -ge 3 ]; then
-            #echo "$CURL_DELETE -H \"$METAX_AUTH_HEADER\" \"$METAX_API/users/$USER/data?flush=true\""
-            OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/users/$USER/data?flush=true" 2>&1`
-        else
-            OUT=`$CURL_POST $METAX_CREDENTIALS "$METAX_RPC/datasets/flush_user_data?metadata_provider_user=$USER" 2>&1`
-        fi
+        #echo "$CURL_DELETE -H \"$METAX_AUTH_HEADER\" \"$METAX_API/users/$USER/data?flush=true\""
+        OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/users/$USER/data?flush=true" 2>&1`
         if [ "$?" -ne 0 ]; then
             OUT=`echo "$OUT" | head -1`
             NOT_FOUND=`echo "$OUT" | grep '404 Not Found'`

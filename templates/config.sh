@@ -76,15 +76,8 @@ RABBIT_MONITOR_PASS="DEFINE_ME"
 RABBIT_MONITORING_DIR="/mnt/storage_vol01/log/rabbitmq_monitoring"
 
 METAX_AVAILABLE=1
-# v1
-METAX_FILE_STORAGE_ID="urn:nbn:fi:att:file-storage-ida" # deprecated from Metax v3 onwards
-METAX_USER="ida"                                        # deprecated from Metax v3 onwards
-METAX_RPC="https://DEFINE_ME/rpc/v1"                    # deprecated from Metax v3 onwards
-METAX_API="https://DEFINE_ME/rest/v1"
+METAX_API="https://DEFINE_ME/v3"
 METAX_PASS="DEFINE_ME"
-# v3
-#METAX_API="https://DEFINE_ME/v3"
-#METAX_PASS="DEFINE_ME"
 
 IDA_API="https://LOCAL_SERVER_FQDN/apps/ida/api"
 FILE_API="https://LOCAL_SERVER_FQDN/remote.php/webdav"

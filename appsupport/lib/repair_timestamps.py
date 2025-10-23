@@ -146,16 +146,10 @@ def main():
                     update_nextcloud_modified_timestamp(config, pathname, modified_timestamp)
                     if frozen_file:
                         update_ida_modified_timestamp(config, pathname, frozen_file_pid, modified_timestamp)
-                        if config.METAX_API_VERSION >= 3:
-                            update_metax_timestamp(config, 'modified', pathname, frozen_file_pid, modified_timestamp)
-                        else:
-                            update_metax_timestamp(config, 'file_modified', pathname, frozen_file_pid, modified_timestamp)
+                        update_metax_timestamp(config, 'modified', pathname, frozen_file_pid, modified_timestamp)
 
                 if frozen_timestamp_error:
-                    if config.METAX_API_VERSION >= 3:
-                        update_metax_timestamp(config, 'frozen', pathname, frozen_file_pid, frozen_timestamp)
-                    else:
-                        update_metax_timestamp(config, 'file_frozen', pathname, frozen_file_pid, frozen_timestamp)
+                    update_metax_timestamp(config, 'frozen', pathname, frozen_file_pid, frozen_timestamp)
 
                 if replicated_timestamp_error:
                     if frozen_file and file_exists_in_tape_archive_cache(config, pathname):
@@ -280,16 +274,10 @@ def update_ida_replicated_timestamp(config, pathname, file_pid, timestamp):
 
 def update_metax_timestamp(config, field_name, pathname, file_pid, timestamp):
 
-    if config.METAX_API_VERSION >= 3:
-        url = "%s/files/patch-many" % config.METAX_API
-        data = [{ "storage_service": "ida", "storage_identifier": file_pid, field_name: timestamp }]
-        headers = { "Authorization": "Token %s" % config.METAX_PASS }
-        response = requests.post(url, headers=headers, json=data)
-    else:
-        url = "%s/files/%s" % (config.METAX_API, file_pid)
-        data = { field_name: timestamp }
-        auth = ( config.METAX_USER, config.METAX_PASS )
-        response = requests.patch(url, auth=auth, headers=config.HEADERS, json=data)
+    url = "%s/files/patch-many" % config.METAX_API
+    data = [{ "storage_service": "ida", "storage_identifier": file_pid, field_name: timestamp }]
+    headers = { "Authorization": "Token %s" % config.METAX_PASS }
+    response = requests.post(url, headers=headers, json=data)
 
     if response.status_code < 200 or response.status_code > 299:
         msg = "Failed to update %s timestamp in Metax to %s for %s: %d" % (

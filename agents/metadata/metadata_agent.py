@@ -39,13 +39,7 @@ class MetadataAgent(GenericAgent):
         self.failed_queue_name = 'metadata-failed'
         self.main_batch_queue_name = 'batch-metadata'
         self.failed_batch_queue_name = 'batch-metadata-failed'
-
         self._metax_api_url = self._uida_conf_vars['METAX_API']
-        self._metax_api_version = int(self._uida_conf_vars['METAX_API_VERSION'])
-        if self._metax_api_version < 3:
-            self._file_storage = self._uida_conf_vars['METAX_FILE_STORAGE_ID']
-
-        self._logger.debug('Metax API version: %d' % self._metax_api_version)
         self._logger.debug('Chunk size: %d' % self._chunk_size)
 
 
@@ -379,48 +373,21 @@ class MetadataAgent(GenericAgent):
         """
         Gather metadata for a single node of type 'file', in a form that is accepted by Metax
         """
-        if self._metax_api_version >= 3:
-            file_metadata = {
-                'storage_service': 'ida',
-                'storage_identifier': node['pid'],
-                'csc_project': node['project'],
-                'pathname': node['pathname'],
-                'filename': os.path.split(node['pathname'])[1],
-                'size': node['size'],
-                'checksum': self._get_checksum_uri(node['checksum']),
-                'modified': node['modified'],
-                'frozen': node['frozen'],
-            }
-        else:
-            file_metadata = {
-                'file_storage': self._file_storage,
-                'identifier': node['pid'],
-                'project_identifier': node['project'],
-                'file_path': node['pathname'],
-                'file_name': os.path.split(node['pathname'])[1],
-                'file_frozen': node['frozen'],
-                'file_modified': node['modified'],
-                'file_uploaded': node['metadata'],
-                'byte_size': node['size'],
-                'checksum': {
-                    'value': self._get_checksum_value(node['checksum']),
-                    'algorithm': 'SHA-256',
-                    'checked': action['checksums'],
-                },
-                'open_access': True,
-            }
+        file_metadata = {
+            'storage_service': 'ida',
+            'storage_identifier': node['pid'],
+            'csc_project': node['project'],
+            'pathname': node['pathname'],
+            'filename': os.path.split(node['pathname'])[1],
+            'size': node['size'],
+            'checksum': self._get_checksum_uri(node['checksum']),
+            'modified': node['modified'],
+            'frozen': node['frozen'],
+        }
 
         user = action.get('user', None)
         if user:
-            if self._metax_api_version >= 3:
-                file_metadata['user'] = user
-            else:
-                file_metadata['user_created'] = user
-
-        if self._metax_api_version < 3:
-            file_format = os.path.splitext(node['pathname'])[1][1:]
-            if file_format:
-                file_metadata['file_format'] = file_format
+            file_metadata['user'] = user
 
         return file_metadata
 
@@ -460,10 +427,7 @@ class MetadataAgent(GenericAgent):
 
         metax_file_pids = []
 
-        if self._metax_api_version >= 3:
-            url_base = "/files?csc_project=%s&storage_service=ida&limit=%d" % (project, self._chunk_size)
-        else:
-            url_base = "/files?fields=identifier&file_storage=urn:nbn:fi:att:file-storage-ida&ordering=id&project_identifier=%s&limit=%d" % (project, self._chunk_size)
+        url_base = "/files?csc_project=%s&storage_service=ida&limit=%d" % (project, self._chunk_size)
 
         offset = 0
         done = False # we are done when Metax returns less than the specified limit of files
@@ -481,10 +445,7 @@ class MetadataAgent(GenericAgent):
                 received_count = len(file_data['results'])
 
                 for record in file_data['results']:
-                    if self._metax_api_version >= 3:
-                        metax_file_pids.append(record['storage_identifier'])
-                    else:
-                        metax_file_pids.append(record['identifier'])
+                    metax_file_pids.append(record['storage_identifier'])
 
             if received_count < self._chunk_size:
                 done = True
@@ -517,10 +478,7 @@ class MetadataAgent(GenericAgent):
         # segregate descriptions of all files in technical metadata based on whether they are known to Metax or not
 
         for record in technical_metadata:
-            if self._metax_api_version >= 3:
-                pid = record['storage_identifier']
-            else:
-                pid = record['identifier']
+            pid = record['storage_identifier']
             if pid in metax_file_pids:
                 metax_files.append(record)
             else:
@@ -568,13 +526,10 @@ class MetadataAgent(GenericAgent):
 
                 chunk = removed_file_pids[chunk_first:chunk_last]
 
-                if self._metax_api_version >= 3:
-                    files = []
-                    for pid in chunk:
-                        files.append({ "storage_service": "ida", "storage_identifier": pid })
-                    response = self._metax_api_request('post', '/files/delete-many', data=files)
-                else:
-                    response = self._metax_api_request('delete', '/files', data=chunk)
+                files = []
+                for pid in chunk:
+                    files.append({ "storage_service": "ida", "storage_identifier": pid })
+                response = self._metax_api_request('post', '/files/delete-many', data=files)
 
                 if response.status_code not in (200, 201, 204):
                     content = response.text
@@ -593,10 +548,7 @@ class MetadataAgent(GenericAgent):
                 if len(response_json.get('failed', [])) > 0:
                     errors = []
                     for i, entry in enumerate(response_json['failed']):
-                        if self._metax_api_version >= 3:
-                            errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
-                        else:
-                            errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                        errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
                         if i > 10:
                             break
 
@@ -629,13 +581,10 @@ class MetadataAgent(GenericAgent):
 
                 chunk = new_files[chunk_first:chunk_last]
 
-                if self._metax_api_version >= 3:
-                    # Use put-many to PUT file metadata into Metax, as IDA is the authority so it's OK to replace any existing
-                    # records for the frozen files in question. Even though we already detect existing and non-existing files
-                    # in Metax, using put-many instead of post-many achieves the desired result most reliably.
-                    response = self._metax_api_request('post', '/files/put-many', data=chunk)
-                else:
-                    response = self._metax_api_request('post', '/files', data=chunk)
+                # Use put-many to PUT file metadata into Metax, as IDA is the authority so it's OK to replace any existing
+                # records for the frozen files in question. Even though we already detect existing and non-existing files
+                # in Metax, using put-many instead of post-many achieves the desired result most reliably.
+                response = self._metax_api_request('post', '/files/put-many', data=chunk)
 
                 if response.status_code not in (200, 201, 204):
                     content = response.text
@@ -654,10 +603,7 @@ class MetadataAgent(GenericAgent):
                 if len(response_json.get('failed', [])) > 0:
                     errors = []
                     for i, entry in enumerate(response_json['failed']):
-                        if self._metax_api_version >= 3:
-                            errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
-                        else:
-                            errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                        errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
                         if i > 10:
                             break
 
@@ -690,10 +636,7 @@ class MetadataAgent(GenericAgent):
 
                 chunk = metax_files[chunk_first:chunk_last]
 
-                if self._metax_api_version >= 3:
-                    response = self._metax_api_request('post', '/files/patch-many', data=chunk)
-                else:
-                    response = self._metax_api_request('patch', '/files', data=chunk)
+                response = self._metax_api_request('post', '/files/patch-many', data=chunk)
 
                 if response.status_code not in (200, 201, 204):
                     content = response.text
@@ -712,10 +655,7 @@ class MetadataAgent(GenericAgent):
                 if len(response_json.get('failed', [])) > 0:
                     errors = []
                     for i, entry in enumerate(response_json['failed']):
-                        if self._metax_api_version >= 3:
-                            errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
-                        else:
-                            errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                        errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
                         if i > 10:
                             break
 
@@ -752,13 +692,10 @@ class MetadataAgent(GenericAgent):
 
             chunk = technical_metadata[chunk_first:chunk_last]
 
-            if self._metax_api_version >= 3:
-                # Use put-many to PUT file metadata into Metax, as IDA is the authority so it's OK to replace any existing
-                # records for the frozen files in question. It also enables robust re-trying of failed actions if there was
-                # a partial publication of file metadata to Metax.
-                response = self._metax_api_request('post', '/files/put-many', data=chunk)
-            else:
-                response = self._metax_api_request('post', '/files?ignore_already_exists_errors=true', data=chunk)
+            # Use put-many to PUT file metadata into Metax, as IDA is the authority so it's OK to replace any existing
+            # records for the frozen files in question. It also enables robust re-trying of failed actions if there was
+            # a partial publication of file metadata to Metax.
+            response = self._metax_api_request('post', '/files/put-many', data=chunk)
 
             if response.status_code not in (200, 201, 204):
                 content = response.text
@@ -777,10 +714,7 @@ class MetadataAgent(GenericAgent):
             if len(response_json.get('failed', [])) > 0:
                 errors = []
                 for i, entry in enumerate(response_json['failed']):
-                    if self._metax_api_version >= 3:
-                        errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
-                    else:
-                        errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                    errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
                     if i > 10:
                         break
 
@@ -816,13 +750,10 @@ class MetadataAgent(GenericAgent):
 
             chunk = file_identifiers[chunk_first:chunk_last]
 
-            if self._metax_api_version >= 3:
-                files = []
-                for pid in chunk:
-                    files.append({ "csc_project": action["project"], "storage_service": "ida", "storage_identifier": pid })
-                response = self._metax_api_request('post', '/files/delete-many', data=files)
-            else:
-                response = self._metax_api_request('delete', '/files', data=chunk)
+            files = []
+            for pid in chunk:
+                files.append({ "csc_project": action["project"], "storage_service": "ida", "storage_identifier": pid })
+            response = self._metax_api_request('post', '/files/delete-many', data=files)
 
             if response.status_code not in (200, 201, 204):
                 content = response.text
@@ -841,10 +772,7 @@ class MetadataAgent(GenericAgent):
             if len(response_json.get('failed', [])) > 0:
                 errors = []
                 for i, entry in enumerate(response_json['failed']):
-                    if self._metax_api_version >= 3:
-                        errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
-                    else:
-                        errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                    errors.append(str({ 'identifier': entry['object']['storage_identifier'], 'errors': entry['errors'] }))
                     if i > 10:
                         break
 
@@ -868,14 +796,9 @@ class MetadataAgent(GenericAgent):
 
     def _metax_api_request(self, method, detail_url, data=None, auth=True):
         if auth:
-            if self._metax_api_version >= 3:
-                headers = {
-                    "Authorization": "Token %s" % self._uida_conf_vars['METAX_PASS']
-                }
-            else:
-                headers = {
-                    "Authorization": make_ba_http_header(self._uida_conf_vars['METAX_USER'], self._uida_conf_vars['METAX_PASS'])
-                }
+            headers = {
+                "Authorization": "Token %s" % self._uida_conf_vars['METAX_PASS']
+            }
         else:
             headers = None
         return self._http_request(method, '%s%s' % (self._metax_api_url, detail_url), data=data, headers=headers)

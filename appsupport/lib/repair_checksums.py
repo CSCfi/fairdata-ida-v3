@@ -210,16 +210,10 @@ def update_checksum_in_ida(config, pathname, file_pid, checksum):
 
 def update_checksum_in_metax(config, pathname, file_pid, checksum):
 
-    if config.METAX_API_VERSION >= 3:
-        url = "%s/files/patch-many" % config.METAX_API
-        data = [{ "storage_service": "ida", "storage_identifier": file_pid, "checksum": "sha256:%s" % checksum }]
-        headers = { "Authorization": "Token %s" % config.METAX_PASS }
-        response = requests.post(url, headers=headers, json=data)
-    else:
-        url = "%s/files/%s" % (config.METAX_API, file_pid)
-        data = { "checksum": { "algorithm": "SHA-256", "value": checksum, "checked": config.CHECKSUMS_CHECKED } }
-        auth = ( config.METAX_USER, config.METAX_PASS )
-        response = requests.patch(url, auth=auth, json=data)
+    url = "%s/files/patch-many" % config.METAX_API
+    data = [{ "storage_service": "ida", "storage_identifier": file_pid, "checksum": "sha256:%s" % checksum }]
+    headers = { "Authorization": "Token %s" % config.METAX_PASS }
+    response = requests.post(url, headers=headers, json=data)
 
     if response.status_code < 200 or response.status_code > 299:
         sys.stderr.write("Warning: Failed to update checksum in Metax to %s for %s: %d %s\n" % (

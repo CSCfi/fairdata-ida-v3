@@ -59,10 +59,6 @@ else
     FLUSH_RECORDS="true"
 fi
 
-if [ $METAX_API_VERSION -ge 3 ]; then
-    $CURL_DELETE -H "$METAX_AUTH_HEADER" "${METAX_API}/files?csc_project=${PROJECT}&storage_service=ida&flush=${FLUSH_RECORDS}" 2>$ERR
-else
-    $CURL_POST $METAX_CREDENTIALS "${METAX_RPC}/files/${METAX_ENDPOINT}?project_identifier=${PROJECT}"
-fi
+$CURL_DELETE -H "$METAX_AUTH_HEADER" "${METAX_API}/files?csc_project=${PROJECT}&storage_service=ida&flush=${FLUSH_RECORDS}" 2>$ERR
 
 addToLog "DONE"

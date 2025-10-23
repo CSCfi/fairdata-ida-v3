@@ -271,7 +271,6 @@ def main():
             sys.stderr.write("DBROUSER:           %s\n" % config.DBROUSER)
             sys.stderr.write("DBNAME:             %s\n" % config.DBNAME)
             sys.stderr.write("METAX_API:          %s\n" % config.METAX_API)
-            sys.stderr.write("METAX_API_VERSION:  %s\n" % str(config.METAX_API_VERSION))
             sys.stderr.write("PID:                %s\n" % config.PID)
             sys.stderr.write("CHANGED_ONLY        %s\n" % config.CHANGED_ONLY)
             sys.stderr.write("AUDIT_STAGING:      %s\n" % config.AUDIT_STAGING)
@@ -424,19 +423,12 @@ def add_metax_files(nodes, counts, config):
     if config.DEBUG:
         sys.stderr.write("--- Adding Metax frozen files...\n")
 
-    if config.METAX_API_VERSION >= 3:
-        url_base = "%s/files?csc_project=%s&storage_service=ida&frozen__gt=%s&limit=%d" % (
-            config.METAX_API,
-            config.PROJECT,
-            config.AFTER,
-            config.MAX_FILE_COUNT
-        )
-    else:
-        url_base = "%s/files?file_storage=urn:nbn:fi:att:file-storage-ida&ordering=id&project_identifier=%s&limit=%d" % (
-            config.METAX_API,
-            config.PROJECT,
-            config.MAX_FILE_COUNT
-        )
+    url_base = "%s/files?csc_project=%s&storage_service=ida&frozen__gt=%s&limit=%d" % (
+        config.METAX_API,
+        config.PROJECT,
+        config.AFTER,
+        config.MAX_FILE_COUNT
+    )
 
     offset = 0
     done = False # we are done when Metax returns less than the specified limit of files
@@ -450,14 +442,10 @@ def add_metax_files(nodes, counts, config):
 
         try:
 
-            if config.METAX_API_VERSION >= 3:
-                headers = { "Authorization": "Token %s" % config.METAX_PASS }
-                if config.DEBUG:
-                    sys.stderr.write("HEADERS: : %s\n" % json.dumps(headers))
-                response = requests.get(url, headers=headers)
-            else:
-                auth = (config.METAX_USER, config.METAX_PASS)
-                response = requests.get(url, auth=auth)
+            headers = { "Authorization": "Token %s" % config.METAX_PASS }
+            if config.DEBUG:
+                sys.stderr.write("HEADERS: : %s\n" % json.dumps(headers))
+            response = requests.get(url, headers=headers)
 
             if response.status_code != 200:
                 raise Exception("Failed to retrieve frozen file metadata from Metax for project %s: %d" % (config.PROJECT, response.status_code))
@@ -476,10 +464,7 @@ def add_metax_files(nodes, counts, config):
 
         for file in files:
 
-            if config.METAX_API_VERSION >= 3:
-                pathname = "frozen%s" % file['pathname']
-            else:
-                pathname = "frozen%s" % file['file_path']
+            pathname = "frozen%s" % file['pathname']
 
             if (not config.ERROR_FILE_PATHNAMES or pathname in config.ERROR_FILE_PATHNAMES) \
                 and pathname not in config.INCOMPLETE_ACTION_FILE_PATHNAMES:
@@ -491,86 +476,45 @@ def add_metax_files(nodes, counts, config):
                 # Even though Metax should not return records for removed files, we check just to be absolutely sure...
                 if not file.get('removed', False):
 
-                    if config.METAX_API_VERSION >= 3:
+                    frozen = normalize_timestamp(file['frozen'])
 
-                        frozen = normalize_timestamp(file['frozen'])
+                    # Only continue for files frozen after AFTER and before BEFORE
+                    if config.AFTER < frozen < config.BEFORE:
 
-                        # Only continue for files frozen after AFTER and before BEFORE
-                        if config.AFTER < frozen < config.BEFORE:
+                        modified = normalize_timestamp(file['modified'])
 
-                            modified = normalize_timestamp(file['modified'])
+                        checksum = str(file['checksum'])
+                        if checksum.startswith('sha256:'):
+                            checksum = checksum[7:]
 
-                            checksum = str(file['checksum'])
-                            if checksum.startswith('sha256:'):
-                                checksum = checksum[7:]
+                        node_details = {
+                            'type': 'file',
+                            'size': file['size'],
+                            'pid': file['storage_identifier'],
+                            'checksum': checksum,
+                            'modified': modified,
+                            'frozen': frozen
+                        }
 
-                            node_details = {
-                                'type': 'file',
-                                'size': file['size'],
-                                'pid': file['storage_identifier'],
-                                'checksum': checksum,
-                                'modified': modified,
-                                'frozen': frozen
-                            }
+                        if node_details['size'] in NULL_VALUES:
+                            node_details['size'] = 0
 
-                            if node_details['size'] in NULL_VALUES:
-                                node_details['size'] = 0
+                        for field in [ 'pid', 'checksum', 'modified', 'frozen' ]:
+                            if node_details[field] in NULL_VALUES:
+                                node_details[field] = None
 
-                            for field in [ 'pid', 'checksum', 'modified', 'frozen' ]:
-                                if node_details[field] in NULL_VALUES:
-                                    node_details[field] = None
+                        if config.DEBUG:
+                            sys.stderr.write("NODE: %s %s\n" % (pathname, json.dumps(node_details)))
 
-                            if config.DEBUG:
-                                sys.stderr.write("NODE: %s %s\n" % (pathname, json.dumps(node_details)))
+                        try:
+                            node = nodes[pathname]
+                            node['metax'] = node_details
+                        except KeyError:
+                            node = {}
+                            node['metax'] = node_details
+                            nodes[pathname] = node
 
-                            try:
-                                node = nodes[pathname]
-                                node['metax'] = node_details
-                            except KeyError:
-                                node = {}
-                                node['metax'] = node_details
-                                nodes[pathname] = node
-
-                            counts['metaxFileCount'] = counts['metaxFileCount'] + 1
-
-                    else:
-
-                        frozen = normalize_timestamp(file['file_frozen'])
-
-                        # Only continue for files frozen after AFTER and before BEFORE
-                        if config.AFTER < frozen < config.BEFORE:
-
-                            modified = normalize_timestamp(file['file_modified'])
-                            checksum = file['checksum']['value']
-
-                            node_details = {
-                                'type': 'file',
-                                'size': file['byte_size'],
-                                'pid': file['identifier'],
-                                'checksum': checksum,
-                                'modified': modified,
-                                'frozen': frozen
-                            }
-
-                            if node_details['size'] in NULL_VALUES:
-                                node_details['size'] = 0
-
-                            for field in [ 'pid', 'checksum', 'modified', 'frozen' ]:
-                                if node_details[field] in NULL_VALUES:
-                                    node_details[field] = None
-
-                            if config.DEBUG:
-                                sys.stderr.write("NODE: %s %s\n" % (pathname, json.dumps(node_details)))
-
-                            try:
-                                node = nodes[pathname]
-                                node['metax'] = node_details
-                            except KeyError:
-                                node = {}
-                                node['metax'] = node_details
-                                nodes[pathname] = node
-
-                            counts['metaxFileCount'] = counts['metaxFileCount'] + 1
+                        counts['metaxFileCount'] = counts['metaxFileCount'] + 1
 
         if len(files) < config.MAX_FILE_COUNT:
             done = True

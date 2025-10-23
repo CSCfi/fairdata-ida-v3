@@ -122,7 +122,6 @@ def main():
             logging.debug("%s DBROUSER: %s" % (config.PROJECT, config.DBROUSER))
             logging.debug("%s DBNAME: %s" % (config.PROJECT, config.DBNAME))
             logging.debug("%s METAX_API: %s" % (config.PROJECT, config.METAX_API))
-            logging.debug("%s METAX_VERSION: %s" % (config.PROJECT, str(config.METAX_API_VERSION)))
             logging.debug("%s ARGS#: %d" % (config.PROJECT, argc))
             logging.debug("%s ARGS: %s" % (config.PROJECT, str(sys.argv)))
             logging.debug("%s PID: %s" % (config.PROJECT, config.PID))
@@ -414,20 +413,12 @@ def get_metax_published_file_pathnames(config):
 
     metax_project_files = {}
 
-    if config.METAX_API_VERSION >= 3:
-        url_base = "%s/files?csc_project=%s&storage_service=ida&limit=%d" % (
-            config.METAX_API,
-            config.PROJECT,
-            config.MAX_FILE_COUNT
-        )
-        headers = { "Authorization": "Token %s" % config.METAX_PASS }
-    else:
-        url_base = "%s/files?file_storage=urn:nbn:fi:att:file-storage-ida&ordering=id&project_identifier=%s&limit=%d" % (
-            config.METAX_API,
-            config.PROJECT,
-            config.MAX_FILE_COUNT
-        )
-        metax_user = (config.METAX_USER, config.METAX_PASS)
+    url_base = "%s/files?csc_project=%s&storage_service=ida&limit=%d" % (
+        config.METAX_API,
+        config.PROJECT,
+        config.MAX_FILE_COUNT
+    )
+    headers = { "Authorization": "Token %s" % config.METAX_PASS }
 
     offset = 0
     done = False # we are done when Metax returns less than the specified limit of files
@@ -441,10 +432,7 @@ def get_metax_published_file_pathnames(config):
 
         try:
 
-            if config.METAX_API_VERSION >= 3:
-                response = requests.get(url, headers=headers)
-            else:
-                response = requests.get(url, auth=metax_user)
+            response = requests.get(url, headers=headers)
 
             if response.status_code not in [ 200, 404 ]:
                 raise Exception("Failed to retrieve frozen file metadata from Metax for project %s: %d" % (config.PROJECT, response.status_code))
@@ -460,10 +448,7 @@ def get_metax_published_file_pathnames(config):
             raise Exception("Failed to retrieve frozen file metadata from Metax for project %s: %s" % (config.PROJECT, str(error)))
 
         for file in files:
-            if config.METAX_API_VERSION >= 3:
-                metax_project_files[file['storage_identifier']] = file['pathname']
-            else:
-                metax_project_files[file['identifier']] = file['file_path']
+            metax_project_files[file['storage_identifier']] = file['pathname']
 
         if len(files) < config.MAX_FILE_COUNT:
             done = True
@@ -484,16 +469,10 @@ def get_metax_published_file_pathnames(config):
 
         try:
 
-            if config.METAX_API_VERSION >= 3:
-                url = '%s/files/datasets?storage_service=ida&relations=true' % config.METAX_API
-                if config.DEBUG_VERBOSE:
-                    logging.debug("%s QUERY URL: %s" % (config.PROJECT, url))
-                response = requests.post(url, headers=headers, json=metax_project_file_identifiers)
-            else:
-                url = '%s/files/datasets?keys=files' % config.METAX_API
-                if config.DEBUG_VERBOSE:
-                    logging.debug("%s QUERY URL: %s" % (config.PROJECT, url))
-                response = requests.post(url, auth=metax_user, json=metax_project_file_identifiers)
+            url = '%s/files/datasets?storage_service=ida&relations=true' % config.METAX_API
+            if config.DEBUG_VERBOSE:
+                logging.debug("%s QUERY URL: %s" % (config.PROJECT, url))
+            response = requests.post(url, headers=headers, json=metax_project_file_identifiers)
 
             response_data = response.json()
 
@@ -503,10 +482,7 @@ def get_metax_published_file_pathnames(config):
             if response.status_code not in [ 200, 404 ]:
                 raise Exception("Failed to retrieve frozen file dataset intersections from Metax for project %s: %d" % (config.PROJECT, response.status_code))
 
-            if config.METAX_API_VERSION >= 3:
-                metax_dataset_files = list(response.json().keys())
-            else:
-                metax_dataset_files = response.json()
+            metax_dataset_files = list(response.json().keys())
 
         except Exception as error:
             raise Exception("Failed to retrieve frozen file metadata from Metax for project %s: %s" % (config.PROJECT, str(error)))

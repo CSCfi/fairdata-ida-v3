@@ -38,8 +38,6 @@ IDA_API="https://mock.ida-api"
 METAX_API="https://mock.metax-api"
 
 METAX_AVAILABLE=1
-METAX_FILE_STORAGE_ID=1
-
 METAX_USER="user"
 METAX_PASS="pass"
 

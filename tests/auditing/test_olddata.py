@@ -68,11 +68,7 @@ class TestOldData(unittest.TestCase):
 
         self.assertEqual(self.config["METAX_AVAILABLE"], 1)
 
-        # If Metax v3 or later, define authentication header
-        if self.config["METAX_API_VERSION"] >= 3:
-            self.metax_headers = { 'Authorization': 'Token %s' % self.config["METAX_PASS"] }
-        else:
-            self.metax_user = (self.config["METAX_USER"], self.config["METAX_PASS"])
+        self.metax_headers = { 'Authorization': 'Token %s' % self.config["METAX_PASS"] }
 
         # ensure we start with a fresh setup of projects, user accounts, and data
         cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/double-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
@@ -241,25 +237,19 @@ class TestOldData(unittest.TestCase):
         check_for_failed_actions(self, "test_project_a", test_user_a)
 
         print("Creating Dataset containing all files in scope /testdata/2017-08/Experiment_1")
-        if self.config["METAX_API_VERSION"] >= 3:
-            dataset_data = DATASET_TEMPLATE_V3
-            dataset_data['title'] = DATASET_TITLES[0]
-            dataset_data['fileset'] = {
-                "storage_service": "ida",
-                "csc_project": "test_project_a",
-                "directory_actions": [
-                    {
-                        "action": "add",
-                        "pathname": "/testdata/2017-08/Experiment_1/"
-                    }
-                ]
-            }
-            response = requests.post("%s/datasets" % self.config['METAX_API'], headers=self.metax_headers, json=dataset_data)
-        else:
-            dataset_data = DATASET_TEMPLATE_V1
-            dataset_data['research_dataset']['title'] = DATASET_TITLES[0]
-            dataset_data['research_dataset']['files'] = build_dataset_files(self, experiment_1_files)
-            response = requests.post("%s/datasets" % self.config['METAX_API'], json=dataset_data, auth=self.metax_user)
+        dataset_data = DATASET_TEMPLATE
+        dataset_data['title'] = DATASET_TITLES[0]
+        dataset_data['fileset'] = {
+            "storage_service": "ida",
+            "csc_project": "test_project_a",
+            "directory_actions": [
+                {
+                    "action": "add",
+                    "pathname": "/testdata/2017-08/Experiment_1/"
+                }
+            ]
+        }
+        response = requests.post("%s/datasets" % self.config['METAX_API'], headers=self.metax_headers, json=dataset_data)
         self.assertEqual(response.status_code, 201, response.text)
 
         print("--- Auditing old data in project A and checking results")

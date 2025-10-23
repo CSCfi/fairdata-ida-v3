@@ -25,6 +25,7 @@ DIR=`dirname $0`
 
 systemctl daemon-reload
 
+$DIR/fix-permissions
 $DIR/restart-www
 $DIR/restart-agents
 

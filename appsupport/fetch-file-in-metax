@@ -58,12 +58,7 @@ PID="$1"
 
 #--------------------------------------------------------------------------------
 
-if [ $METAX_API_VERSION -ge 3 ]; then
-    $CURL_GET -H "$METAX_AUTH_HEADER" "${METAX_API}/files?storage_service=ida&storage_identifier=${PID}&limit=1" 2>$ERR >$OUT
-else
-    URL="${METAX_API}/files/${PID}"
-    $CURL_GET $METAX_CREDENTIALS "${URL}" 2>$ERR >$OUT
-fi
+$CURL_GET -H "$METAX_AUTH_HEADER" "${METAX_API}/files?storage_service=ida&storage_identifier=${PID}&limit=1" 2>$ERR >$OUT
 
 if [ -s $ERR ]; then
     MSG=$(cat $ERR)
@@ -71,11 +66,7 @@ if [ -s $ERR ]; then
     errorExit "Failed to retrieve file details in Metax"
 fi
 
-if [ $METAX_API_VERSION -ge 3 ]; then
-    cat $OUT | jq '.results[0] // empty' --indent 4
-else
-    cat $OUT | jq --indent 4
-fi
+cat $OUT | jq '.results[0] // empty' --indent 4
 
 addToLog "DONE"
 

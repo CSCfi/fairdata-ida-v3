@@ -60,11 +60,7 @@ DATASET="$1"
 
 URL="${METAX_API}/datasets/${DATASET}"
 
-if [ $METAX_API_VERSION -ge 3 ]; then
-    OUT=`$CURL_GET -H "$METAX_AUTH_HEADER" "${URL}" 2>$ERR`
-else
-    OUT=`$CURL_GET $METAX_CREDENTIALS "${URL}" 2>$ERR`
-fi
+OUT=`$CURL_GET -H "$METAX_AUTH_HEADER" "${URL}" 2>$ERR`
 
 if [ -s $ERR ]; then
     MSG=`cat $ERR`

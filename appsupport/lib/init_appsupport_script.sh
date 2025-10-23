@@ -104,16 +104,6 @@ if [ "$METAX_API" = "" ]; then
     errorExit "The variable METAX_API must be defined"
 fi
 
-if [ "$METAX_API_VERSION" = "" ]; then
-    errorExit "The variable METAX_API_VERSION must be defined"
-fi
-
-if [ $METAX_API_VERSION -lt 3 ]; then
-    if [ "$METAX_USER" = "" ]; then
-        errorExit "The variable METAX_USER must be defined"
-    fi
-fi
-
 if [ "$METAX_PASS" = "" ]; then
     errorExit "The variable METAX_PASS must be defined"
 fi
@@ -170,13 +160,7 @@ PROJECT_REPLICATION_ROOT="${DATA_REPLICATION_ROOT}/projects/${PROJECT}"
 PROJECT_TRASH_DATA_ROOT="${TRASH_DATA_ROOT}/${TODAY}_${PROJECT}"
 PROJECT_USER_CREDENTIALS="-u ${PROJECT_USER}:${PROJECT_USER_PASS}"
 ADMIN_CREDENTIALS="-u ${NC_ADMIN_USER}:${NC_ADMIN_PASS}"
-
-if [ $METAX_API_VERSION -ge 3 ]; then
-    METAX_AUTH_HEADER="Authorization: Token ${METAX_PASS}"
-else
-    METAX_CREDENTIALS="-u ${METAX_USER}:${METAX_PASS}"
-fi
-
+METAX_AUTH_HEADER="Authorization: Token ${METAX_PASS}"
 HOSTNAME=$(hostname)
 
 #--------------------------------------------------------------------------------
@@ -216,7 +200,6 @@ if [ "$DEBUG" = "true" ]; then
     echo "DATA_REPLICATION_ROOT:        $DATA_REPLICATION_ROOT"
     echo "IDA_API:                      $IDA_API"
     echo "METAX_API:                    $METAX_API"
-    echo "METAX_API_VERSION:            $METAX_API_VERSION"
     echo "HTTPD_USER:                   $HTTPD_USER"
     echo "NC_ADMIN_USER:                $NC_ADMIN_USER"
     echo "NC_ADMIN_PASS:                $NC_ADMIN_PASS"
