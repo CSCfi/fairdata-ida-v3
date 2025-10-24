@@ -68,7 +68,7 @@
 # accounts and data are purged and no new accounts created.
 #
 #--------------------------------------------------------------------------------
-. `dirname $0`/../../lib/init_script.sh
+source $(dirname $0)/../../lib/init_script.sh
 
 if [ "$ROOT" = "" ]; then
     echo "Error: Failed to properly initialize script. Aborting." >&2
@@ -143,7 +143,7 @@ echo "Ensuring IDA control directory exists..."
 
 if [ ! -d "$STORAGE_OC_DATA_ROOT/control" ]; then
     mkdir "$STORAGE_OC_DATA_ROOT/control"
-    chown $HTTPD_USER:$HTTPD_USER "$STORAGE_OC_DATA_ROOT/control"
+    #chown apache:apache "$STORAGE_OC_DATA_ROOT/control"
 fi
 
 #--------------------------------------------------------------------------------
@@ -153,9 +153,9 @@ echo "Flushing all action, change, and frozen file records from IDA service data
 for PROJECT in $PROJECTS; do
     STEP="   Flushing $PROJECT"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$CURL_POST $IDA_CREDENTIALS $IDA_HEADERS "$IDA_API/flush?project=$PROJECT" 2>&1`
+    OUT=$($CURL_POST $IDA_CREDENTIALS $IDA_HEADERS "$IDA_API/flush?project=$PROJECT" 2>&1)
     if [ "$?" -ne 0 ]; then
-        OUT=`echo "$OUT" | head -1`
+        OUT=$(echo "$OUT" | head -1)
         failure "$OUT (ignored)"
     else
         success
@@ -169,10 +169,10 @@ if [ "$METAX_AVAILABLE" = "1" ]; then
     for PROJECT in $PROJECTS; do
         STEP="   Flushing $PROJECT"
         printf "%${PADDING}s" "$STEP"
-        OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/files?csc_project=$PROJECT&storage_service=ida&flush=true" 2>&1`
+        OUT=$($CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/files?csc_project=$PROJECT&storage_service=ida&flush=true" 2>&1)
         if [ "$?" -ne 0 ]; then
-            OUT=`echo "$OUT" | head -1`
-            NOT_FOUND=`echo "$OUT" | grep '404 Not Found'`
+            OUT=$(echo "$OUT" | head -1)
+            NOT_FOUND=$(echo "$OUT" | grep '404 Not Found')
             if [ "$NOT_FOUND" ]; then
                 failure "404 Not Found (ignored)"
             else
@@ -189,10 +189,10 @@ if [ "$METAX_AVAILABLE" = "1" ]; then
         STEP="   Flushing $USER"
         printf "%${PADDING}s" "$STEP"
         #echo "$CURL_DELETE -H \"$METAX_AUTH_HEADER\" \"$METAX_API/users/$USER/data?flush=true\""
-        OUT=`$CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/users/$USER/data?flush=true" 2>&1`
+        OUT=$($CURL_DELETE -H "$METAX_AUTH_HEADER" "$METAX_API/users/$USER/data?flush=true" 2>&1)
         if [ "$?" -ne 0 ]; then
-            OUT=`echo "$OUT" | head -1`
-            NOT_FOUND=`echo "$OUT" | grep '404 Not Found'`
+            OUT=$(echo "$OUT" | head -1)
+            NOT_FOUND=$(echo "$OUT" | grep '404 Not Found')
             if [ "$NOT_FOUND" ]; then
                 failure "404 Not Found (ignored)"
             else
@@ -210,9 +210,9 @@ echo "Purging all records from Nextcloud file cache..."
 for PROJECT in $PROJECTS; do
     STEP="   Purging $PROJECT"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$ROOT/tests/utils/purge-cache $PROJECT 2>&1`
+    OUT=$($ROOT/tests/utils/purge-cache $PROJECT 2>&1)
     if [ "$?" -ne 0 ]; then
-        OUT=`echo "$OUT" | head -1`
+        OUT=$(echo "$OUT" | head -1)
         failure "$OUT (ignored)"
     else
         success
@@ -224,9 +224,9 @@ echo "Flushing all replicated files..."
 for PROJECT in $PROJECTS; do
     STEP="   Flushing $PROJECT"
     printf "%${PADDING}s" "$STEP"
-    OUT=`/bin/rm -fr $DATA_REPLICATION_ROOT/projects/$PROJECT 2>&1`
+    OUT=$(/bin/rm -fr $DATA_REPLICATION_ROOT/projects/$PROJECT 2>&1)
     if [ "$?" -ne 0 ]; then
-        OUT=`echo "$OUT" | head -1`
+        OUT=$(echo "$OUT" | head -1)
         failure "$OUT (ignored)"
     else
         success
@@ -241,22 +241,22 @@ echo "Deleting any existing test users..."
 for USER in $USERS; do
     STEP="   Deleting $USER"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$ROOT/admin/ida_user DELETE $USER 2>&1`
+    OUT=$($ROOT/admin/ida_user DELETE $USER 2>&1)
     if [ "$?" -ne 0 ]; then
-        OUT=`echo "$OUT" | head -1`
+        OUT=$(echo "$OUT" | head -1)
         failure "$OUT (ignored)"
     else
         success
     fi
     STEP="   Ensuring no residual user folder"
     printf "%${PADDING}s" "$STEP"
-    TARGET=`echo "$STORAGE_OC_DATA_ROOT/$USER" | sed -e 's/^[[:blank:]]*//;s/[[:blank:]]*$//'`
+    TARGET=$(echo "$STORAGE_OC_DATA_ROOT/$USER" | sed -e 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
     if [ "$TARGET" != "/" ]; then
         if [ "$TARGET" != "/mnt/storage_vol01/ida/" ]; then
             if [ -d "$TARGET" ]; then
-                OUT=`rm -fr "$TARGET"`
+                OUT=$(rm -fr "$TARGET")
                 if [ "$?" -ne 0 ]; then
-                    OUT=`echo "$OUT" | head -1`
+                    OUT=$(echo "$OUT" | head -1)
                     failure "$OUT (ignored)"
                 else
                     success
@@ -277,9 +277,9 @@ echo "Deleting any existing test projects..."
 for PROJECT in $PROJECTS; do
     STEP="   Deleting $PROJECT"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$ROOT/admin/ida_project DISABLE $PROJECT 2>&1`
+    OUT=$($ROOT/admin/ida_project DISABLE $PROJECT 2>&1)
     if [ "$?" -ne 0 ]; then
-        OUT=`echo "$OUT" | head -1`
+        OUT=$(echo "$OUT" | head -1)
         failure "$OUT (ignored)"
     else
         success
@@ -292,9 +292,9 @@ for PROJECT in $PROJECTS; do
     USER="$PROJECT_USER_PREFIX""$PROJECT"
     STEP="   Deleting $USER"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$ROOT/admin/ida_user DELETE $USER 2>&1`
+    OUT=$($ROOT/admin/ida_user DELETE $USER 2>&1)
     if [ "$?" -ne 0 ]; then
-        OUT=`echo "$OUT" | head -1`
+        OUT=$(echo "$OUT" | head -1)
         failure "$OUT (ignored)"
     else
         success
@@ -307,9 +307,9 @@ for USER in $USERS; do
     if [ -d "$STORAGE_OC_DATA_ROOT/$USER" ]; then
         STEP="   Deleting $USER "
         printf "%${PADDING}s" "$STEP"
-        OUT=`rm -fr "$STORAGE_OC_DATA_ROOT/$USER"`
+        OUT=$(rm -fr "$STORAGE_OC_DATA_ROOT/$USER")
         if [ "$?" -ne 0 ]; then
-            OUT=`echo "$OUT" | head -1`
+            OUT=$(echo "$OUT" | head -1)
             failure "$OUT (ignored)"
         else
             success
@@ -321,15 +321,15 @@ echo "Deleting any residual project share owner directories and links..."
 
 for PROJECT in $PROJECTS; do
     for CANDIDATE_STORAGE_VOLUME in ${STORAGE_CANDIDATES[*]}; do
-        TARGET=`echo "${CANDIDATE_STORAGE_VOLUME}/${PROJECT_USER_PREFIX}${PROJECT}" | sed -e 's/^[[:blank:]]*//;s/[[:blank:]]*$//'`
+        TARGET=$(echo "${CANDIDATE_STORAGE_VOLUME}/${PROJECT_USER_PREFIX}${PROJECT}" | sed -e 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
         if [ "$TARGET" != "/" ]; then
             if [ "$TARGET" != "${CANDIDATE_STORAGE_VOLUME}/" ]; then
                 if [ -e "$TARGET" ]; then
                     STEP="   Deleting $TARGET "
                     printf "%${PADDING}s" "$STEP"
-                    OUT=`rm -fr "$TARGET"`
+                    OUT=$(rm -fr "$TARGET")
                     if [ "$?" -ne 0 ]; then
-                        OUT=`echo "$OUT" | head -1`
+                        OUT=$(echo "$OUT" | head -1)
                         failure "$OUT (ignored)"
                     else
                         success
@@ -362,7 +362,7 @@ echo "Creating projects..."
 for PROJECT in $PROJECTS; do
     STEP="   Creating $PROJECT"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$ROOT/admin/ida_project ADD $PROJECT 100 2>&1`
+    OUT=$($ROOT/admin/ida_project ADD $PROJECT 100 2>&1)
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
         exit 1
@@ -384,23 +384,23 @@ for PROJECT in $PROJECTS; do
     PROJECT_STAGING_FOLDER="$PROJECT$STAGING_FOLDER_SUFFIX"
     PROJECT_FROZEN_FOLDER="$PROJECT"
 
-    OUT=`cp -rp $ROOT/tests/testdata $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_STAGING_FOLDER`
+    OUT=$(cp -rp $ROOT/tests/testdata $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_STAGING_FOLDER)
 
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
         exit 1
     fi
 
-    rm -fr `find $STORAGE_OC_DATA_ROOT/$USER/files -name .DS_Store`
+    rm -fr $(find $STORAGE_OC_DATA_ROOT/$USER/files -name .DS_Store)
 
-    OUT=`mkdir -p $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_STAGING_FOLDER/testdata/empty_folder_s/a/b/c`
+    OUT=$(mkdir -p $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_STAGING_FOLDER/testdata/empty_folder_s/a/b/c)
 
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
         exit 1
     fi
 
-    OUT=`mkdir -p $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_FROZEN_FOLDER/testdata/empty_folder_f/x/y/z`
+    OUT=$(mkdir -p $STORAGE_OC_DATA_ROOT/$USER/files/$PROJECT_FROZEN_FOLDER/testdata/empty_folder_f/x/y/z)
 
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
@@ -408,11 +408,11 @@ for PROJECT in $PROJECTS; do
         continue
     fi
 
-    chown -R $HTTPD_USER:$HTTPD_USER "$STORAGE_OC_DATA_ROOT/$USER"
+    #chown -R apache:apache "$STORAGE_OC_DATA_ROOT/$USER"
     chmod -R u+w,g+rwX,o-rwx "$STORAGE_OC_DATA_ROOT/$USER"
 
     # Update Nextcloud filesystem records
-    OUT=`$OCC files:scan -q $USER`
+    OUT=$($OCC files:scan -q $USER)
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
         exit 1
@@ -425,7 +425,7 @@ for PROJECT in $PROJECTS; do
     STEP="   Initializing upload timestamps for ${PROJECT}"
     printf "%${PADDING}s" "$STEP"
 
-    OUT=`$ROOT/tests/utils/initialize-change-timestamps $PROJECT 2>&1`
+    OUT=$($ROOT/tests/utils/initialize-change-timestamps $PROJECT 2>&1)
 
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
@@ -439,7 +439,7 @@ for PROJECT in $PROJECTS; do
     STEP="   Generating cache checksums for ${PROJECT}"
     printf "%${PADDING}s" "$STEP"
 
-    OUT=`$ROOT/appsupport/generate-missing-checksums $PROJECT 2>&1`
+    OUT=$($ROOT/appsupport/generate-missing-checksums $PROJECT 2>&1)
 
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
@@ -456,11 +456,11 @@ done
 echo "Creating users..."
 
 for RELATION in $BASIC_RELATIONS; do
-    USER=`echo $RELATION | sed -e 's/:.*$//'`
-    PROJECT=`echo $RELATION | sed -e 's/^.*://'`
+    USER=$(echo $RELATION | sed -e 's/:.*$//')
+    PROJECT=$(echo $RELATION | sed -e 's/^.*://')
     STEP="   Creating $USER in $PROJECT"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$ROOT/admin/ida_user ADD $USER $PROJECT 2>&1`
+    OUT=$($ROOT/admin/ida_user ADD $USER $PROJECT 2>&1)
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
         exit 1
@@ -474,11 +474,11 @@ done
 echo "Creating additional project relations..."
 
 for RELATION in $EXTRA_RELATIONS; do
-    USER=`echo $RELATION | sed -e 's/:.*$//'`
-    PROJECT=`echo $RELATION | sed -e 's/^.*://'`
+    USER=$(echo $RELATION | sed -e 's/:.*$//')
+    PROJECT=$(echo $RELATION | sed -e 's/^.*://')
     STEP="   Adding $USER to $PROJECT"
     printf "%${PADDING}s" "$STEP"
-    OUT=`$ROOT/admin/ida_user JOIN $USER $PROJECT 2>&1`
+    OUT=$($ROOT/admin/ida_user JOIN $USER $PROJECT 2>&1)
     if [ "$?" -ne 0 ]; then
         failure "$OUT"
         exit 1
@@ -489,7 +489,7 @@ done
 
 #--------------------------------------------------------------------------------
 
-FOUND=`echo "$PROJECTS" | grep "test_project_s"`
+FOUND=$(echo "$PROJECTS" | grep "test_project_s")
 
 if [ "$FOUND" ]; then
     echo "Suspending project test_project_s..."
@@ -498,7 +498,7 @@ fi
 
 #--------------------------------------------------------------------------------
 
-FOUND=`echo "$PROJECTS" | grep "test_project_p"`
+FOUND=$(echo "$PROJECTS" | grep "test_project_p")
 
 if [ "$FOUND" ]; then
     echo "Creating pending action in test_project_p..."
@@ -507,7 +507,7 @@ fi
 
 #--------------------------------------------------------------------------------
 
-FOUND=`echo "$PROJECTS" | grep "test_project_f"`
+FOUND=$(echo "$PROJECTS" | grep "test_project_f")
 
 if [ "$FOUND" ]; then
     echo "Creating failed action in test_project_f..."

@@ -1,8 +1,19 @@
 #!/bin/bash
 
+IDA_ROOT="/usr/local/fd/ida-fairdata-v3"
+
+if [ ! -d "$IDA_ROOT" ]; then
+    IDA_ROOT="/var/ida"
+fi
+
+if [ ! -d "$IDA_ROOT" ]; then
+    echo "Error: IDA root directory not found."
+    exit 1
+fi  
+
 # Input files
-STRING_LIST_FILE="/var/ida/nextcloud/apps/ida/src/l10n/utils/translated_strings.txt"
-JSON_FILE="/var/ida/nextcloud/apps/ida/src/l10n/utils/translations_old.json"
+STRING_LIST_FILE="$IDA_ROOT/nextcloud/apps/ida/src/l10n/utils/translated_strings.txt"
+JSON_FILE="$IDA_ROOT/nextcloud/apps/ida/src/l10n/utils/translations_old.json"
 
 # Check if both files exist
 if [[ ! -f "$STRING_LIST_FILE" || ! -f "$JSON_FILE" ]]; then
@@ -36,5 +47,5 @@ jq --argjson keys "[$keys]" '
     ) |
     # Sort the output object by keys
     to_entries | sort_by(.key) | from_entries
-' "$JSON_FILE" | jq . --indent 4 > /var/ida/nextcloud/apps/ida/src/l10n/utils/translations.json
+' "$JSON_FILE" | jq . --indent 4 > $IDA_ROOT/nextcloud/apps/ida/src/l10n/utils/translations.json
 

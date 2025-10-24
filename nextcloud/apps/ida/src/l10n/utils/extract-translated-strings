@@ -1,12 +1,23 @@
 #!/bin/bash
 
+IDA_ROOT="/usr/local/fd/ida-fairdata-v3"
+
+if [ ! -d "$IDA_ROOT" ]; then
+    IDA_ROOT="/var/ida"
+fi
+
+if [ ! -d "$IDA_ROOT" ]; then
+    echo "Error: IDA root directory not found."
+    exit 1
+fi  
+
 # Base directory to search
-BASE_DIR="/var/ida/nextcloud"
+BASE_DIR="$IDA_ROOT/nextcloud"
 
 # Exclude directories
 EXCLUDE_DIRS=(
-    "/var/ida/nextcloud/3rdparty"
-    "/var/ida/nextcloud/apps/idaui-cleanup"
+    "$IDA_ROOT/nextcloud/3rdparty"
+    "$IDA_ROOT/nextcloud/apps/idaui-cleanup"
 )
 
 # Build the find exclude arguments
@@ -21,5 +32,5 @@ find "$BASE_DIR" \
     \( -name "*.js" -o -name "*.php" \) -type f -exec \
     grep -Eho "t\(['\"]ida['\"],\s*['\"][^'\"]+['\"]\)" {} + | \
     sed -E "s/^t\(['\"]ida['\"],\s*['\"]([^'\"]+)['\"]\)/\1/" | \
-    sort -u > /var/ida/nextcloud/apps/ida/src/l10n/utils/translated_strings.txt
+    sort -u > $IDA_ROOT/nextcloud/apps/ida/src/l10n/utils/translated_strings.txt
 

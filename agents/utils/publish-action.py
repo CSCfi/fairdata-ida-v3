@@ -30,8 +30,7 @@ Before executing the script, ensure:
 - rabbitmq admin credentials are in place in config/config.sh
 
 Execution:
-    cd /var/ida
-    source /srv/venv-agents/bin/activate
+    source venv/bin/activate
     python -m agents.utils.publish-action pid
 """
 
@@ -110,7 +109,7 @@ def publish_action_messages(exchange, message):
         error_msg='message was not published to exchange \'%s\'.' % exchange
     )
 
-def _rabbitmq_api_call(method, resource_url, data=None, error_msg=None, success_codes=SUCCESS_CODES):
+def _rabbitmq_api_call(method, resource_url, data=None, error_msg='', success_codes=SUCCESS_CODES):
     response = getattr(requests, method)(
         '%s%s' % (RABBITMQ_API_URL, resource_url),
         data=data,

@@ -7,6 +7,8 @@
 
 SCRIPT=$(basename $0)
 
+ROOT=$(dirname $(dirname $(realpath "$0")))
+
 USER="$1"
 TARGETDIR="$2"
 TMPDIR="$3"
@@ -48,9 +50,9 @@ echo "Extracting status ..."
 IS_PSO_USER=$(echo "$USER" | grep "PSO_")
 
 if [ "$IS_PSO_USER" ]; then
-    sudo -u apache /var/ida/appsupport/user-status $USER 2>"$ERR" | tail -n +3 > "$TARGETDIR/$USER.status.txt"
+    $ROOT/appsupport/user-status $USER 2>"$ERR" | tail -n +3 > "$TARGETDIR/$USER.status.txt"
 else
-    sudo -u apache /var/ida/appsupport/user-status $USER 2>"$ERR" > "$TARGETDIR/$USER.status.txt"
+    $ROOT/appsupport/user-status $USER 2>"$ERR" > "$TARGETDIR/$USER.status.txt"
 fi
 
 EXIT_CODE=$?

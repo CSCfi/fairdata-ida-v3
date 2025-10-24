@@ -6,19 +6,28 @@
 # database defines all the current users but there is no actual data on disk for those users in the
 # non-production environment.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 for USER in $USERS; do
     echo "Creating dummy home directories for user ${USER} ..."
     HOME_DIR="${STORAGE_OC_DATA_ROOT}/${USER}"
     if [ ! -d "${HOME_DIR}" ]; then
-        sudo -u apache mkdir "${HOME_DIR}" 
+        mkdir "${HOME_DIR}" 
         echo "    ${HOME_DIR} created"
     else
         echo "    ${HOME_DIR} exists"
     fi
     if [ ! -d "${HOME_DIR}/files" ]; then
-        sudo -u apache mkdir "${HOME_DIR}/files" 
+        mkdir "${HOME_DIR}/files" 
         echo "    ${HOME_DIR}/files created"
     else
         echo "    ${HOME_DIR}/files exists"
@@ -27,13 +36,13 @@ for USER in $USERS; do
     if [ "$PSO_USER" ]; then
         PROJECT=$(echo "$PSO_USER" | sed -e 's/^PSO_//')
         if [ ! -d "${HOME_DIR}/files/${PROJECT}" ]; then
-            sudo -u apache mkdir "${HOME_DIR}/files/${PROJECT}" 
+            mkdir "${HOME_DIR}/files/${PROJECT}" 
             echo "    ${HOME_DIR}/files/${PROJECT} created"
         else
             echo "    ${HOME_DIR}/files/${PROJECT} exists"
         fi
         if [ ! -d "${HOME_DIR}/files/${PROJECT}+" ]; then
-            sudo -u apache mkdir "${HOME_DIR}/files/${PROJECT}+" 
+            mkdir "${HOME_DIR}/files/${PROJECT}+" 
             echo "    ${HOME_DIR}/files/${PROJECT}+ created"
         else
             echo "    ${HOME_DIR}/files/${PROJECT}+ exists"

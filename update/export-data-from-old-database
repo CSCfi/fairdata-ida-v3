@@ -2,7 +2,16 @@
 #
 # This script will export all essential data from the old database.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 # Ensure DBDATA is defined in configuration, and that the subdirectory exists
 if [[ -z "$DBDATA" ]]; then
@@ -70,7 +79,7 @@ function export_table() {
         echo "Error: The output file ${csv_file} does not exist" >&2
         exit 1
     fi
-    local exported_record_count=$(/var/ida/update/count-csv-records < "${csv_file}")
+    local exported_record_count=$($ROOT/update/count-csv-records < "${csv_file}")
     if [ "$exported_record_count" = "0" ]; then
         echo "Error: The output file ${csv_file} is empty" >&2
         exit 1

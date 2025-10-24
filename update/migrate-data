@@ -2,17 +2,26 @@
 #
 # This script will perform the core of the data migration from the old to the new database. 
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 set -e # if anything fails, die die die
 
 echo "--- Migrating all data from $DBNAME_OLD to $DBNAME ..."
 
-/var/ida/update/export-data-from-old-database
-/var/ida/update/validate-exported-data
-/var/ida/update/import-data-into-new-database
-/var/ida/update/update-sequences
-/var/ida/update/update-indices
-/var/ida/update/wait-for-database-housekeeping
+$UPDATE_ROOT/export-data-from-old-database
+$UPDATE_ROOT/validate-exported-data
+$UPDATE_ROOT/import-data-into-new-database
+$UPDATE_ROOT/update-sequences
+$UPDATE_ROOT/update-indices
+$UPDATE_ROOT/wait-for-database-housekeeping
 
 echo "Migration completed."

@@ -60,16 +60,16 @@ class TestDataDeletion(unittest.TestCase):
         flush_datasets(self)
 
         # empty trash data root of any residual project directories
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/delete-ida-trash 0" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/appsupport/delete-ida-trash 0" % self.config["ROOT"]
         result = os.system(cmd)
 
         # ensure we start with a fresh setup of projects, user accounts, and data
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/triple-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/triple-project.config" % (self.config["ROOT"], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
         # ensure all cache checksums have been generated for test_project_a (if OK, assume OK for all test projects)
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/list-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/appsupport/list-missing-checksums test_project_a" % self.config["ROOT"]
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
             self.assertEqual(len(output), 0)
@@ -86,7 +86,7 @@ class TestDataDeletion(unittest.TestCase):
 
             flush_datasets(self)
 
-            cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+            cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
             result = os.system(cmd)
             self.assertEqual(result, 0)
 
@@ -168,7 +168,7 @@ class TestDataDeletion(unittest.TestCase):
         
         # --------------------------------------------------------------------------------
 
-        cmd_base = "sudo -u apache ECHO_TEST_EMAILS=\"true\" %s/appsupport" % (self.config['ROOT'])
+        cmd_base = "ECHO_TEST_EMAILS=\"true\" %s/appsupport" % (self.config['ROOT'])
 
         print("Freezing project A folder /testdata/2017-08/Experiment_1")
         # Should be preserved after project removal, as part of published dataset

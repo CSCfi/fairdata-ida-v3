@@ -45,7 +45,7 @@ safe tests. Older version of the command line tools will not work with Nextcloud
 whereas the latest version of the command line tools are compatible with all versions of Nextcloud
 and IDA.
 
-IMPORTANT: The following environment variables must be defined in /var/ida/config/config.sh, both
+IMPORTANT: The following environment variables must be defined in config/config.sh, both
 before the update/migration, with the NC21 version of IDA, and after deploying the new NC31 version
 of IDA, so they need to be added to the end of the config.sh template for both versions of IDA
 (recommended values are shown for the current update, but edit accordingly if/as needed):
@@ -86,21 +86,21 @@ On ida241 ONLY:
    repository, per the appropriate repository tag
 >> IMPORTANT: Disable modsecurity entirely on ida241
 >> Restart apache
->> Manually deploy ONLY the latest version of the directory /var/ida/update from the latest version of
+>> Manually deploy ONLY the latest version of the directory update from the latest version of
    the new repository fairdata-ida-v3 that is about to be deployed, so it can be executed against the
    current running version of IDA
 >> Create the housekeeping directory IDA_UPDATE_ROOT as defined above
->> Execute sudo -u apache php /var/ida/nextcloud/cron.php    
->> Execute sudo -u apache /var/ida/appsupport/generate-missing-checksums
->> Execute /var/ida/update/rescan-cleanup
+>> Execute sudo -u apache php nextcloud/cron.php    
+>> Execute sudo -u apache appsupport/generate-missing-checksums
+>> Execute update/rescan-cleanup
    NOTE: Execution of the rescan-cleanup script will take approximately a full day to run!
 *****************************************************************************************************************
 *** ENSURE THAT NO ERRORS WERE REPORTED BY THE SCRIPT, RE-RUN THE SCRIPT UNTIL NO ERRORS ARE REPORTED!        ***
 *** ONLY WHEN NO ERRORS ARE DETECTED SHOULD YOU PROCEED FURTHER !!!                                           ***
 *****************************************************************************************************************
->> Execute /var/ida/update/extract-baseline-validation-data
+>> Execute update/extract-baseline-validation-data
    NOTE: Execution of the extract-baseline-validation-data script will take approximately a full day to run!
->> Execute /var/ida/update/validate-baseline-data and ensure no errors are reported
+>> Execute update/validate-baseline-data and ensure no errors are reported
 *****************************************************************************************************************
 *** ENSURE THAT NO ERRORS WERE REPORTED BY THE SCRIPT, MIGRATION VALIDATION CANNOT BE DONE WITHOUT THIS DATA! ***
 *** Logs for every script executed will be generated in $IDA_UPDATE_ROOT/log                                  ***
@@ -125,24 +125,24 @@ On ida241 ONLY:
 4. Software updates (for all IDA instances)
 
 >> Upgrade PHP version as required, along with latest updated configurations (NC31: PHP 8.3)
->> Deploy the latest version of IDA from the new gitlab repository to /var/ida
+>> Deploy the latest version of IDA from the new gitlab repository
 >> Install updated IDA config.sh with new and old database names defined in DBNAME and DBNAME_OLD
 >> Install updated IDA config.php with new database name and Nextcloud version defined
->> Reinitialize Python3 virtual environment by executing /var/ida/utils/initialize_venv
+>> Reinitialize Python3 virtual environment by executing utils/initialize_venv
 
 5. Install new version of Nextcloud on ida241 (ONLY DONE ON ONE IDA INSTANCE PER ENVIRONMENT)
 
 On ida241 ONLY:
->> Manually edit /var/ida/nextcloud/config/config.php and update it to define
+>> Manually edit nextcloud/config/config.php and update it to define
       'config_is_read_only' => false,
->> Execute /var/ida/update/install-new-nextcloud
+>> Execute update/install-new-nextcloud
 >> Grant read-only privileges for new database and newly created tables to inspector account
        GRANT CONNECT ON DATABASE nextcloud31 TO inspector;
        GRANT USAGE ON SCHEMA public TO inspector;
        GRANT SELECT ON ALL TABLES IN SCHEMA public TO inspector;
        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO inspector;
        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO inspector;
->> Manually edit /var/ida/nextcloud/config/config.php and update it to define
+>> Manually edit nextcloud/config/config.php and update it to define
       'config_is_read_only' => true,
 >> Start apache on ida241 only
    NOTE: The IDA specific tables will be automatically created in the new database when apache/Nextcloud
@@ -155,25 +155,25 @@ On ida241 ONLY:
 6. Migrate and validate essential data on ida241 (ONLY DONE ON ONE IDA INSTANCE PER ENVIRONMENT)
 
 On ida241 ONLY (with one step on ida245):
->> Execute /var/ida/update/migrate-data and ensure no errors reported
+>> Execute update/migrate-data and ensure no errors reported
    NOTE: Execution of the migrate-data script will take approximately a full day to run!
 >> Execute the following commands to ensure that there are no outstanding Nextcloud housekeeping tasks
    and that all pending database transactions are completed and the service is "clean":
-       sudo -u apache php /var/ida/nextcloud/cron.php    
+       sudo -u apache php nextcloud/cron.php    
        sudo systemctl restart apache
    (on ida245):
        sudo systemctl restart postgresql
->> Execute /var/ida/update/reset-reshare and ensure no errors are reported
+>> Execute update/reset-reshare and ensure no errors are reported
    NOTE: Execution of the reset-reshare script can take several hours to run in production
    NOTE: If errors are reported, it will be necessary to run it again, until no errors are reported for
    any PSO users or projects
->> Execute /var/ida/update/extract-migrated-validation-data
->> Execute /var/ida/update/validate-migrated-data and ensure no errors reported
+>> Execute update/extract-migrated-validation-data
+>> Execute update/validate-migrated-data and ensure no errors reported
 *****************************************************************************************************************
 *** ENSURE THAT NO ERRORS WERE REPORTED BY THE SCRIPT, REPEAT ANY PRECEEDING STEPS AS NEEDED UNTIL NO ERRORS! ***
 *** ONLY WHEN NO ERRORS ARE DETECTED SHOULD YOU PROCEED FURTHER !!!                                           ***
 *****************************************************************************************************************
->> Execute /var/ida/update/rescan-cleanup
+>> Execute update/rescan-cleanup
    NOTE: Execution of the rescan-cleanup script can take several hours to run in production
 *****************************************************************************************************************
 *** ENSURE THAT NO ERRORS WERE REPORTED BY THE SCRIPT, RE-RUN THE SCRIPT UNTIL NO ERRORS ARE REPORTED!        ***

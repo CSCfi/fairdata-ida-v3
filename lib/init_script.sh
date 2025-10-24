@@ -21,6 +21,15 @@
 # @license  GNU Affero General Public License, version 3
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
+# Ensure script is run as apache
+
+ID=$(id -u -n)
+if [ "$ID" != "apache" ]; then
+    sudo -u apache bash "$0" "$@"
+    exit
+fi
+
+#--------------------------------------------------------------------------------
 # Verify needed utilities are available
 
 for NEEDS_PROG in curl php python3.12 realpath jq
@@ -72,24 +81,6 @@ fi
 
 if [ "$DEBUG" = "" ]; then
     DEBUG="false"
-fi
-
-#--------------------------------------------------------------------------------
-# Determine the apache user
-
-if [ -d /etc/httpd ]; then
-    HTTPD_USER="apache"
-else
-    HTTPD_USER="www-data"
-fi
-
-#--------------------------------------------------------------------------------
-# Ensure script is run as apache
-
-ID=$(id -u -n)
-if [ "$ID" != "$HTTPD_USER" ]; then
-    echo "You must execute this script as $HTTPD_USER"
-    exit 1
 fi
 
 #--------------------------------------------------------------------------------
@@ -151,14 +142,9 @@ fi
 # Initialize log file and record start of script execution
 
 if [ ! -e $LOG ]; then
-    OUT=$(touch $LOG)
+    touch $LOG
     if [ "$?" -ne 0 ]; then
         echo "Can't create log file \"$LOG\"" >&2
-        exit 1
-    fi
-    OUT=$(chown $HTTPD_USER:$HTTPD_USER $LOG)
-    if [ "$?" -ne 0 ]; then
-        echo "Can't set ownership of log file \"$LOG\"" >&2
         exit 1
     fi
 fi

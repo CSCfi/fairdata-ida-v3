@@ -59,12 +59,12 @@ class TestChecksums(unittest.TestCase):
         print("(initializing)")
 
         # ensure we start with a fresh setup of projects, user accounts, and data
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
         # ensure all cache checksums have been generated for test_project_a (if OK, assume OK for all test projects)
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/list-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/appsupport/list-missing-checksums test_project_a" % self.config["ROOT"]
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
             self.assertEqual(len(output), 0, output[:2000])
@@ -80,7 +80,7 @@ class TestChecksums(unittest.TestCase):
 
             print("(cleaning)")
 
-            cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+            cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
             result = os.system(cmd)
             self.assertEqual(result, 0)
 
@@ -103,7 +103,7 @@ class TestChecksums(unittest.TestCase):
         try:
             with open(pathname, 'w') as file:
                 file.write("TEST")
-            shutil.chown(pathname, user=self.config["HTTPD_USER"], group=self.config["HTTPD_USER"])
+            #shutil.chown(pathname, user='apache', group='apache')
         except Exception as error:
             self.fail("Failed to create test file %s: %s" % (pathname, str(error)))
         path = Path(pathname)
@@ -112,12 +112,12 @@ class TestChecksums(unittest.TestCase):
         original_size = path.stat().st_size
         self.assertEqual(original_size, 4)
 
-        cmd = "sudo -u %s DEBUG=false %s/nextcloud/occ files:scan PSO_test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/nextcloud/occ files:scan PSO_test_project_a" % self.config["ROOT"]
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
         # Run list-missing-checksums to ensure file has no checksum and it is listed in output.
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/list-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/appsupport/list-missing-checksums test_project_a" % self.config["ROOT"]
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         self.assertTrue("/testdata/newfile.dat" in output, output)
 
@@ -125,7 +125,7 @@ class TestChecksums(unittest.TestCase):
         try:
             with open(pathname, 'w') as file:
                 file.write("TEST123")
-            shutil.chown(pathname, user=self.config["HTTPD_USER"], group=self.config["HTTPD_USER"])
+            #shutil.chown(pathname, user='apache', group='apache')
         except Exception as error:
             self.fail("Failed to modify test file %s: %s" % (pathname, str(error)))
         path = Path(pathname)
@@ -135,7 +135,7 @@ class TestChecksums(unittest.TestCase):
         self.assertEqual(updated_size, 7)
 
         # Run generate-missing-checksums and ensure warning is output for file regarding size mismatch.
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/generate-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/appsupport/generate-missing-checksums test_project_a" % self.config["ROOT"]
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         warning = "Recorded size 4 does not match size on disk 7 for test_project_a /test_project_a+/testdata/newfile.dat (skipped)"
         self.assertTrue(warning in output, output)
@@ -144,7 +144,7 @@ class TestChecksums(unittest.TestCase):
         try:
             with open(pathname, 'w') as file:
                 file.write("TEST")
-            shutil.chown(pathname, user=self.config["HTTPD_USER"], group=self.config["HTTPD_USER"])
+            #shutil.chown(pathname, user='apache', group='apache')
         except Exception as error:
             self.fail("Failed to create test file %s: %s" % (pathname, str(error)))
         path = Path(pathname)
@@ -154,13 +154,13 @@ class TestChecksums(unittest.TestCase):
         self.assertEqual(fixed_size, 4)
 
         # Run generate-missing-checksums and ensure no warning is output.
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/generate-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/appsupport/generate-missing-checksums test_project_a" % self.config["ROOT"]
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         status = " recorded in cache for test_project_a /test_project_a+/testdata/newfile.dat"
         self.assertTrue(status in output, output)
 
         # Run list-missing-checksums to ensure no files listed.
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/list-missing-checksums test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/appsupport/list-missing-checksums test_project_a" % self.config["ROOT"]
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         self.assertFalse("/testdata/newfile.dat" in output, output)
 

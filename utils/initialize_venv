@@ -21,16 +21,24 @@
 # @license  GNU Affero General Public License, version 3
 # @link     https://www.fairdata.fi/en/ida
 # --------------------------------------------------------------------------------
+# Ensure script is run as apache
 
-ID=`id -u -n`
-if [ "$ID" != "root" ]; then
-    echo "You must execute this script as root"
-    exit 1
+ID=$(id -u -n)
+if [ "$ID" != "apache" ]; then
+    sudo -u apache "$0" "$@"
+    exit
 fi
 
+#--------------------------------------------------------------------------------
+
 SCRIPT_PATHNAME="$(realpath $0)"
-UTILS=`dirname "$SCRIPT"`
-ROOT=`dirname "$UTILS"`
+UTILS=$(dirname "$SCRIPT_PATHNAME")
+ROOT=$(dirname "$UTILS")
+
+if [ ! -f "$ROOT/config/config.sh" ]; then
+    echo "Could not find configuration file" >&2
+    exit 1
+fi
 
 source $ROOT/config/config.sh
 
@@ -56,8 +64,5 @@ $PYTHON -m venv $ROOT/venv
 
 source $ROOT/venv/bin/activate
 
-pip install --upgrade pip
-pip install -r $ROOT/requirements.txt
-
-chown -R $HTTPD_USER:$HTTPD_USER $ROOT/venv
-
+pip install --no-cache-dir --upgrade pip
+pip install --no-cache-dir -r $ROOT/requirements.txt

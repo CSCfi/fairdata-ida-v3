@@ -1,9 +1,18 @@
 #!/bin/bash
 #
 # This script will install a new version of Nextcloud, according to the current
-# configuration and contents of /var/ida, creating a new database.
+# configuration and contents of the cloned repository, creating a new database.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 echo "Checking configuration ..."
 for VARIABLE in OCC DBTYPE DBNAME DBNAME_OLD DBHOST DBUSER DBPASSWORD NC_ADMIN_USER NC_ADMIN_PASS TMPDIR STORAGE_OC_DATA_ROOT; do
@@ -20,7 +29,7 @@ if [ "$DBNAME" = "$DBNAME_OLD" ]; then
 fi
 
 echo "Checking existing configuration files ..."
-for FILE in /var/ida/nextcloud/config/config.php /var/ida/nextcloud/.htaccess; do
+for FILE in $ROOT/nextcloud/config/config.php $ROOT/nextcloud/.htaccess; do
     if [ ! -e $FILE ]; then
         echo "The current Nextcloud file '$FILE' does not exist. Aborting."
         exit 1
@@ -37,11 +46,11 @@ if ! $PSQL -c "SELECT 1 FROM pg_database WHERE datname = '$DBNAME';" | grep -q 1
 fi
 
 echo "Backing up existing Nextcloud configurations ..."
-mv /var/ida/nextcloud/config/config.php "${TMPDIR}/config.php"
-mv /var/ida/nextcloud/.htaccess "${TMPDIR}/.htaccess"
+mv $ROOT/nextcloud/config/config.php "${TMPDIR}/config.php"
+mv $ROOT/nextcloud/.htaccess "${TMPDIR}/.htaccess"
 
 echo "Clearing default Nextcloud account files for new users ..."
-rm -fr /var/ida/nextcloud/core/skeleton/* 2>/dev/null
+rm -fr $ROOT/nextcloud/core/skeleton/* 2>/dev/null
 
 # NOTE: We specify a temporary empty directory as the data storage root for installation, so that the
 # existing data storage root is not touched by the Nextcloud installation process!!! 
@@ -73,23 +82,23 @@ if [ $? != 0 ]; then
 fi
 
 echo "Restoring original configuration ..."
-sudo -u apache cp "${TEMP_DATA_ROOT}/.ncdata" "$STORAGE_OC_DATA_ROOT"
-if [ -e /var/ida/nextcloud/config/config.php ]; then
+cp "${TEMP_DATA_ROOT}/.ncdata" "$STORAGE_OC_DATA_ROOT"
+if [ -e $ROOT/nextcloud/config/config.php ]; then
     rm -f "${INSTALL_ROOT}/config.php.install"
-    mv /var/ida/nextcloud/config/config.php "${INSTALL_ROOT}/config.php.install"
+    mv $ROOT/nextcloud/config/config.php "${INSTALL_ROOT}/config.php.install"
 fi
-if [ -e /var/ida/nextcloud/.htaccess ]; then
+if [ -e $ROOT/nextcloud/.htaccess ]; then
     rm -f "${INSTALL_ROOT}/.htaccess.install"
-    mv /var/ida/nextcloud/.htaccess "${INSTALL_ROOT}/.htaccess.install"
+    mv $ROOT/nextcloud/.htaccess "${INSTALL_ROOT}/.htaccess.install"
 fi
-cat "${TMPDIR}/.htaccess" > /var/ida/nextcloud/.htaccess
-cat "${TMPDIR}/config.php" > /var/ida/nextcloud/config/config.php
+cat "${TMPDIR}/.htaccess" > $ROOT/nextcloud/.htaccess
+cat "${TMPDIR}/config.php" > $ROOT/nextcloud/config/config.php
 
 echo "Ensuring IDA file permissions are correct ..."
-/var/ida/utils/fix-permissions
+$ROOT/utils/fix-permissions
 
 echo "Disabling unused Nextcloud apps ..."
-sudo -u apache /var/ida/utils/disable_nextcloud_apps
+$ROOT/utils/disable_nextcloud_apps
 
 echo "Enabling essential Nextcloud apps ..."
 $OCC app:enable files_sharing
@@ -97,7 +106,7 @@ $OCC app:enable admin_audit
 $OCC app:enable ida
 
 echo "Configuring essential Nextcloud settings ..."
-/var/ida/utils/initialize_nextcloud_settings
+$ROOT/utils/initialize_nextcloud_settings
 
 echo "Updating database indices and MIME types..."
 $OCC maintenance:repair --include-expensive

@@ -60,7 +60,7 @@ class TestAgents(unittest.TestCase):
 
         # ensure we start with a fresh setup of projects, user accounts, and data
 
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
@@ -71,7 +71,7 @@ class TestAgents(unittest.TestCase):
 
         if self.success and self.config.get('NO_FLUSH_AFTER_TESTS', 'false') == 'false':
             print("(cleaning)")
-            cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+            cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
             os.system(cmd)
             if self.config["METAX_AVAILABLE"] != 1:
                 print('')
@@ -349,7 +349,7 @@ class TestAgents(unittest.TestCase):
         pathname = "%s/projects/test_project_a/testdata/2017-08/Experiment_1/test05.dat" % (self.config["DATA_REPLICATION_ROOT"])
         self.assertTrue(os.path.exists(pathname))
         self.assertEqual(os.path.getsize(pathname), 3728)
-        cmd = "sudo -u %s /bin/echo x >> %s" % (self.config["HTTPD_USER"], pathname)
+        cmd = "/bin/echo x >> %s" % pathname
         result = os.system(cmd)
         self.assertEqual(result, 0)
         self.assertEqual(os.path.getsize(pathname), 3730)
@@ -359,7 +359,7 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(result, "%s/testdata/2017-08/Experiment_2" % (frozen_area_root))
 
         print("Update Nextcloud file database")
-        cmd = "sudo -u %s %s/nextcloud/occ files:scan PSO_test_project_a" % (self.config['HTTPD_USER'], self.config["ROOT"])
+        cmd = "%s/nextcloud/occ files:scan PSO_test_project_a" % self.config["ROOT"]
         result = os.system(cmd)
         self.assertEqual(result, 0)
 

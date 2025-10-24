@@ -25,20 +25,11 @@
 # already exist
 # --------------------------------------------------------------------------------
 
-SCRIPT_PATHNAME="$(realpath $0)"
-PARENT_FOLDER=`dirname "$SCRIPT_PATHNAME"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
-
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE=$(dirname $(realpath "$0"))/../config/config.sh
 
 if [ -e $CONFIG_FILE ]
 then
-    . $CONFIG_FILE
+    source $CONFIG_FILE
 else
     echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
     exit 1
@@ -48,7 +39,7 @@ CONSTANTS_FILE="$ROOT/lib/constants.sh"
 
 if [ -e $CONSTANTS_FILE ]
 then
-    . $CONSTANTS_FILE
+    source $CONSTANTS_FILE
 else
     echo "The configuration file $CONSTANTS_FILE cannot be found. Aborting." >&2
     exit 1

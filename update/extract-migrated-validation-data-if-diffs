@@ -8,7 +8,16 @@
 #
 # Strict assumptions are made about the location of git repositories; update as needed.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 echo "--- Extracting migrated validation data ..."
 
@@ -59,7 +68,7 @@ for PROJECT in $PROJECTS; do
         continue
     fi
 
-    /var/ida/update/extract-project-data "$PROJECT" "$NEWDATA" "$TMPDIR" 2>"$ERR"
+    $ROOT/update/extract-project-data "$PROJECT" "$NEWDATA" "$TMPDIR" 2>"$ERR"
 
     EXIT_CODE=$?
 
@@ -89,7 +98,7 @@ for USER in $USERS; do
         continue
     fi
 
-    /var/ida/update/extract-user-data "$USER" "$NEWDATA" "$TMPDIR" 2>"$ERR"
+    $ROOT/update/extract-user-data "$USER" "$NEWDATA" "$TMPDIR" 2>"$ERR"
 
     if [ -s "$ERR" ]; then
         cat "$ERR" >&2

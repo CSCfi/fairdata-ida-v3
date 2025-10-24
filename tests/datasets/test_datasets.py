@@ -64,11 +64,11 @@ class TestDatasets(unittest.TestCase):
         flush_datasets(self)
 
         # ensure we start with a fresh setup of projects, user accounts, and data
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-max-files test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-max-files test_project_a" % self.config["ROOT"]
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
@@ -83,7 +83,7 @@ class TestDatasets(unittest.TestCase):
 
             flush_datasets(self)
 
-            cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+            cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
             result = os.system(cmd)
             self.assertEqual(result, 0)
 
@@ -184,7 +184,7 @@ class TestDatasets(unittest.TestCase):
 
         frozen_area_root = "%s/PSO_test_project_a/files/test_project_a" % (self.config["STORAGE_OC_DATA_ROOT"])
         staging_area_root = "%s/PSO_test_project_a/files/test_project_a%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
-        cmd_base="sudo -u %s SIMULATE_AGENTS=true DEBUG=false %s/appsupport/execute-batch-action" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd_base="SIMULATE_AGENTS=true DEBUG=false %s/appsupport/execute-batch-action" % self.config["ROOT"]
 
         print("Batch freezing a folder with more than max allowed files")
         cmd = "%s test_project_a freeze /testdata/MaxFiles >/dev/null" % (cmd_base)
@@ -489,7 +489,7 @@ class TestDatasets(unittest.TestCase):
 
         print("Test appsupport scripts...")
 
-        cmd_base = "sudo -u apache %s/appsupport" % (self.config['ROOT'])
+        cmd_base = "%s/appsupport" % (self.config['ROOT'])
 
         # list-published-projects
         #   output includes test_project_a

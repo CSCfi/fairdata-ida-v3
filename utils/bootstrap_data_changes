@@ -28,16 +28,7 @@
 
 DEBUG_ENV="$DEBUG"
 
-SCRIPT_PATHNAME="$(realpath $0)"
-PARENT_FOLDER=`dirname "$SCRIPT_PATHNAME"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
-
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE=$(dirname $(realpath "$0"))/../config/config.sh
 
 if [ -e $CONFIG_FILE ]
 then
@@ -75,7 +66,7 @@ export PGPASSWORD="$DBPASSWORD"
 if [ "$*" ]; then
     PROJECTS="$*"
 else
-    PROJECTS=`sudo -u apache $ROOT/appsupport/list-projects`
+    PROJECTS=$($ROOT/appsupport/list-projects)
 fi
 
 if [ "$IDA_MIGRATION" = "" ]; then
@@ -98,7 +89,7 @@ for PROJECT in $PROJECTS; do
 
     # Get storage ID for project
     QUERY="SELECT numeric_id FROM ${DBTABLEPREFIX}storages WHERE id = 'home::${PROJECT_USER_PREFIX}${PROJECT}' LIMIT 1"
-    OUT=`psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+    OUT=$(psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     STORAGE_ID="$OUT"
     if [ "$DEBUG" = "true" ]; then
         echo "--- STORAGE ID"
@@ -117,7 +108,7 @@ for PROJECT in $PROJECTS; do
            WHERE project = '${PROJECT}' \
            AND change = 'init' \
            LIMIT 1"
-    OUT=`psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+    OUT=$(psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     if [ "$DEBUG" = "true" ]; then
         echo "--- EXISTING PROJECT CREATION CHANGE"
         echo "QUERY:            $QUERY"
@@ -134,7 +125,7 @@ for PROJECT in $PROJECTS; do
                WHERE cache.storage = ${STORAGE_ID} \
                ORDER BY GREATEST(cache.mtime, COALESCE(extended.upload_time, 0)) ASC \
                LIMIT 1"
-        OUT=`psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+        OUT=$(psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
         if [ "$DEBUG" = "true" ]; then
             echo "--- OLDEST MODIFICATION"
@@ -143,7 +134,7 @@ for PROJECT in $PROJECTS; do
         fi
 
         CACHE_TS="$OUT"
-        CACHE_TIMESTAMP=`date -u +"%Y-%m-%dT%H:%M:%SZ" -d "@${CACHE_TS}"`
+        CACHE_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ" -d "@${CACHE_TS}")
         if [ "$DEBUG" = "true" ]; then
             echo "CACHE_TS:         $CACHE_TS"
             echo "CACHE_TIMESTAMP:  $CACHE_TIMESTAMP"
@@ -163,7 +154,7 @@ for PROJECT in $PROJECTS; do
                (\"timestamp\", \"project\", \"user\", \"change\", \"pathname\", \"mode\") \
                VALUES ('${TIMESTAMP}', '${PROJECT}', 'service', 'init', '/', 'system')" 
 
-        OUT=`psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+        OUT=$(psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
         if [ "$DEBUG" = "true" ]; then
             echo "--- RECORDED PROJECT CREATION CHANGE"
@@ -185,7 +176,7 @@ for PROJECT in $PROJECTS; do
            AND cache.path LIKE 'files/${PROJECT}%' \
            ORDER BY GREATEST(cache.mtime, COALESCE(extended.upload_time, 0)) DESC \
            LIMIT 1"
-    OUT=`psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+    OUT=$(psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
     if [ "$DEBUG" = "true" ]; then
         echo "--- LATEST MODIFICATION"
@@ -194,9 +185,9 @@ for PROJECT in $PROJECTS; do
     fi
 
     if [ "$OUT" ]; then
-        CACHE_PATHNAME=`echo "$OUT" | awk -F'|' '{print $1}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed -e 's/^files//'`
-        CACHE_TS=`echo "$OUT" | awk -F'|' '{print $2}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
-        CACHE_TIMESTAMP=`date -u +"%Y-%m-%dT%H:%M:%SZ" -d "@${CACHE_TS}"`
+        CACHE_PATHNAME=$(echo "$OUT" | awk -F'|' '{print $1}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed -e 's/^files//')
+        CACHE_TS=$(echo "$OUT" | awk -F'|' '{print $2}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        CACHE_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ" -d "@${CACHE_TS}")
         if [ "$DEBUG" = "true" ]; then
             echo "CACHE_PATHNAME:   $CACHE_PATHNAME" 
             echo "CACHE_TS:         $CACHE_TS"
@@ -234,7 +225,7 @@ for PROJECT in $PROJECTS; do
               COALESCE (cleared, '${IDA_MIGRATION}') \
            ) DESC \
            LIMIT 1"
-    OUT=`psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+    OUT=$(psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
     if [ "$DEBUG" = "true" ]; then
         echo "--- LATEST ACTION"
@@ -243,11 +234,11 @@ for PROJECT in $PROJECTS; do
     fi
 
     if [ "$OUT" ]; then
-        ACTION_PID=`echo "$OUT" | awk -F'|' '{print $1}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
-        ACTION_USER=`echo "$OUT" | awk -F'|' '{print $2}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
-        ACTION_ACTION=`echo "$OUT" | awk -F'|' '{print $3}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
-        ACTION_PATHNAME=`echo "$OUT" | awk -F'|' '{print $4}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
-        ACTION_TIMESTAMP=`echo "$OUT" | awk -F'|' '{print $5}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+        ACTION_PID=$(echo "$OUT" | awk -F'|' '{print $1}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        ACTION_USER=$(echo "$OUT" | awk -F'|' '{print $2}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        ACTION_ACTION=$(echo "$OUT" | awk -F'|' '{print $3}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        ACTION_PATHNAME=$(echo "$OUT" | awk -F'|' '{print $4}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        ACTION_TIMESTAMP=$(echo "$OUT" | awk -F'|' '{print $5}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
         if [ "$DEBUG" = "true" ]; then
             echo "ACTION_PID:       $ACTION_PID"
             echo "ACTION_TIMESTAMP: $ACTION_TIMESTAMP"
@@ -284,7 +275,7 @@ for PROJECT in $PROJECTS; do
            WHERE project = '${PROJECT}' \
            ORDER BY timestamp DESC \
            LIMIT 1"
-    OUT=`psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+    OUT=$(psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     LAST_CHANGE_TIMESTAMP="$OUT"
     if [ "$DEBUG" = "true" ]; then
         echo "--- LAST RECORDED CHANGE"
@@ -322,8 +313,8 @@ for PROJECT in $PROJECTS; do
             exit 1
         fi
 
-        EX_PATHNAME=`echo "$PATHNAME" | sed -e "s/'/''/g"`
-        EX_TARGET=`echo "$TARGET" | sed -e "s/'/''/g"`
+        EX_PATHNAME=$(echo "$PATHNAME" | sed -e "s/'/''/g")
+        EX_TARGET=$(echo "$TARGET" | sed -e "s/'/''/g")
 
         if [ "$TARGET" = "" ]; then
             QUERY="INSERT INTO ${DBTABLEPREFIX}ida_data_change \
@@ -335,7 +326,7 @@ for PROJECT in $PROJECTS; do
                    VALUES ('${TIMESTAMP}', '${PROJECT}', '${USER}', '${CHANGE}', '${EX_PATHNAME}', '${EX_TARGET}', '${MODE}')" 
         fi
     
-        OUT=`psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'`
+        OUT=$(psql -h "$DBHOST" -p "$DBPORT" -d "$DBNAME" -U "$DBUSER" -c "$QUERY" -t | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     
         if [ "$DEBUG" = "true" ]; then
             echo "--- NEW LATEST RECORDED CHANGE"

@@ -28,7 +28,7 @@
 #--------------------------------------------------------------------------------
 # Ensure the rpcinfo utility exists
 
-PROG_LOCATION=`/usr/bin/which rpcinfo 2>/dev/null`
+PROG_LOCATION=$(/usr/bin/which rpcinfo 2>/dev/null)
 if [ ! -e "$PROG_LOCATION" ]; then
     echo "Can't find rpcinfo in your \$PATH"
     exit 1
@@ -37,26 +37,11 @@ fi
 #--------------------------------------------------------------------------------
 # Load service configuration settings
 
-SCRIPT_PATHNAME="$(realpath $0)"
-PARENT_FOLDER=`dirname "$SCRIPT_PATHNAME"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-
-if [ "$SCRIPT" == "" ]; then
-    SCRIPT=`basename $SCRIPT_PATHNAME`
-else
-    SCRIPT=`basename $SCRIPT`
-fi
-
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
-
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE=$(dirname $(realpath "$0"))/../../config/config.sh
 
 if [ -e $CONFIG_FILE ]
 then
-    . $CONFIG_FILE
+    source $CONFIG_FILE
 else
     echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
     exit 1
@@ -67,7 +52,7 @@ if [ "$DMF_SERVER" = "" ]; then
     exit 1
 fi
 
-OUT=`rpcinfo -T tcp $DMF_SERVER 100003 3`
+OUT=$(rpcinfo -T tcp $DMF_SERVER 100003 3)
 
 echo "$OUT"
 

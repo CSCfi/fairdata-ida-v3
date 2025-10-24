@@ -3,7 +3,16 @@
 # This script will check for ongoing database housekeeping tasks and wait for them to finish, up to
 # a specified timeout. If the tasks are not finished within the timeout, the script will exit with an error.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 echo "--- Waiting for database housekeeping operations to complete ..."
 

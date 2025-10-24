@@ -71,7 +71,7 @@ class TestOldData(unittest.TestCase):
         self.metax_headers = { 'Authorization': 'Token %s' % self.config["METAX_PASS"] }
 
         # ensure we start with a fresh setup of projects, user accounts, and data
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/double-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/double-project.config" % (self.config["ROOT"], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
@@ -82,7 +82,7 @@ class TestOldData(unittest.TestCase):
 
         if self.success and self.config.get('NO_FLUSH_AFTER_TESTS', 'false') == 'false':
             print("(cleaning)")
-            cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts --flush" % (self.config["HTTPD_USER"], self.config["ROOT"])
+            cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts --flush" % self.config["ROOT"]
             result = os.system(cmd)
             self.assertEqual(result, 0)
 
@@ -96,7 +96,7 @@ class TestOldData(unittest.TestCase):
 
         print ("(auditing old data for project %s max_days %d force_audit %s)" % (project, max_days, force_audit))
 
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/audit-old-data %s %d --json-output %s --quiet" % (self.config["HTTPD_USER"], self.config["ROOT"], project, max_days, self.config.get('no-user-email'))
+        cmd = "DEBUG=false %s/appsupport/audit-old-data %s %d --json-output %s --quiet" % (self.config["ROOT"], project, max_days, self.config.get('no-user-email'))
 
         if force_audit:
             cmd = "%s --force-audit" % cmd
@@ -147,11 +147,11 @@ class TestOldData(unittest.TestCase):
         print ("(auditing old data for all projects %s max_days %d force_audit %s)" % (projects, max_days, force_audit))
 
         # ensure no residual sentinel file exists
-        cmd = "sudo -u %s rm -f /var/tmp/AUDIT_ALL_OLD_DATA 2>/dev/null" % self.config["HTTPD_USER"]
+        cmd = "rm -f /var/tmp/AUDIT_ALL_OLD_DATA 2>/dev/null"
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        cmd = "sudo -u %s PROJECTS=\"%s\" DEBUG=false %s/appsupport/audit-all-old-data %d --json-output %s --quiet" % (self.config["HTTPD_USER"], projects, self.config["ROOT"], max_days, self.config.get('no-email'))
+        cmd = "PROJECTS=\"%s\" DEBUG=false %s/appsupport/audit-all-old-data %d --json-output %s --quiet" % (projects, self.config["ROOT"], max_days, self.config.get('no-email'))
 
         if force_audit:
             cmd = "%s --force-audit" % cmd
@@ -341,7 +341,7 @@ class TestOldData(unittest.TestCase):
 
         print("(suspending test_project_b)")
 
-        cmd = "sudo -u %s %s/appsupport/suspend-project test_project_b --silent" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "%s/appsupport/suspend-project test_project_b --silent" % self.config["ROOT"]
         result = os.system(cmd)
         self.assertEqual(result, 0)
 

@@ -7,6 +7,8 @@
 
 SCRIPT=$(basename $0)
 
+ROOT=$(dirname $(dirname $(realpath "$0")))
+
 PROJECT="$1"
 TARGETDIR="$2"
 TMPDIR="$3"
@@ -62,7 +64,7 @@ while [ "$ATTEMPT" -le "$MAX_RETRIES" ]; do
     ERROR=""
 
     # Execute command and capture exit status
-    sudo -u apache /var/ida/appsupport/project-status "$PROJECT" 2>"$ERR" > "$TARGETDIR/$PROJECT.status.txt"
+    $ROOT/appsupport/project-status "$PROJECT" 2>"$ERR" > "$TARGETDIR/$PROJECT.status.txt"
 
     EXIT_CODE=$?
 
@@ -95,7 +97,7 @@ fi
 
 echo "Extracting stats ..."
 # Lists general project stats
-sudo -u apache /var/ida/appsupport/fetch-project-stats $PROJECT 2>"$ERR" > "$TARGETDIR/$PROJECT.stats.txt"
+$ROOT/appsupport/fetch-project-stats $PROJECT 2>"$ERR" > "$TARGETDIR/$PROJECT.stats.txt"
 
 if [ -s "$ERR" ]; then
     cat "$ERR" >&2
@@ -108,7 +110,7 @@ fi
 echo "Extracting inventory ..."
 # Lists all file details, both staging and frozen; aggregated from multiple table sources, but
 # exclude created timestamp and datasets (as we only care about data in IDA, not Metax)
-sudo -u apache /var/ida/appsupport/fetch-project-inventory $PROJECT 2>"$ERR" | \
+$ROOT/appsupport/fetch-project-inventory $PROJECT 2>"$ERR" | \
     jq 'del(.created) | .frozen |= with_entries(.value |= del(.datasets))' | \
     $JQ > "$TARGETDIR/$PROJECT.inventory.json"
 
@@ -123,7 +125,7 @@ fi
 echo "Extracting actions ..."
 # Lists all IDA actions in all states
 for state in pending failed cleared completed incomplete initiating; do
-    sudo -u apache /var/ida/appsupport/fetch-actions $PROJECT $state 2>"$ERR" | \
+    $ROOT/appsupport/fetch-actions $PROJECT $state 2>"$ERR" | \
         jq 'sort_by(.pid)' | $JQ > "$TARGETDIR/$PROJECT.actions.$state.json"
     if [ -s "$ERR" ]; then
         cat "$ERR" >&2
@@ -158,7 +160,7 @@ for PID in $ACTION_PIDS; do
 
     echo "\"$PID\": " >> "$TEMP_FILE"
 
-    sudo -u apache /var/ida/appsupport/fetch-action-files $PROJECT $PID 2>"$ERR" >> "$TEMP_FILE"
+    $ROOT/appsupport/fetch-action-files $PROJECT $PID 2>"$ERR" >> "$TEMP_FILE"
 
     EXIT_CODE=$?
 
@@ -183,7 +185,7 @@ fi
 
 echo "Extracting data change events ..."
 # Lists all data change events 
-sudo -u apache /var/ida/appsupport/fetch-data-changes $PROJECT 99999 2>"$ERR" | \
+$ROOT/appsupport/fetch-data-changes $PROJECT 99999 2>"$ERR" | \
     jq 'sort_by(.timestamp, .project, .user, .change, .mode, .pathname, .target)' | \
     $JQ > "$TARGETDIR/$PROJECT.changes.json"
 

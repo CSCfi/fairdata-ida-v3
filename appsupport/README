@@ -42,7 +42,6 @@ $ROOT/lib/constants.sh file of the service:
 ROOT
 OCC
 LOG
-HTTPD_USER
 NC_ADMIN_USER
 NC_ADMIN_PASS
 PROJECT_USER_PASS
@@ -180,7 +179,7 @@ At present, there is no script to "unremove" a project, though if ever needed, i
 expected that one will be created.
 
 Note: The tape replication cache defined at the pathname $DATA_REPLICATION_ROOT must
-grant group write permissions to the defined $HTTPD_USER.
+grant group write permissions to apache.
 
 
 STEP 3: Permanently delete all project data from trash

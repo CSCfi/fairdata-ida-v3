@@ -15,7 +15,16 @@
 # It then updates the essential sequence values in the new database to be 1 greater than the
 # maximum value remaining in each relevant table in the new database.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 echo "--- Resetting new database ..."
 

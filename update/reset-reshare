@@ -3,12 +3,22 @@
 # This script will reset all PSO passwords and reshare all PSO folders
 # so they are visible to all project users
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+ROOT=$(dirname "$UPDATE_ROOT")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 echo "--- Resetting all PSO passwords ..."
-sudo -u apache /var/ida/utils/reset_PSO_passwords
+$ROOT/utils/reset_PSO_passwords
 
 echo "--- Resharing all PSO folders ..."
-sudo -u apache /var/ida/utils/reshare_PSO_folders
+$ROOT/utils/reshare_PSO_folders
 
 echo "Reset / Reshare completed."

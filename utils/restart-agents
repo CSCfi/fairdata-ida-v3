@@ -21,14 +21,14 @@
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
 
-systemctl stop rabbitmq-replication-agent
-systemctl stop rabbitmq-metadata-agent
-systemctl stop rabbitmq-server
+sudo systemctl stop rabbitmq-replication-agent
+sudo systemctl stop rabbitmq-metadata-agent
+sudo systemctl stop rabbitmq-server
 
-systemctl start rabbitmq-server
-systemctl start rabbitmq-metadata-agent
-systemctl start rabbitmq-replication-agent
+sudo systemctl start rabbitmq-server
+sudo systemctl start rabbitmq-metadata-agent
+sudo systemctl start rabbitmq-replication-agent
 
-systemctl status rabbitmq-server
-systemctl status rabbitmq-metadata-agent
-systemctl status rabbitmq-replication-agent
+sudo systemctl --no-pager --plain --no-legend status rabbitmq-server
+sudo systemctl --no-pager --plain --no-legend status rabbitmq-metadata-agent
+sudo systemctl --no-pager --plain --no-legend status rabbitmq-replication-agent

@@ -1,7 +1,18 @@
 #!/bin/bash
 
+IDA_ROOT="/usr/local/fd/ida-fairdata-v3"
+
+if [ ! -d "$IDA_ROOT" ]; then
+    IDA_ROOT="/var/ida"
+fi
+
+if [ ! -d "$IDA_ROOT" ]; then
+    echo "Error: IDA root directory not found."
+    exit 1
+fi  
+
 # Base directory to search
-BASE_DIR="/var/ida/nextcloud/apps/ida/lib"
+BASE_DIR="$IDA_ROOT/nextcloud/apps/ida/lib"
 
 # Execute the find command with exclusions and extract translations
 find "$BASE_DIR" \
@@ -14,4 +25,4 @@ find "$BASE_DIR" \
     grep -v '$e->getMessage(' | \
     sed -E "s/^['\"]\s*//" | \
     sed -E "s/\s*['\"]$//" | \
-    sort -u > /var/ida/nextcloud/apps/ida/src/l10n/utils/api_response_strings.txt
+    sort -u > $IDA_ROOT/nextcloud/apps/ida/src/l10n/utils/api_response_strings.txt

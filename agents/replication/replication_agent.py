@@ -78,7 +78,16 @@ class ReplicationAgent(GenericAgent):
                 self._logger.warning('Dependencies not OK: Sentinel file not found')
                 return True
 
-            _dmfstatus = self._uida_conf_vars.get('DMF_STATUS', '/var/ida/agents/replication/mock_dmfstatus')
+            _ida_root = self._uida_conf_vars.get('ROOT')
+
+            if _replication_root == False:
+                raise Exception('The configuration variable ROOT is not defined!')
+
+            if not os.path.isdir(_ida_root):
+                self._logger.warning('IDA root directory %s not found' % _ida_root)
+                return True
+
+            _dmfstatus = self._uida_conf_vars.get('DMF_STATUS', f"{_ida_root}/agents/replication/mock_dmfstatus")
 
             if not os.path.isfile(_dmfstatus):
                 raise FileNotFoundError("The script %s could not be found!" % _dmfstatus)

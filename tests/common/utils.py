@@ -190,11 +190,6 @@ def load_configuration():
     except:
         config['SEND_TEST_EMAILS'] = 'false'
 
-    if os.path.exists("/etc/httpd/"):
-        config['HTTPD_USER'] = "apache"
-    else:
-        config['HTTPD_USER'] = "www-data"
-
     return config
 
 
@@ -462,14 +457,7 @@ def audit_project(self, project, status, after = None, area = None, timestamps =
 
     print ("(auditing project %s%s)" % (project, parameters))
 
-    cmd = "sudo -u %s DEBUG=false %s/appsupport/audit-project %s%s" % (
-        self.config["HTTPD_USER"],
-        self.config["ROOT"],
-        project,
-        parameters
-    )
-
-    # print(cmd) # TEMP DEBUG
+    cmd = "DEBUG=false %s/appsupport/audit-project %s%s" % (self.config["ROOT"], project, parameters)
 
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()

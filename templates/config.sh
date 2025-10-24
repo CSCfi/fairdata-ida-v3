@@ -23,15 +23,14 @@
 
 IDA_ENVIRONMENT="DEV"
 
+ROOT="/usr/local/fd/ida-fairdata-v3"
+
 DEBUG="false"
 NO_FLUSH_AFTER_TESTS="false"
 SEND_TEST_EMAILS="false"
 
-ROOT="/var/ida"
-OCC="/var/ida/nextcloud/occ"
+OCC="$ROOT/nextcloud/occ"
 LOG="/mnt/storage_vol01/log/ida.log"
-
-HTTPD_USER="apache"
 
 NC_ADMIN_USER="admin"
 NC_ADMIN_PASS="DEFINE_ME"
@@ -85,7 +84,7 @@ SHARE_API="https://LOCAL_SERVER_FQDN/ocs/v1.php/apps/files_sharing/api/v1/shares
 GROUP_API="https://LOCAL_SERVER_FQDN/ocs/v1.php/cloud/groups"
 USER_API="https://LOCAL_SERVER_FQDN/ocs/v1.php/cloud/users"
 
-IDA_CLI_ROOT="/var/ida-tools"
+IDA_CLI_ROOT="$ROOT/cli"
 
 STORAGE_OC_DATA_ROOT="/mnt/storage_vol01/ida"
 STORAGE_CANDIDATES=("/mnt/storage_vol01/ida" "/mnt/storage_vol02/ida" "/mnt/storage_vol03/ida" "/mnt/storage_vol04/ida")

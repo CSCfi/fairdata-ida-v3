@@ -70,7 +70,7 @@ class TestAuditing(unittest.TestCase):
             print("(not sending test emails)")
 
         # ensure we start with a fresh setup of projects, user accounts, and data
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
@@ -84,7 +84,7 @@ class TestAuditing(unittest.TestCase):
 
         if self.success and self.config.get('NO_FLUSH_AFTER_TESTS', 'false') == 'false':
             print("(cleaning)")
-            cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
+            cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.config["ROOT"], self.config["ROOT"])
             result = os.system(cmd)
             self.assertEqual(result, 0)
 
@@ -125,7 +125,7 @@ class TestAuditing(unittest.TestCase):
         print("--- Modifying state of test project A")
 
         print("(creating orphan file cache records for project A)")
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-cache-orphans test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-cache-orphans test_project_a" % self.config["ROOT"]
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
@@ -199,7 +199,7 @@ class TestAuditing(unittest.TestCase):
 
         print("--- Repairing project A")
 
-        cmd = "sudo -u %s DEBUG=false %s/appsupport/repair-project %s" % (self.config["HTTPD_USER"], self.config["ROOT"], report_pathname_a)
+        cmd = "DEBUG=false %s/appsupport/repair-project %s" % (self.config["ROOT"], report_pathname_a)
         try:
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode(sys.stdout.encoding).strip()
         except subprocess.CalledProcessError as error:

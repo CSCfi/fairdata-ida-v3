@@ -21,16 +21,16 @@
 # @license  GNU Affero General Public License, version 3
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
-#
 # This script configures Nextcloud with essential settings. It is safe to execute
 # in any environment, including production. 
+#--------------------------------------------------------------------------------
 
-SCRIPT="$(realpath $0)"
-UTILS=`dirname "$SCRIPT"`
-ROOT=`dirname "$UTILS"`
+SCRIPT_PATHNAME="$(realpath $0)"
+UTILS=$(dirname "$SCRIPT_PATHNAME")
+ROOT=$(dirname "$UTILS")
 
 if [ -f $ROOT/config/config.sh ]; then
-    . $ROOT/config/config.sh
+    source $ROOT/config/config.sh
 fi
 
 if [ -z "$EMAIL_USER" ]; then
@@ -38,19 +38,10 @@ if [ -z "$EMAIL_USER" ]; then
 fi
 
 #--------------------------------------------------------------------------------
-# Determine the apache user
 
-if [ -d /etc/httpd ]; then
-    HTTPD_USER="apache"
-else
-    HTTPD_USER="www-data"
-fi
+OCC="sudo -u apache php $ROOT/nextcloud/occ"
 
-#--------------------------------------------------------------------------------
-
-OCC="sudo -u $HTTPD_USER php $ROOT/nextcloud/occ"
-
-$OCC user:setting   admin         settings email                                "$EMAIL_SENDER"
+$OCC user:setting   admin         settings email                                "$EMAIL_USER"
 $OCC config:app:set settings      profile_enabled_by_default                    --value="0"
 $OCC config:app:set files_sharing outgoing_server2server_share_enabled          --value="no"
 $OCC config:app:set files_sharing incoming_server2server_share_enabled          --value="no"

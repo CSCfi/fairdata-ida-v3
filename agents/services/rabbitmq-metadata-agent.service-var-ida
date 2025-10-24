@@ -5,8 +5,8 @@ After=network.target
 [Service]
 User=apache
 Group=apache
-WorkingDirectory=/usr/local/fd/fairdata-ida-v3
-ExecStart=/usr/local/fd/fairdata-ida-v3/venv/bin/python -m agents.metadata.metadata_agent
+WorkingDirectory=/var/ida
+ExecStart=/var/ida/venv/bin/python -m agents.metadata.metadata_agent
 
 [Install]
 WantedBy=multi-user.target

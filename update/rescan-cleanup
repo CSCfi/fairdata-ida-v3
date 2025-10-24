@@ -9,7 +9,16 @@
 # disk even though the original production file cache records have been copied to the new
 # database.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 if [ "$IDA_ENVIRONMENT" != "DEV" ]; then
     HOST_DOMAIN=$(hostname -f)
@@ -20,12 +29,12 @@ if [ "$IDA_ENVIRONMENT" != "DEV" ]; then
 fi
 
 echo "--- Cleaning file cache ..."
-sudo -u apache /var/ida/nextcloud/occ files:cleanup
+$OCC files:cleanup
 
 echo "--- Rescanning all data for all projects and users ..."
-sudo -u apache /var/ida/nextcloud/occ files:scan --all #-v
+$OCC files:scan --all #-v
 
 echo "--- Cleaning file cache again ..."
-sudo -u apache /var/ida/nextcloud/occ files:cleanup
+$OCC files:cleanup
 
 echo "Rescan / Cleanup completed."

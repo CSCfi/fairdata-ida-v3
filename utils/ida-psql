@@ -22,7 +22,7 @@
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
 # This script opens a psql shell based on the database configuration in 
-# /var/ida/config/config.sh, using the read-only database credentials by
+# config/config.sh, using the read-only database credentials by
 # default, unless the parameter 'privileged' is specified, in which case the
 # read-write credentials are used.
 #

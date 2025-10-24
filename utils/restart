@@ -21,9 +21,9 @@
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
 
-DIR=`dirname $0`
+DIR=$(dirname $(realpath $0))
 
-systemctl daemon-reload
+sudo systemctl daemon-reload
 
 $DIR/fix-permissions
 $DIR/restart-www

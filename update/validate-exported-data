@@ -3,7 +3,17 @@
 # This script will validate all CSV files exported from the database to ensure
 # they have the correct number of fields, taking into account escaped commas.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+ROOT=$(dirname "$UPDATE_ROOT")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 set -e # if anything fails, die die die
 
@@ -17,7 +27,7 @@ if [ ! -d "$DBDATA" ]; then
     exit 1;
 fi
 
-if [ ! -d /var/ida/venv ]; then
+if [ ! -d $ROOT/venv ]; then
     echo "Error: The python venv does not exist!" >&2;
     exit 1;
 fi
@@ -44,5 +54,5 @@ export OC_SHARE_FIELDS
 export OC_STORAGES_FIELDS
 export OC_USERS_FIELDS
 
-source /var/ida/venv/bin/activate
-python -u /var/ida/update/lib/validate_exported_data.py
+source $ROOT/venv/bin/activate
+python -u $ROOT/update/lib/validate_exported_data.py

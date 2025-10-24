@@ -84,10 +84,6 @@ if [ "$NC_ADMIN_PASS" = "" ]; then
     errorExit "The variable NC_ADMIN_PASS must be defined"
 fi
 
-if [ "$HTTPD_USER" = "" ]; then
-    errorExit "The variable HTTPD_USER must be defined"
-fi
-
 if [ "$PROJECT_USER_PASS" = "" ]; then
     errorExit "The variable PROJECT_USER_PASS must be defined"
 fi
@@ -200,7 +196,6 @@ if [ "$DEBUG" = "true" ]; then
     echo "DATA_REPLICATION_ROOT:        $DATA_REPLICATION_ROOT"
     echo "IDA_API:                      $IDA_API"
     echo "METAX_API:                    $METAX_API"
-    echo "HTTPD_USER:                   $HTTPD_USER"
     echo "NC_ADMIN_USER:                $NC_ADMIN_USER"
     echo "NC_ADMIN_PASS:                $NC_ADMIN_PASS"
     echo "METAX_USER:                   $METAX_USER"

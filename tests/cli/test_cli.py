@@ -141,7 +141,7 @@ class TestIdaCli(unittest.TestCase):
 
         # Initialize clean test accounts
 
-        cmd = "sudo -u apache DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.ida_root, self.ida_root)
+        cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts %s/tests/utils/single-project.config" % (self.ida_root, self.ida_root)
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
@@ -190,7 +190,7 @@ class TestIdaCli(unittest.TestCase):
 
             #shutil.rmtree(self.tempdir, ignore_errors=True)
 
-            cmd = "sudo -u apache DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.ida_root, self.ida_root)
+            cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts --flush %s/tests/utils/single-project.config" % (self.ida_root, self.ida_root)
             result = os.system(cmd)
             self.assertEqual(result, 0)
 

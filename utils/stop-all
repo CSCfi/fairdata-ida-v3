@@ -21,22 +21,14 @@
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
 
-# Determine the apache executable app
-
-if [ -d /etc/httpd ]; then
-    HTTPD_APP="httpd"
-else
-    HTTPD_APP="apache2"
-fi
-
 systemctl daemon-reload
 
-systemctl stop $HTTPD_APP
+systemctl stop httpd
 systemctl stop rabbitmq-metadata-agent
 systemctl stop rabbitmq-replication-agent
 systemctl stop rabbitmq-server
 
-systemctl status rabbitmq-server
-systemctl status rabbitmq-replication-agent
-systemctl status rabbitmq-metadata-agent
-systemctl status $HTTPD_APP
+systemctl status --no-pager --plain --no-legend rabbitmq-server
+systemctl status --no-pager --plain --no-legend rabbitmq-replication-agent
+systemctl status --no-pager --plain --no-legend rabbitmq-metadata-agent
+systemctl status --no-pager --plain --no-legend httpd

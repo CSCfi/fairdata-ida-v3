@@ -22,20 +22,11 @@
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
 
-SCRIPT_PATHNAME="$(realpath $0)"
-PARENT_FOLDER=`dirname "$SCRIPT_PATHNAME"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
-
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE=$(dirname $(realpath "$0"))/../config/config.sh
 
 if [ -e $CONFIG_FILE ]
 then
-    . $CONFIG_FILE
+    source $CONFIG_FILE
 else
     echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
     exit 1
@@ -43,7 +34,7 @@ fi
 
 #--------------------------------------------------------------------------------
 
-ID=`id -u -n`
+ID=$(id -u -n)
 if [ "$ID" != "root" ]; then
     echo "You must execute this script as root"
     exit 1

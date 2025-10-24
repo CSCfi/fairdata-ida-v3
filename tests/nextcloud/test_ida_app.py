@@ -55,7 +55,7 @@ class TestIdaApp(unittest.TestCase):
 
         print("(initializing)")
 
-        self.ida_project = "sudo -u %s DEBUG=false %s/admin/ida_project" % (self.config['HTTPD_USER'], self.config['ROOT'])
+        self.ida_project = "DEBUG=false %s/admin/ida_project" % self.config['ROOT']
         self.suspendedSentinelFile = "%s/control/SUSPENDED" % self.config["STORAGE_OC_DATA_ROOT"]
 
         # ensure service is not suspended
@@ -66,19 +66,19 @@ class TestIdaApp(unittest.TestCase):
 
         # ensure we start with a fresh setup of projects, user accounts, and data
 
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts" % self.config["ROOT"]
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-max-files test_project_a" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-max-files test_project_a" % self.config["ROOT"]
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-max-files test_project_b" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "DEBUG=false %s/tests/utils/initialize-max-files test_project_b" % self.config["ROOT"]
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        self.ida_project = "sudo -u %s DEBUG=false %s/admin/ida_project" % (self.config['HTTPD_USER'], self.config['ROOT'])
+        self.ida_project = "DEBUG=false %s/admin/ida_project" % self.config['ROOT']
 
 
     def tearDown(self):
@@ -94,7 +94,7 @@ class TestIdaApp(unittest.TestCase):
 
         if self.success and self.config.get('NO_FLUSH_AFTER_TESTS', 'false') == 'false':
             print("(cleaning)")
-            cmd = "sudo -u %s DEBUG=false %s/tests/utils/initialize-test-accounts --flush" % (self.config["HTTPD_USER"], self.config["ROOT"])
+            cmd = "DEBUG=false %s/tests/utils/initialize-test-accounts --flush" % self.config["ROOT"]
             os.system(cmd)
 
         # verify all tests passed
@@ -293,7 +293,7 @@ class TestIdaApp(unittest.TestCase):
         #---
 
         print("(suspending service)")
-        cmd = "sudo -u %s touch %s" % (self.config["HTTPD_USER"], self.suspendedSentinelFile)
+        cmd = "touch %s" % (self.suspendedSentinelFile)
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
@@ -512,7 +512,7 @@ class TestIdaApp(unittest.TestCase):
         print("--- Suspended Service and Project Freezing Limitations")
 
         print("(suspending service)")
-        cmd = "sudo -u %s touch %s" % (self.config["HTTPD_USER"], self.suspendedSentinelFile)
+        cmd = "touch %s" % (self.suspendedSentinelFile)
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
@@ -1501,7 +1501,7 @@ class TestIdaApp(unittest.TestCase):
         # pathname = "/testdata/2017-08/Experiment_1/test02.dat"
         cmd = "touch %s/PSO_test_project_c/files/test_project_c+/testdata/2017-08/Experiment_1/test02.dat" % (self.config["STORAGE_OC_DATA_ROOT"])
         os.system(cmd)
-        cmd = "sudo -u %s %s/nextcloud/occ files:scan PSO_test_project_c 2>&1 >/dev/null" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "%s/nextcloud/occ files:scan PSO_test_project_c 2>&1 >/dev/null" % self.config["ROOT"]
         os.system(cmd)
 
         print("Attempt to freeze folder which intersects with file associated with pending action")
@@ -1545,7 +1545,7 @@ class TestIdaApp(unittest.TestCase):
         # pathname = "/testdata/2017-08/Experiment_1/test02.dat"
         cmd = "rm %s/PSO_test_project_c/files/test_project_c+/testdata/2017-08/Experiment_1/test02.dat" % (self.config["STORAGE_OC_DATA_ROOT"])
         os.system(cmd)
-        cmd = "sudo -u %s %s/nextcloud/occ files:scan PSO_test_project_c 2>&1 >/dev/null" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd = "%s/nextcloud/occ files:scan PSO_test_project_c 2>&1 >/dev/null" % self.config["ROOT"]
         os.system(cmd)
 
         print("Freeze folder which no longer intersects with pending action or existing file in frozen area")
@@ -1912,7 +1912,7 @@ class TestIdaApp(unittest.TestCase):
 
         frozen_area_root = "%s/PSO_test_project_b/files/test_project_b" % (self.config["STORAGE_OC_DATA_ROOT"])
         staging_area_root = "%s/PSO_test_project_b/files/test_project_b%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
-        cmd_base="sudo -u %s SIMULATE_AGENTS=true DEBUG=false %s/appsupport/execute-batch-action" % (self.config["HTTPD_USER"], self.config["ROOT"])
+        cmd_base="SIMULATE_AGENTS=true DEBUG=false %s/appsupport/execute-batch-action" % self.config["ROOT"]
 
         print("Attempt to freeze a folder with more than max allowed files")
         data = {"project": "test_project_b", "pathname": "/testdata/MaxFiles"}

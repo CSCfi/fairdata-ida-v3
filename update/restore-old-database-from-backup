@@ -3,7 +3,16 @@
 # This script flushes and restores the DBNAME_OLD database from a dump file located in
 # the subdirectory named 'backup' in the defined IDA_UPDATE_ROOT folder.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 if [[ -z "$IDA_UPDATE_ROOT" ]]; then
     echo "Error: Environment variable IDA_UPDATE_ROOT must be defined" >&2

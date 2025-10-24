@@ -86,17 +86,17 @@
 #     127.0.0.1 ida191.local
 #     127.0.0.1 ida192.local
 #
-#     # In /var/ida/config/config.sh, ensure the following pathnames are defined as specified below:
+#     # In config/config.sh, ensure the following pathnames are defined as specified below:
 #
 #     STORAGE_OC_DATA_ROOT="/mnt/storage_vol01/ida"
 #     STORAGE_CANDIDATES=("/mnt/storage_vol01/ida" "/mnt/storage_vol02/ida" "/mnt/storage_vol03/ida" "/mnt/storage_vol04/ida")
 #     DATA_REPLICATION_ROOT="/mnt/storage_vol01/ida_replication"
 #     TRASH_DATA_ROOT="/mnt/storage_vol01/ida_trash"
-#     LOG="/var/ida/storage/mnt/storage_vol01/log/ida.log"
+#     LOG="/mnt/storage_vol01/log/ida.log"
 #     RABBIT_WORKER_LOG_FILE="/mnt/storage_vol01/log/agents.log"
 #     RABBIT_MONITORING_DIR="/mnt/storage_vol01/log/rabbitmq_monitoring"
 #
-#     # In /var/ida/nextcloud/config/config.php, ensure the following pathnames are defined as specified below:
+#     # In nextcloud/config/config.php, ensure the following pathnames are defined as specified below:
 #
 #     'datadirectory' => '/mnt/storage_vol01/ida',
 #     'logfile' => '/mnt/storage_vol01/log/nextcloud.log',
@@ -104,25 +104,27 @@
 # NOTE: See the comments in purge_dev_glusterfs regarding backing up and restoring existing
 # emulated glusterfs volumes, if the emulated glusterfs volumes need re-initialization.
 #
-# After initialization, the generated file /var/ida/storage/mount.init should be configured to
+# After initialization, the generated file storage/mount.init should be configured to
 # be executed on boot, e.g. by adding the following to /etc/rc.local
 #
-#     /bin/bash /var/ida/storage/mount.init
+#     /bin/bash storage/mount.init
 #
 #--------------------------------------------------------------------------------
+# Ensure script is run as root
 
-PARENT_FOLDER=`dirname "$(realpath $0)"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+ID=$(id -u -n)
+if [ "$ID" != "root" ]; then
+    sudo "$0" "$@"
+    exit
+fi
 
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
+#--------------------------------------------------------------------------------
+# Load configuration
 
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE=$(dirname $(realpath "$0"))/../config/config.sh
 
 if [ -e $CONFIG_FILE ]; then
-    . $CONFIG_FILE
+    source $CONFIG_FILE
 else
     echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
     exit 1
@@ -143,24 +145,6 @@ fi
 
 if [ "$IDA_ENVIRONMENT" = "PRODUCTION" ]; then
     echo "Error: This script can not be run in a production environment. Aborting." >&2
-    exit 1
-fi
-
-#--------------------------------------------------------------------------------
-# Determine the apache user
-
-if [ -d /etc/httpd ]; then
-    HTTPD_USER="apache"
-else
-    HTTPD_USER="www-data"
-fi
-
-#--------------------------------------------------------------------------------
-# Ensure script is run as root
-
-ID=`id -u -n`
-if [ "$ID" != "root" ]; then
-    echo "Error: You must execute this script as root" >&2
     exit 1
 fi
 
@@ -354,7 +338,7 @@ echo "Mounting glusterfs volumes..."
 
 for VOLUME in {1..4}; do
     mkdir -p "/mnt/storage_vol0$VOLUME"
-    chown -R $HTTPD_USER:$HTTPD_USER "/mnt/storage_vol0$VOLUME"
+    chown -R apache:apache "/mnt/storage_vol0$VOLUME"
     chmod -R g+rwX,o-rwx "/mnt/storage_vol0$VOLUME"
     COMMAND="mount -t glusterfs ida201.local:/storage_vol0$VOLUME -o defaults,_netdev /mnt/storage_vol0$VOLUME"
     echo $COMMAND >> /var/ida-storage/mount.init
@@ -366,7 +350,7 @@ done
 #--------------------------------------------------------------------------------
 
 chmod +x /var/ida-storage/mount.init
-chown -R $HTTPD_USER:$HTTPD_USER /var/ida-storage
+chown -R apache:apache /var/ida-storage
 chmod -R g+rwX,o-rwx /var/ida-storage
 
 echo "Done"

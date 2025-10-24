@@ -42,29 +42,30 @@
 #     cd /
 #     systemctl stop httpd
 #     tar czvf /var/tmp/ida_storage_volumes.tgz /mnt/storage_vol01 /mnt/storage_vol02 /mnt/storage_vol03 /mnt/storage_vol04
-#     /var/ida/utils/purge_dev_glusterfs
-#     /var/ida/utils/initialize_dev_glusterfs
+#     utils/purge_dev_glusterfs
+#     utils/initialize_dev_glusterfs
 #     tar xzvf /var/tmp/ida_storage_volumes.tgz
 #     chown -R apache:apache /mnt/storage_vol01 /mnt/storage_vol02 /mnt/storage_vol03 /mnt/storage_vol04
 #     chmod -R g+rwX,o-rwx /mnt/storage_vol01 /mnt/storage_vol02 /mnt/storage_vol03 /mnt/storage_vol04
-#     /var/ida/utiis/restart
-#     sudo -u apache /var/ida/nextcloud/occ files:scan --all
+#     utiis/restart
+#     sudo -u apache nextcloud/occ files:scan --all
 #
 #--------------------------------------------------------------------------------
+# Ensure script is run as root
 
-PARENT_FOLDER=`dirname "$(realpath $0)"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
+ID=$(id -u -n)
+if [ "$ID" != "root" ]; then
+    sudo "$0" "$@"
+    exit
+fi
 
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
+#--------------------------------------------------------------------------------
 
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE=$(dirname $(realpath "$0"))/../config/config.sh
 
 if [ -e $CONFIG_FILE ]
 then
-    . $CONFIG_FILE
+    source $CONFIG_FILE
 else
     echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
     exit 1
@@ -85,15 +86,6 @@ fi
 
 if [ "$IDA_ENVIRONMENT" = "PRODUCTION" ]; then
     echo "Error: This script can not be run in a production environment. Aborting." >&2
-    exit 1
-fi
-
-#--------------------------------------------------------------------------------
-# Ensure script is run as root
-
-ID=`id -u -n`
-if [ "$ID" != "root" ]; then
-    echo "Error: You must execute this script as root" >&2
     exit 1
 fi
 

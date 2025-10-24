@@ -21,17 +21,9 @@
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
 
-# Determine the apache executable app
-
-if [ -d /etc/httpd ]; then
-    HTTPD_APP="httpd"
-else
-    HTTPD_APP="apache2"
-fi
-
-systemctl stop php-fpm
-systemctl stop $HTTPD_APP
-systemctl start php-fpm
-systemctl start $HTTPD_APP
-systemctl status php-fpm
-systemctl status $HTTPD_APP
+sudo systemctl stop php-fpm
+sudo systemctl stop httpd
+sudo systemctl start php-fpm
+sudo systemctl start httpd
+sudo systemctl --no-pager --plain --no-legend status php-fpm
+sudo systemctl --no-pager --plain --no-legend status httpd

@@ -43,7 +43,7 @@ $CONFIG = array (
   'apps_paths' => array (
     0 =>
     array (
-      'path' => '/var/ida/nextcloud/apps',
+      'path' => '/usr/local/fd/ida-fairdata-v3/nextcloud/apps',
       'url' => '/apps',
       'writable' => true,
     ),

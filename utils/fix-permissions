@@ -30,41 +30,23 @@
 #--------------------------------------------------------------------------------
 # Ensure script is run as root
 
-ID=`id -u -n`
+ID=$(id -u -n)
 if [ "$ID" != "root" ]; then
-    echo "You must execute this script as root"
-    exit 1
+    sudo "$0" "$@"
+    exit
 fi
 
 #--------------------------------------------------------------------------------
-# Load service constants and configuration settings
+# Load configuration
 
-SCRIPT_PATHNAME="$(realpath $0)"
-PARENT_FOLDER=`dirname "$SCRIPT_PATHNAME"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
-
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE=$(dirname $(realpath "$0"))/../config/config.sh
 
 if [ -e $CONFIG_FILE ]
 then
-    . $CONFIG_FILE
+    source $CONFIG_FILE
 else
     echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
     exit 1
-fi
-
-#--------------------------------------------------------------------------------
-# Determine the apache user
-
-if [ -d /etc/httpd ]; then
-    HTTPD_USER="apache"
-else
-    HTTPD_USER="www-data"
 fi
 
 #--------------------------------------------------------------------------------
@@ -75,15 +57,15 @@ else
     PERMS="g+rwX,o-rwx"
 fi
 
-chown -R -P $HTTPD_USER:$HTTPD_USER $ROOT
-chown $HTTPD_USER:$HTTPD_USER $ROOT/config/config.sh
-chown $HTTPD_USER:$HTTPD_USER $ROOT/nextcloud/config/config.php
+sudo chown -R -P apache:apache $ROOT
+sudo chown apache:apache $ROOT/config/config.sh
+sudo chown apache:apache $ROOT/nextcloud/config/config.php
 
-chmod +x $ROOT/nextcloud/occ
-chmod +x $ROOT/agents/replication/dmfstatus
-chmod +x $ROOT/agents/replication/mock_dmfstatus
-chmod +x $ROOT/agents/replication/mock_dmfstatus_timeout
+sudo chmod +x $ROOT/nextcloud/occ
+sudo chmod +x $ROOT/agents/replication/dmfstatus
+sudo chmod +x $ROOT/agents/replication/mock_dmfstatus
+sudo chmod +x $ROOT/agents/replication/mock_dmfstatus_timeout
 
-chmod -R $PERMS $ROOT
-chmod $PERMS $ROOT/config/config.sh
-chmod $PERMS $ROOT/nextcloud/config/config.php
+sudo chmod -R $PERMS $ROOT
+sudo chmod $PERMS $ROOT/config/config.sh
+sudo chmod $PERMS $ROOT/nextcloud/config/config.php

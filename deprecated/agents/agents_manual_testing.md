@@ -9,9 +9,8 @@ docker exec -it $(docker ps -q -f name=ida-nextcloud) sudo su -l www-data -s /bi
 
 2. Generate files for test_project_a and test_project_b
 ```
-cd /var/ida/tests/utils
-./initialize_max_files test_project_a
-./initialize_max_files test_project_b
+tests/utils/initialize_max_files test_project_a
+tests/utils/initialize_max_files test_project_b
 ```
 
 3. Login to ida.fd-dev.csc.fi as "test_user_a"/"test"
@@ -24,10 +23,9 @@ cd /var/ida/tests/utils
 
 7. Back in the Nextcloud container, do a batch freeze for test_project_b:
 ```
-cd /var/ida/appsupport
-./execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_1
-./execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_2
-./execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_3
+appsupport/execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_1
+appsupport/execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_2
+appsupport/execute-batch-action test_project_b freeze /testdata/MaxFiles/5000_files/500_files_1/100_files_3
 ```
 
 8. In the UI, manually freeze the last (1) of the folders

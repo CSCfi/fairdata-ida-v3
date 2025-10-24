@@ -1,9 +1,25 @@
+# Ensure script is run as apache
+
+ID=$(id -u -n)
+if [ "$ID" != "apache" ]; then
+    sudo -u apache "$0" "$@"
+    exit
+fi
+
 # Strict assumptions are made about the location of necessary scripts; update if/as needed.
 
 START=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 SCRIPT=$(basename $0)
 
-. /var/ida/config/config.sh
+CONFIG_FILE=$(dirname $(dirname $(realpath "$0")))/config/config.sh
+
+if [ -e $CONFIG_FILE ]
+then
+    source $CONFIG_FILE
+else
+    echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
+    exit 1
+fi
 
 # Ensure IDA_UPDATE_ROOT is defined in configuration and exists
 if [ -z "$IDA_UPDATE_ROOT" ]; then
@@ -90,8 +106,8 @@ if [ "$IDA_ENVIRONMENT" = "DEV" ]; then
     INTERNAL_PROJECTS="fd_user1_project"
     INTERNAL_USERS="PSO_fd_user1_project fd_user1"
 else
-    PROJECTS=$(/var/ida/update/list-projects)
-    USERS=$(/var/ida/update/list-users)
+    PROJECTS=$($ROOT/update/list-projects)
+    USERS=$($ROOT/update/list-users)
     INTERNAL_PROJECTS="$INTERNAL_PROJECTS 2011020"
     INTERNAL_USERS="$INTERNAL_USERS PSO_2011020 ida-test-user"
 fi
@@ -197,4 +213,4 @@ if [ ! "$SILENT" ]; then
     echo "$START $SCRIPT $IDA_ENVIRONMENT"
 fi
 
-OCC="sudo -u apache php /var/ida/nextcloud/occ"
+OCC="php $ROOT/nextcloud/occ"

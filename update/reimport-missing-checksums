@@ -13,7 +13,16 @@
 #
 # Strict assumptions are made about the location of git repositories; update as needed.
 
-. /var/ida/update/init.sh
+SCRIPT_PATHNAME="$(realpath $0)"
+UPDATE_ROOT=$(dirname "$SCRIPT_PATHNAME")
+INIT_FILE="$UPDATE_ROOT/init.sh"
+
+if [ ! -f "$INIT_FILE" ]; then
+    echo "ERROR: Could not find file $INIT_FILE"
+    exit 1
+fi
+
+source "$INIT_FILE"
 
 # Ensure DBNAME_NEW and DBNAME_OLD are defined in configuration and not the same
 if [[ -z "$DBNAME_NEW" ]]; then
@@ -63,7 +72,7 @@ echo "Generating checksum re-import SQL from ${DBDATA}oc_filecache.csv ... "
 
 cd "$DBDATA"
 
-/var/ida/update/generate-checksum-import-sql
+$UPDATE_ROOT/generate-checksum-import-sql
 
 echo "Re-importing any missing checksums into the oc_filecache table in $DBNAME_NEW ..."
 

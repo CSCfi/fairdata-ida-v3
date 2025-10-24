@@ -23,19 +23,11 @@
 #--------------------------------------------------------------------------------
 # Load service constants and configuration settings
 
-PARENT_FOLDER=`dirname "$(realpath $0)"`
-PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-
-while [ "$PARENT_BASENAME" != "ida" -a "$PARENT_BASENAME" != "" ]; do
-    PARENT_FOLDER=`dirname "$PARENT_FOLDER"`
-    PARENT_BASENAME=`basename "$PARENT_FOLDER"`
-done
-
-CONFIG_FILE="$PARENT_FOLDER/config/config.sh"
+CONFIG_FILE=$(dirname $(realpath "$0"))/../config/config.sh
 
 if [ -e $CONFIG_FILE ]
 then
-    . $CONFIG_FILE
+    source $CONFIG_FILE
 else
     echo "The configuration file $CONFIG_FILE cannot be found. Aborting." >&2
     exit 1
@@ -56,7 +48,7 @@ fi
 
 #--------------------------------------------------------------------------------
 
-LOGDIR=`dirname "$LOG"`
+LOGDIR=$(dirname "$LOG")
 
 rm -f $LOGDIR/*.log 2>/dev/null
 rm -f $LOGDIR/old_data/*.log 2>/dev/null

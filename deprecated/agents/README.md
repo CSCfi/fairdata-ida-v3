@@ -91,6 +91,27 @@ python -m agents.run_all
 
 ## Testing
 
+### Unit tests
+
+To execute all unit tests, in directory /usr/local/fd/fairdata-ida-v3 execute:
+
+```
+source /usr/local/fd/fairdata-ida-v3/venv/bin/activate
+python -W ignore -m unittest discover tests.agents
+```
+
+The test suite creates its own rabbitmq vhost, exchanges and users. During the tests, messages are
+published to rabbitmq, and the agents processes messages from a real rabbitmq queue.
+
+Both the IDA web API, and Metax web API, are mocked. The pre-generated test data
+used during the tests are stored in tests/agents/testdata/testdata.py, which is what the mocked IDA
+api uses as its "database".
+
+In test environments, the replication location does not have to be mounted; it is treated as a
+normal directory, and will be created when necessary.
+
+### Behavioral tests
+
 Behavioral testing of the postprocessing agents is part of the wider Nextcloud tests
 in various test files in tests/.
 
