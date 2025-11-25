@@ -595,9 +595,11 @@ class TestDataDeletion(unittest.TestCase):
             self.fail(error.output.decode(sys.stdout.encoding))
         self.assertEqual("0", output.strip())
 
-        print("Preserve already preserved project A after removal of a dataset and verify no email and newly unpublished files moved to trash")
-        response = requests.delete("%s/datasets/%s" % (self.config['METAX_API'], dataset_1_pid), headers=self.metax_headers, json=dataset_data)
+        print("(deleting dataset %s)" % dataset_1_pid)
+        response = requests.delete("%s/datasets/%s" % (self.config['METAX_API'], dataset_1_pid), headers=self.metax_headers)
         self.assertEqual(response.status_code, 204, response.text)
+
+        print("Preserve already preserved project A after deletion of a dataset and verify no email and newly unpublished files moved to trash")
         cmd = "%s/preserve-project test_project_a --force" % (cmd_base)
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode(sys.stdout.encoding)
