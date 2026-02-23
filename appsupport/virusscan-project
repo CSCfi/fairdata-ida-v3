@@ -21,7 +21,7 @@
 # @license  GNU Affero General Public License, version 3
 # @link     https://www.fairdata.fi/en/ida
 # --------------------------------------------------------------------------------
-# This script scans the staging area of the specified project for viruses.
+# This script scans the frozen area of the specified project for viruses.
 # --------------------------------------------------------------------------------
 
 SCRIPT=`basename "$(realpath $0)"`
@@ -61,13 +61,20 @@ if [ ! -d "$PROJECT_STORAGE_OC_DATA_ROOT" ]; then
     errorExit "The specified project ${PROJECT} does not exist"
 fi
 
-CLAMSCAN=$(which clamscan 2>/dev/null)
+#--------------------------------------------------------------------------------
+# Check for clamdscan first (faster), fallback to clamscan
 
-if [ ! "$CLAMSCAN" ]; then
-    errorExit "The clamscan command was not found"
+if command -v clamdscan >/dev/null 2>&1 && clamdscan --ping 10 >/dev/null 2>&1; then
+    SCANNER=$(command -v clamdscan)
+    echoAndLog "Using clamdscan (daemon mode)"
+elif command -v clamscan >/dev/null 2>&1; then
+    SCANNER=$(command -v clamscan)
+    echoAndLog "Using clamscan (standalone mode)"
+else
+    errorExit "Neither clamdscan nor clamscan command was found or clamd is not running"
 fi
 
-CLAMSCAN_OPTIONS="--infected --no-summary --quiet"
+SCANNER_OPTIONS="--infected --no-summary --quiet"
 
 #--------------------------------------------------------------------------------
 # Process command line arguments...
@@ -168,7 +175,7 @@ REPORT_FILE="${LOG_ROOT}/virusscans/${YEAR}/${MONTH}/${START}_${PROJECT}.warning
 FILES="/var/tmp/$$.files"
 OUTPUT="/var/tmp/$$.out"
 
-SCAN_PATHNAME="${PROJECT_STAGING_ROOT}${SCOPE}"
+SCAN_PATHNAME="${PROJECT_FROZEN_ROOT}${SCOPE}"
 
 trap 'rm -f -- "$OUTPUT" $FILES' EXIT
 
@@ -205,21 +212,21 @@ else
 fi
 
 if [ ! -s "$FILES" ]; then
-    echoAndLog "No files to scan"
+    echoAndLog "No frozen files to scan"
     rm $FILES 2>/dev/null
     exit 0
 else
     FILECOUNT=$(cat "$FILES" | wc -l)
     if [ "$FILECOUNT" -eq 1 ]; then
-        echoAndLog "Found 1 file to scan"
+        echoAndLog "Found 1 frozen file to scan"
     else
-        echoAndLog "Found $FILECOUNT files to scan"
+        echoAndLog "Found $FILECOUNT frozen files to scan"
     fi
 fi
 
-echo "Scanning ..."
+echoAndLog "Scanning frozen files ..."
 
-$CLAMSCAN $CLAMSCAN_OPTIONS --file-list="$FILES" 2>"$OUTPUT" >/dev/null
+$SCANNER $SCANNER_OPTIONS --file-list="$FILES" 2>"$OUTPUT" >/dev/null
 
 if [ -s "$OUTPUT" ]; then
     mkdir -p $(dirname $REPORT_FILE) 2>/dev/null
@@ -227,7 +234,7 @@ if [ -s "$OUTPUT" ]; then
     if [ "$?" -ne 0 ]; then
         errorExit "Failed to create virus scan warning file $REPORT_FILE"
     fi
-    echoAndLog "Virus warnings were reported in $REPORT_FILE"
+    echoAndLog "Virus warnings were reported in $REPORT_FILE" >&2
 else
     echoAndLog "No virus warnings were reported"
     rm $OUTPUT 2>/dev/null

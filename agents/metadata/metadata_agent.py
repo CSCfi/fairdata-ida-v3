@@ -23,7 +23,7 @@
 
 import os
 import json
-
+import subprocess
 from agents.common import GenericAgent
 from agents.utils.utils import construct_file_path, make_ba_http_header, generate_timestamp
 
@@ -81,7 +81,28 @@ class MetadataAgent(GenericAgent):
 
     def _handle_freeze_action(self, action, method, queue):
 
-        # if sub-actions are being successfully executed sequentially, then
+        # Scan files associated with action for viruses. If any warnings produced, mark
+        # action as failed. We use the checksums timestamp to determine if virus scanning
+        # has already been performed for the action, as virus scanning is done before
+        # checksum processing so if checksums have been processed, we know the virus scan
+        # was previously performed without issues.
+
+        # TODO: Determine whether we want to have a mechanism for skipping virus scanning
+        # when a failed action is retried by appsupport user, to bypass any false positives,
+        # or leave virus scanning always in place such that resolution of false positives is
+        # handled by some other means
+
+        if self._sub_action_processed(action, 'checksums'):
+            self._logger.debug('Virus scan already processed')
+        else:
+            try:
+                self._process_virusscan(action)
+            except Exception as e:
+                self._logger.exception('Virus scan failed')
+                self._republish_or_fail_action(method, action, None, queue, e)
+                return
+
+        # If sub-actions are being successfully executed sequentially, then
         # nodes downloaded during checksums processing will be re-used for
         # metadata publication.
         nodes = None
@@ -192,6 +213,31 @@ class MetadataAgent(GenericAgent):
             self.publish_message(action, exchange=used_exchange)
 
         self._ack_message(method)
+
+
+    def _process_virusscan(self, action):
+        self._logger.info('Processing virus scan for action %s' % action['pid'])
+
+        script_path = f"{self._uida_conf_vars['ROOT']}/appsupport/virusscan-project"
+
+        command = [
+            script_path, 
+            action['project'], 
+            '--scope', 
+            action['pathname']
+        ]
+
+        self._logger.debug('Processing virus scan for action %s' % command)
+
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            if result.stderr.strip():
+                raise Exception("Virus scan produced warnings (see virus scan logs for details)")
+
+        except subprocess.CalledProcessError as e:
+            # This handles cases where the script returns a non-zero exit code
+            self._logger.error(f"Virus scan script failed: {e.stderr}")
+            raise Exception(f"Virus scan execution failed for project {action['project']}")
 
 
     def _process_checksums(self, action):

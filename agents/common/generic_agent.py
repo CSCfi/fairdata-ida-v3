@@ -498,6 +498,8 @@ class GenericAgent():
         """
         Compare current retry-count of a sub-action to the sub-action's retry policy in the settings.
         """
+        if not sub_action_name:
+            return False
         sub_action_retry_info = '%s_retry_info' % sub_action_name
         if sub_action_retry_info in self.rabbitmq_message:
             return self.rabbitmq_message[sub_action_retry_info]['retry'] < self._settings['retry_policy'][sub_action_name]['max_retries']
