@@ -45,6 +45,8 @@ else
 fi
 
 export ROOT
+export IDA_ENVIRONMENT
+export HOSTNAME
 export EMAIL_SENDER
 export EMAIL_RECIPIENTS
 export ECHO_TEST_EMAILS

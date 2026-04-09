@@ -21,9 +21,12 @@
 # @link     https://www.fairdata.fi/en/ida
 #--------------------------------------------------------------------------------
 
+sudo systemctl stop clamd@scan 2>/dev/null
 sudo systemctl stop php-fpm
 sudo systemctl stop httpd
+sudo systemctl start clamd@scan 2>/dev/null
 sudo systemctl start php-fpm
 sudo systemctl start httpd
+sudo systemctl --no-pager --plain --no-legend status clamd@scan 2>/dev/null
 sudo systemctl --no-pager --plain --no-legend status php-fpm
 sudo systemctl --no-pager --plain --no-legend status httpd

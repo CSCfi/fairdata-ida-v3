@@ -82,7 +82,7 @@ SNAIL=`mail --version 2>/dev/null | grep -- 's-nail' 2>/dev/null`
 SUBJECT=`echo "$SUBJECT" | tr '\n' ' '`
 SUBJECT="[IDA Service] ${SUBJECT}"
 
-if [ "$IDA_ENVIRONMENT" != "PRODUCTION" ]; then
+if [[ -n "$IDA_ENVIRONMENT" && "$IDA_ENVIRONMENT" != "PRODUCTION" ]]; then
     SUBJECT="${IDA_ENVIRONMENT} (${HOSTNAME}) ${SUBJECT}"
 fi
 

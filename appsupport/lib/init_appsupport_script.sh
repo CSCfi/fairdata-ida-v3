@@ -42,21 +42,15 @@ else
     errorExit "The initialization file $INIT_FILE cannot be found"
 fi
 
-#--------------------------------------------------------------------------------
-# Process input and get project name, per default admin script behavior
-
-if [ "$SCRIPT" = "" ]; then
-    SCRIPT_PATHNAME=$(realpath "$0")
-    SCRIPT_DIR=$(dirname "$SCRIPT_PATHNAME")
-    SCRIPT=$(basename "$SCRIPT_PATHNAME")
-fi
-
 if [ "$USAGE" = "" ]; then
     USAGE="
 Usage: $SCRIPT PROJECT
        $SCRIPT -h
 "
 fi
+
+#--------------------------------------------------------------------------------
+# Process input and get project name, per default admin script behavior
 
 if [ "$1" = "-h" ]; then
     echo "$USAGE" >&2

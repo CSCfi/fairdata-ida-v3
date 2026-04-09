@@ -44,6 +44,10 @@ done
 #--------------------------------------------------------------------------------
 # Load service constants and configuration settings
 
+SCRIPT_PATHNAME=$(realpath "$0")
+SCRIPT_DIR=$(dirname "$SCRIPT_PATHNAME")
+SCRIPT=$(basename "$SCRIPT_PATHNAME")
+
 INIT_SCRIPT_PATHNAME=$(realpath "${BASH_SOURCE[0]}")
 INIT_SCRIPT_DIR=$(dirname "$INIT_SCRIPT_PATHNAME")
 INIT_SCRIPT=$(basename "$INIT_SCRIPT_PATHNAME")
