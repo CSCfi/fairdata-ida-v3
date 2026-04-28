@@ -118,13 +118,25 @@ else
         exit 0
     fi
 
-    echo "$MESSAGE" | eval "$COMMAND" 2>$ERR
+    TMP_MSG=$(mktemp /tmp/ida_mail.XXXXXX)
 
-    if [ -s $ERR ]; then
-        cat $ERR >&2
+    echo "$MESSAGE" > "$TMP_MSG"
+
+    eval "$COMMAND < \"$TMP_MSG\"" 2>$ERR
+
+    EXIT_STATUS=$?
+
+    if [ $EXIT_STATUS -ne 0 ] || [ -s "$ERR" ]; then
+        echo "Mail command exited with code $EXIT_STATUS" >&2
+        if [ -s $ERR ]; then
+            cat $ERR >&2
+        fi
+        echo "Message body retained in ${TMP_MSG}" >&2
         echo "Failed to send email to internal application support staff!" >&2
         exit 1
     fi
+
+    rm -f "$TMP_MSG"
 fi
 
 echo "Email sent to all internal application support staff."

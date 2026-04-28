@@ -78,13 +78,25 @@ if [ "$COUNT" -gt 0 ]; then
             echo "COMMAND:          ${COMMAND}"
         fi
 
-        echo "$ACTIONS" | eval "$COMMAND" 2>$ERR
+        TMP_MSG=$(mktemp /tmp/ida_mail.XXXXXX)
 
-        if [ -s $ERR ]; then
-            MSG=$(cat $ERR)
-            addToLog "$MSG"
+        echo "$ACTIONS" > "$TMP_MSG"
+
+        eval "$COMMAND < \"$TMP_MSG\"" 2>$ERR
+
+        EXIT_STATUS=$?
+
+        if [ $EXIT_STATUS -ne 0 ] || [ -s "$ERR" ]; then
+            addToLog "Mail command exited with code $EXIT_STATUS"
+            if [ -s $ERR ]; then
+                MSG=$(cat $ERR)
+                addToLog "$MSG"
+            fi
+            addToLog "Message body retained in ${TMP_MSG}"
             errorExit "Failed to send stuck action report email"
         fi
+
+        rm -f "$TMP_MSG"
 
         echoAndLog "${COUNT} stuck actions reported"
     fi

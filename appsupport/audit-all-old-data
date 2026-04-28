@@ -328,11 +328,17 @@ if [ -z "$NO_EMAIL" ]; then
             echo "COMMAND:          ${COMMAND}"
         fi
 
-        cat "$OUTPUT_TXT" | eval "$COMMAND" 2>$ERR
+        eval "$COMMAND < \"$OUTPUT_TXT\"" 2>$ERR
 
-        if [ -s $ERR ]; then
-            MSG=`cat $ERR`
-            addToLog "$MSG"
+        EXIT_STATUS=$?
+
+        if [ $EXIT_STATUS -ne 0 ] || [ -s "$ERR" ]; then
+            addToLog "Mail command exited with code $EXIT_STATUS"
+            if [ -s $ERR ]; then
+                MSG=$(cat $ERR)
+                addToLog "$MSG"
+            fi
+            addToLog "Message body retained in ${OUTPUT_TXT}"
             errorExit "Failed to send report summary email to internal users"
         fi
 

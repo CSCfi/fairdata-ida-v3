@@ -444,11 +444,17 @@ if [ "$SEND_REPORT" = "true" ] && [ "$RECIPIENTS" ]; then
         echo "COMMAND:          ${COMMAND}"
     fi
 
-    cat "$SUMMARY" | eval "$COMMAND" 2>$ERR
+    eval "$COMMAND < \"$SUMMARY\"" 2>$ERR
 
-    if [ -s $ERR ]; then
-        MSG=`cat $ERR`
-        addToLog "$MSG"
+    EXIT_STATUS=$?
+
+    if [ $EXIT_STATUS -ne 0 ] || [ -s "$ERR" ]; then
+        addToLog "Mail command exited with code $EXIT_STATUS"
+        if [ -s $ERR ]; then
+            MSG=$(cat $ERR)
+            addToLog "$MSG"
+        fi
+        addToLog "Message body retained in ${SUMMARY}"
         errorExit "Failed to send audit summary email"
     fi
 fi
