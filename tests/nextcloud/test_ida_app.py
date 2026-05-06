@@ -2102,6 +2102,37 @@ class TestIdaApp(unittest.TestCase):
         self.assertTrue(os.path.exists(staging_area_root))
 
         # --------------------------------------------------------------------------------
+
+        # print("--- Virus Scanning")
+        #
+        # print("Upload infected test file")
+        # url = "%s/test_user_d/test_project_d+/eicar-68.txt" % self.config["FILE_API"]
+        # data = ""
+        # response = requests.put(url=url, data=data, auth=test_user_d, verify=False)
+        # self.assertEqual(response.status_code, 201)
+        #
+        # frozen_area_root = "%s/PSO_test_project_d/files/test_project_d" % (self.config["STORAGE_OC_DATA_ROOT"])
+        # staging_area_root = "%s/PSO_test_project_d/files/test_project_d%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
+        #
+        # self.assertTrue(os.path.exists("%s/eicar-68.txt" % (staging_area_root)))
+        #
+        # print("Attempt to freeze infected file")
+        # data = {"project": "test_project_d", "pathname": "/eicar-68.txt"}
+        # response = requests.post("%s/freeze" % self.config["IDA_API"], json=data, auth=test_user_d, verify=False)
+        # self.assertEqual(response.status_code, 200)
+        # action_data = response.json()
+        # self.assertEqual(action_data["action"], "freeze")
+        # self.assertEqual(action_data["project"], data["project"])
+        # self.assertEqual(action_data["pathname"], data["pathname"])
+        #
+        # print("Verify file was physically moved from staging to frozen area")
+        # self.assertFalse(os.path.exists("%s/eicar-68.txt" % (staging_area_root)))
+        # self.assertTrue(os.path.exists("%s/eicar-68.txt" % (frozen_area_root)))
+        #
+        # wait_for_pending_actions(self, "test_project_d", test_user_d)
+        # check_for_failed_actions(self, "test_project_d", test_user_d, should_be_failed = True)
+
+        # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done
 
         self.success = True

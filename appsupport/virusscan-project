@@ -74,7 +74,7 @@ else
     errorExit "Neither clamdscan nor clamscan command was found or clamd is not running"
 fi
 
-SCANNER_OPTIONS="--infected --no-summary --quiet"
+SCANNER_OPTIONS="--infected --no-summary --fdpass"
 
 #--------------------------------------------------------------------------------
 # Process command line arguments...
@@ -226,7 +226,7 @@ fi
 
 echoAndLog "Scanning frozen files ..."
 
-$SCANNER $SCANNER_OPTIONS --file-list="$FILES" 2>"$OUTPUT" >/dev/null
+$SCANNER $SCANNER_OPTIONS --file-list="$FILES" >"$OUTPUT" 2>&1
 
 if [ -s "$OUTPUT" ]; then
     mkdir -p $(dirname $REPORT_FILE) 2>/dev/null
