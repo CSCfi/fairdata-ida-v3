@@ -93,6 +93,8 @@ TRASH_DATA_ROOT="/mnt/storage_vol01/ida_trash"
 
 QUARANTINE_PERIOD="7776000"   # 7776000 seconds = 90 days
 
+STUCK_ACTIONS_CUTOFF="7" # days
+
 EMAIL_SENDER="root@LOCAL_SERVER_FQDN"
 EMAIL_RECIPIENTS="DEFINE_ME"  # Internal stakeholders
 

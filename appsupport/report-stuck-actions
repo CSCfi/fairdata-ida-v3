@@ -50,7 +50,8 @@ fi
 
 ACTIONS=$(DEBUG=false $ROOT/appsupport/fetch-actions pending 2>/dev/null)
 
-CUTOFF=$(date -u -d '7 days ago' +%s)
+STUCK_ACTIONS_CUTOFF="${STUCK_ACTIONS_CUTOFF:-7}"
+CUTOFF=$(date -u -d "${STUCK_ACTIONS_CUTOFF} days ago" +%s)
 
 ACTIONS=$(echo "$ACTIONS" | jq --argjson cutoff "$CUTOFF" 'map(select((.initiated | fromdateiso8601) <= $cutoff))' --indent 4)
 
