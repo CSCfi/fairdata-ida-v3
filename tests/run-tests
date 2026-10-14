@@ -210,6 +210,12 @@ else
         exit 1
     fi
 
+    python -W ignore -m unittest discover -f -q tests.virusscan
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
     report_success
 
 fi
