@@ -25,6 +25,8 @@ DIR=$(dirname $(realpath $0))
 
 sudo systemctl daemon-reload
 
+sudo rm -f /mnt/storage_vol01/ida/control/OFFLINE 2>/dev/null
+
 $DIR/fix-permissions
 $DIR/restart-www
 $DIR/restart-agents

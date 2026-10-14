@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+# Utility script to configure IDA in a CSC HPC or other environment
+
+set -e
+
+IDA_CONFIG_FILE="$HOME/.ida-config"
+IDA_NETRC="$HOME/.netrc"
+
+do_config=1
+
+echo "----------------------------------------------------------"
+
+# Check if configuration files already exist
+if [ -f "$IDA_CONFIG_FILE" ]; then
+    echo "IDA configuration files already exist in your home directory."
+    read -p "Do you want to overwrite them? (y/n): " override
+    if [[ "$override" != "y" ]]; then
+        do_config=0
+    fi
+fi
+
+if [[ $do_config -eq 1 ]]; then
+    echo ""
+    echo "To configure your IDA connection, you need to define information"
+    echo "that can be found from the IDA web interface."
+    echo ""
+    echo "You can check the required information at:"
+    echo "    https://ida.fairdata.fi/settings/personal"
+    echo ""
+    read -p "Please provide the number of the IDA project you wish to use: " proj
+    project=$(echo "$proj" | tr -d ' ')
+    echo "Project: $project"
+
+    DEFAULT_USER=$(whoami)
+    echo ""
+    read -p "Please provide your IDA username [$DEFAULT_USER]: " my_name
+    if [[ -n "$my_name" ]]; then
+        IDA_USERNAME=$(echo "$my_name" | tr -d ' ')
+    else
+        IDA_USERNAME="$DEFAULT_USER"
+    fi
+    echo "Username: $IDA_USERNAME"
+
+    echo ""
+    echo 'In the web interface, click "Create new app password"'
+    read -sp 'and paste the app password string here: ' app_passwd
+    echo ""
+    echo 'Password defined. Remember to click "Done" in the web interface!'
+
+    # Write .ida-config
+    cat <<EOF > "$IDA_CONFIG_FILE"
+IDA_PROJECT="$project"
+IDA_HOST="https://ida.fairdata.fi"
+EOF
+    chmod 600 "$IDA_CONFIG_FILE"
+
+    # Safely handle .netrc (remove existing entry for ida.fairdata.fi if present)
+    if [[ -f "$IDA_NETRC" ]]; then
+        sed -i '/machine ida\.fairdata\.fi/,+2d' "$IDA_NETRC" 2>/dev/null || true
+    fi
+
+    cat <<EOF >> "$IDA_NETRC"
+machine ida.fairdata.fi
+login $IDA_USERNAME
+password $app_passwd
+EOF
+    chmod 600 "$IDA_NETRC"
+
+    echo "$IDA_CONFIG_FILE and $IDA_NETRC updated successfully."
+fi

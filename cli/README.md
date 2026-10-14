@@ -81,18 +81,11 @@ The output format of the inventory action is always formatted as JSON.
 
 Examples are provided at the end of this guide.
 
-## Installation
+## Support for IDA command line tools in CSC HPC Environments
 
-The `ida` and `ida-checksum` scripts requires that `bash` is installed on your system as `/bin/bash` and that
-the utilities `curl`, `xargs`, `awk`, and `sha256sum` (or `shasum` on Mac OS-X) are installed on your system
-and visible somewhere in your `$PATH`.
-
-Download the `ida` and `ida-checksum` scripts, ideally placing them in a location somewhere in your `$PATH`,
-and ensure that the scripts are executable. E.g.:
-
-    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/ida"
-    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/ida-checksum"
-    chmod +x ida ida-checksum
+The IDA command line tools `ida` and `ida-checksum`, and the `ida_config` utility (described below) are
+pre-installed and available in all CSC HPC environments. Configuration in a particular HPC environment
+can be done by simply executing the `ida_config` command within a terminal in that environment.
 
 ## Authentication
 
@@ -112,10 +105,36 @@ new application password will be displayed, and must be copied and saved immedia
 view the application password again, though it will be listed by the provided name and you will be able to delete
 it and remove it from use.
 
+## Local Installation
+
+The `ida` and `ida-checksum` scripts requires that `bash` is installed on your system as `/bin/bash` and that
+the utilities `curl`, `xargs`, `awk`, and `sha256sum` (or `shasum` on Mac OS-X) are installed on your system
+and visible somewhere in your `$PATH`.
+
+Download the `ida` and `ida-checksum` scripts, ideally placing them in a location somewhere in your `$PATH`,
+and ensure that the scripts are executable. E.g.:
+
+    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/ida"
+    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/ida-checksum"
+    chmod +x ida ida-checksum
+
 ## Configuration
 
 The `ida` script requires that certain parameters are defined, either via environment variables, or
 via a configuration file, or provided via command line arguments.
+
+### Configuration Utility
+
+For convenience, a configuration utility is available which will prompt for the essential configuration
+details and create the appropriate configuration files in your home directory.
+
+    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/utils/ida_config"
+    chmod +x ida_config
+
+The `ida_config` script will guide the user through the configuration process, prompting for each
+configuration detail.
+
+The manual configuration process is detailed below.
 
 ### Configuration file
 
@@ -209,7 +228,7 @@ Be sure to set the permissions of your configuration file securely so its conten
 If any account credentials (username and/or password) cannot be found from any of the above
 sources, you will be prompted to enter them for each command.
 
-## Ignore file
+### Ignore file
 
 The `ida` script will look for and use a file `.ida-ignore` if it exists in your home directory, to exclude
 files matching certain patterns from upload.
