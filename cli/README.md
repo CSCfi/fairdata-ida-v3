@@ -83,9 +83,9 @@ Examples are provided at the end of this guide.
 
 ## Support for IDA command line tools in CSC HPC Environments
 
-The IDA command line tools `ida` and `ida-checksum`, and the `ida_config` utility (described below) are
+The IDA command line tools `ida` and `ida-checksum`, and the `ida_configure` utility (described below) are
 pre-installed and available in all CSC HPC environments. Configuration in a particular HPC environment
-can be done by simply executing the `ida_config` command within a terminal in that environment.
+can be done by simply executing the `ida_configure` command within a terminal in that environment.
 
 ## Authentication
 
@@ -128,10 +128,10 @@ via a configuration file, or provided via command line arguments.
 For convenience, a configuration utility is available which will prompt for the essential configuration
 details and create the appropriate configuration files in your home directory.
 
-    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/utils/ida_config"
-    chmod +x ida_config
+    curl -LJO "https://raw.githubusercontent.com/CSCfi/fairdata-ida-v3/master/cli/utils/ida_configure"
+    chmod +x ida_configure
 
-The `ida_config` script will guide the user through the configuration process, prompting for each
+The `ida_configure` script will guide the user through the configuration process, prompting for each
 configuration detail.
 
 The manual configuration process is detailed below.
